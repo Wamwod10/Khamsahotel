@@ -17,7 +17,7 @@ export default function Gallery() {
     { id: 3, src: "/13.jpg", altKey: "standardtr", category: "Outside" },
     { id: 4, src: "/4.jpg", altKey: "familyroom", category: "Room" },
     { id: 5, src: "/7.jpg", altKey: "reception", category: "Lobby" },
-    { id: 6, src: "/10.png", altKey: "cafest", category: "Cafe" },
+    { id: 6, src: "/10.jpg", altKey: "cafest", category: "Cafe" },
     { id: 7, src: "/3.jpg", altKey: "standardair", category: "Room" },
     { id: 8, src: "/6.jpg", altKey: "restroom", category: "Bath" },
     { id: 9, src: "/9.jpg", altKey: "hallway", category: "Room" },
