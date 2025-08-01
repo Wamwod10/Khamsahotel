@@ -11,10 +11,10 @@ import RoomModal from "./RoomModal"; // MODAL COMPONENT
 import NoticePopup from "./NoticePopup"; // NOTICE COMPONENT
 
 const standardImages = [
-  "./public/5.jpg",
-  "./public/24.jpg",
-  "./public/13.jpg",
-  "./public/23.jpg",
+  "/5.jpg",
+  "/24.jpg",
+  "/13.jpg",
+  "/23.jpg",
 ];
 
 const familyImages = ["/public/4.jpg", "/public/25.jpg"];

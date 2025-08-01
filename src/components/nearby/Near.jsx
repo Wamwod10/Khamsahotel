@@ -7,7 +7,6 @@ import { TbExternalLink } from "react-icons/tb";
 import { IoTrainSharp } from "react-icons/io5";
 import { FaRegBuilding } from "react-icons/fa";
 import { FaMosque } from "react-icons/fa6";
-import { FaHotel } from "react-icons/fa6";
 import { PiPark } from "react-icons/pi";
 import { useTranslation } from "react-i18next";
 import { FaMapPin } from "react-icons/fa6";
