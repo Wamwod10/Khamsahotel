@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { FaSearchPlus } from "react-icons/fa";
-import "./Gallery.scss";
+import "./gallery.scss";
 import './galleryMedia.scss';
 import { FaChevronRight, FaChevronLeft } from "react-icons/fa6";
 import { IoClose } from "react-icons/io5";

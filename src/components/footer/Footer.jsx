@@ -20,7 +20,7 @@ const Footer = () => {
           </p>
           <div className="footer__socials">
             <a
-              href="https://twitter.com"
+              href="https://twitte.com"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Twitter"
