@@ -24,7 +24,7 @@ const Near = () => {
         </p>
         <div className="near__box">
           <div className="near__box-card">
-            <img src="/public/15.jpg" width={"100%"} height={"200px"} alt="" />
+            <img src="./public/15.jpg" width={"100%"} height={"200px"} alt="" />
             <div className="near__box-absolute">
               <p className="near__absolute-text">
                 <IoTrainSharp />
@@ -56,7 +56,7 @@ const Near = () => {
             </a>
           </div>
           <div className="near__box-card">
-            <img src="/public/16.webp" width={"100%"} height={"200px"} alt="" />
+            <img src="./public/16.webp" width={"100%"} height={"200px"} alt="" />
             <div className="near__box-absolute">
               <p className="near__absolute-text">
                 <FaRegBuilding />
@@ -89,7 +89,7 @@ const Near = () => {
             </a>
           </div>
           <div className="near__box-card">
-            <img src="/public/17.jpg" width={"100%"} height={"200px"} alt="" />
+            <img src="./public/17.jpg" width={"100%"} height={"200px"} alt="" />
             <div className="near__box-absolute">
               <p className="near__absolute-text">
                 <FaMosque />
@@ -122,7 +122,7 @@ const Near = () => {
             </a>
           </div>
           <div className="near__box-card">
-            <img src="/public/18.jpg" width={"100%"} height={"200px"} alt="" />
+            <img src="./public/18.jpg" width={"100%"} height={"200px"} alt="" />
             <div className="near__box-absolute">
               <p className="near__absolute-text">
                 <PiPark />

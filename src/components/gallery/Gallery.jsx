@@ -12,18 +12,18 @@ export default function Gallery() {
   const { t } = useTranslation();
 
   const images = [
-    { id: 1, src: "/public/12.jpg", altKey: "hotelview", category: "Outside" },
-    { id: 2, src: "/public/8.jpg", altKey: "corridor", category: "Cafe" },
-    { id: 3, src: "/public/13.jpg", altKey: "standardtr", category: "Outside" },
-    { id: 4, src: "/public/4.jpg", altKey: "familyroom", category: "Room" },
-    { id: 5, src: "/public/7.jpg", altKey: "reception", category: "Lobby" },
-    { id: 6, src: "/public/10.png", altKey: "cafest", category: "Cafe" },
-    { id: 7, src: "/public/3.jpg", altKey: "standardair", category: "Room" },
-    { id: 8, src: "/public/6.jpg", altKey: "restroom", category: "Bath" },
-    { id: 9, src: "/public/9.jpg", altKey: "hallway", category: "Room" },
-    { id: 10, src: "/public/11.jpg", altKey: "bf", category: "Outside" },
-    { id: 11, src: "/public/5.jpg", altKey: "standardtr", category: "Room" },
-    { id: 12, src: "/public/14.jpg", altKey: "bath", category: "Outside" },
+    { id: 1, src: "./public/12.jpg", altKey: "hotelview", category: "Outside" },
+    { id: 2, src: "./public/8.jpg", altKey: "corridor", category: "Cafe" },
+    { id: 3, src: "./public/13.jpg", altKey: "standardtr", category: "Outside" },
+    { id: 4, src: "./public/4.jpg", altKey: "familyroom", category: "Room" },
+    { id: 5, src: "./public/7.jpg", altKey: "reception", category: "Lobby" },
+    { id: 6, src: "./public/10.png", altKey: "cafest", category: "Cafe" },
+    { id: 7, src: "./public/3.jpg", altKey: "standardair", category: "Room" },
+    { id: 8, src: "./public/6.jpg", altKey: "restroom", category: "Bath" },
+    { id: 9, src: "./public/9.jpg", altKey: "hallway", category: "Room" },
+    { id: 10, src: "./public/11.jpg", altKey: "bf", category: "Outside" },
+    { id: 11, src: "./public/5.jpg", altKey: "standardtr", category: "Room" },
+    { id: 12, src: "./public/14.jpg", altKey: "bath", category: "Outside" },
   ];
 
   const categories = [

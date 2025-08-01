@@ -36,7 +36,7 @@ const Roomcard = () => {
                 <span>{t("roomprice2")}</span>
                 <span>{t("roomprice3")}</span>
               </div>
-              <img className="roomcard__boxes-img" src="/public/5.jpg" alt="" />
+              <img className="roomcard__boxes-img" src="./public/5.jpg" alt="" />
               <div className="roomcard__title-box">
                 <h2 className="roomcard__boxes-title">{t("standard1")}</h2>
                 <div className="roomcard__boxes-spans">
@@ -87,7 +87,7 @@ const Roomcard = () => {
                 <span>{t("roomprice5")}</span>
                 <span>{t("roomprice6")}</span>
               </div>
-              <img className="roomcard__boxes-img" src="/public/4.jpg" alt="" />
+              <img className="roomcard__boxes-img" src="./public/4.jpg" alt="" />
               <div className="roomcard__title-box">
                 <h2 className="roomcard__boxes-title">{t("family1")}</h2>
                 <div className="roomcard__boxes-spans">
@@ -138,7 +138,7 @@ const Roomcard = () => {
                 <span>{t("roomprice2")}</span>
                 <span>{t("roomprice3")}</span>
               </div>
-              <img className="roomcard__boxes-img" src="/public/3.jpg" alt="" />
+              <img className="roomcard__boxes-img" src="./public/3.jpg" alt="" />
               <div className="roomcard__title-box">
                 <h2 className="roomcard__boxes-title">{t("standard1")}</h2>
                 <div className="roomcard__boxes-spans">
