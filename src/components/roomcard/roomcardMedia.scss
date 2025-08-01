@@ -1,0 +1,117 @@
+@media (max-width:1024px) {
+    .roomcard {
+        &__boxes {
+
+            display: flex;
+
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+    }
+}
+
+@media (max-width:768px) {
+    .roomcard {
+        &__title {
+            font-size: 30px;
+        }
+
+        &__txt {
+            font-size: 16px;
+        }
+    }
+}
+
+@media (max-width:425px) {
+    .roomcard {
+        margin-top: 750px;
+
+        &__title {
+            font-size: 29px;
+        }
+
+        &__txt {
+            font-size: 14.5px;
+
+
+        }
+    }
+
+}
+
+@media (max-width:375px) {
+    .roomcard {
+        &__boxes-img {
+            height: 200px;
+        }
+
+        &__boxes-title {
+            font-size: 18px;
+        }
+
+        &__price-badges span {
+            font-size: 12.5px;
+        }
+
+        &__boxes-text {
+            font-size: 14.5px;
+            margin-top: -3px;
+            margin-bottom: 13px;
+        }
+
+        &__boxes-ft {
+            margin-top: 15px;
+        }
+
+        &__ft-box {
+            width: 376px;
+            padding-left: 7px;
+        }
+
+        &__box-link {
+            margin-top: 20px;
+        }
+    }
+}
+
+@media (max-width:320px) {
+    .roomcard {
+        &__boxes-img{
+            height: 180px;
+        }
+        &__boxes-title {
+            font-size: 16px;
+        }
+
+        &__span {
+            font-size: 11px;
+        }
+
+        &__boxes-text {
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        &__boxes-ft{
+            margin-top: 13px;
+            
+        }
+        &__ft-box {
+                    width: 351px;
+        row-gap: 7px;
+        column-gap: 2px;
+        padding-left: 3px;
+        }
+        &__ft-span{
+           
+            font-size: 11px;
+            padding: 6px;
+        }
+        &__box-link{
+            padding: 10px;
+        }
+        &__link{
+            font-size: 15px;
+        }
+    }
+}

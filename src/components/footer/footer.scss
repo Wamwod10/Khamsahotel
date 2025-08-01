@@ -1,0 +1,304 @@
+.footer {
+    background-color: #203556;
+    color: #fff;
+    padding: 40px 20px;
+    margin-top: 100px;
+
+    &__container {
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        gap: 40px;
+        flex-wrap: wrap;
+    }
+
+    &__left {
+        flex: 1 1 350px;
+        display: flex;
+        flex-direction: column;
+
+        .footer__logo {
+            font-weight: 700;
+            margin-bottom: 18px;
+            user-select: none;
+            font-size: 28px;
+            padding-top: 5px;
+            font-family: "Inter";
+            color: rgb(255, 169, 48);
+            transition: 0.2s;
+            cursor: pointer;
+        }
+
+        .footer__description {
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 25px;
+            max-width: 520px;
+            color: #cbd2db;
+        }
+
+        .footer__socials {
+            display: flex;
+            gap: 18px;
+
+            .footer__social-link {
+                width: 36px;
+                height: 36px;
+                background-color: #334d6e;
+                border-radius: 50%;
+                color: #fff;
+                font-weight: 700;
+                font-size: 18px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                line-height: 36px;
+                text-decoration: none;
+                transition: background-color 0.3s ease;
+
+                &:hover {
+                    background-color: #5177b9;
+                }
+            }
+        }
+    }
+
+    // MIDDLE BLOCK (Quick Links)
+    &__links {
+        flex: 1 1 200px;
+        display: flex;
+        flex-direction: column;
+
+        .footer__title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            user-select: none;
+        }
+
+        .footer__list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+
+            .footer__link {
+                color: #cbd2db;
+                font-size: 15px;
+                line-height: 1.8;
+                text-decoration: none;
+                display: block;
+                margin-bottom: 12px;
+                transition: color 0.25s ease;
+
+                &:hover {
+                    color: #fff;
+                }
+            }
+        }
+    }
+
+    &__payments {
+        display: flex;
+        align-items: center;
+        column-gap: 15px;
+    }
+
+    &__payment {
+        width: 70px;
+    }
+
+    // RIGHT BLOCK (Contact Info)
+    &__contact {
+        flex: 1 1 250px;
+        display: flex;
+        flex-direction: column;
+
+        .footer__title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            user-select: none;
+        }
+
+        .footer__address,
+        .footer__phone,
+        .footer__email {
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 12px;
+            color: #cbd2db;
+        }
+
+        .footer__link {
+            color: #cbd2db;
+            text-decoration: none;
+            transition: color 0.25s ease;
+
+            &:hover {
+                color: #fff;
+            }
+        }
+    }
+
+    // BOTTOM COPYRIGHT
+    &__bottom {
+        margin-top: 40px;
+        border-top: 1px solid #2e4a72;
+        padding-top: 38px;
+        font-size: 14px;
+        color: #9bb4d7;
+        text-align: center;
+        user-select: none;
+    }
+
+    // RESPONSIVE (mobil qurilmalar)
+    @media (max-width: 768px) {
+        &__container {
+            flex-direction: column;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        &__left,
+        &__links,
+        &__contact {
+            flex: 1 1 100%;
+            max-width: 100%;
+        }
+    }
+}
+
+// ...existing code...
+
+@media (max-width: 1440px) {
+    .footer__container {
+        gap: 30px;
+    }
+    .footer__payment {
+        width: 60px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .footer {
+        padding: 35px 10px;
+    }
+    .footer__container {
+        gap: 25px;
+    }
+    .footer__left .footer__logo {
+        font-size: 24px;
+    }
+    .footer__payment {
+        width: 50px;
+    }
+}
+
+@media (max-width: 768px) {
+    .footer {
+        padding: 25px 5px;
+    }
+    .footer__container {
+        flex-direction: column;
+        gap: 30px;
+        align-items: flex-start;
+    }
+    .footer__left,
+    .footer__links,
+    .footer__contact {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+    .footer__left .footer__logo {
+        font-size: 20px;
+    }
+    .footer__description,
+    .footer__address,
+    .footer__phone,
+    .footer__email {
+        font-size: 13px;
+    }
+    .footer__payment {
+        width: 40px;
+    }
+    .footer__bottom {
+        font-size: 13px;
+        padding-top: 25px;
+    }
+}
+
+@media (max-width: 425px) {
+    .footer {
+        padding: 15px 2px;
+    }
+    .footer__left .footer__logo {
+        font-size: 17px;
+    }
+    .footer__title {
+        font-size: 18px;
+    }
+    .footer__description,
+    .footer__address,
+    .footer__phone,
+    .footer__email {
+        font-size: 12px;
+    }
+    .footer__payment {
+        width: 28px;
+    }
+    .footer__bottom {
+        font-size: 12px;
+        padding-top: 15px;
+    }
+}
+
+@media (max-width: 375px) {
+    .footer {
+        padding: 10px 1px;
+    }
+    .footer__left .footer__logo {
+        font-size: 15px;
+    }
+    .footer__title {
+        font-size: 16px;
+    }
+    .footer__description,
+    .footer__address,
+    .footer__phone,
+    .footer__email {
+        font-size: 11px;
+    }
+    .footer__payment {
+        width: 22px;
+    }
+    .footer__bottom {
+        font-size: 11px;
+        padding-top: 10px;
+    }
+}
+
+@media (max-width: 325px) {
+    .footer {
+        padding: 6px 0;
+    }
+    .footer__left .footer__logo {
+        font-size: 13px;
+    }
+    .footer__title {
+        font-size: 14px;
+    }
+    .footer__description,
+    .footer__address,
+    .footer__phone,
+    .footer__email {
+        font-size: 10px;
+    }
+    .footer__payment {
+        width: 16px;
+    }
+    .footer__bottom {
+        font-size: 10px;
+        padding-top: 6px;
+    }
+}

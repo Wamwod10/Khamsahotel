@@ -1,0 +1,288 @@
+.header {
+    // margin-top: 84px;
+    position: relative !important;
+    width: 100%;
+    height: 91.1vh;
+    background: url("/public/1.png") no-repeat center/cover;
+    z-index: 1;
+    
+    .container {
+        padding: 0;
+    }
+
+    &__big-box {
+        width: 100%;
+        height: 91.1vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+    }
+
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.55); // ozgina qoraytirildi
+        z-index: 0;
+    }
+
+    .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        @media (max-width: 900px) {
+            flex-direction: column;
+            gap: 2rem;
+        }
+    }
+
+    &__box {
+        position: relative;
+        z-index: 10;
+        max-width: 800px;
+        margin: 20px;
+    }
+
+    &__title {
+        color: #fff;
+        font-size: 3.7rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 1rem;
+        text-transform: capitalize;
+        text-shadow: 0 2px 6px rgba(61, 61, 61, 0.7);
+
+        & span {
+            font-weight: 700;
+            color: rgb(255, 169, 48);
+        }
+
+        @media (max-width: 600px) {
+            font-size: 2.8rem;
+        }
+    }
+
+    &__text {
+        color: #ddd;
+        font-size: 1.25rem;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+
+        @media (max-width: 600px) {
+            font-size: 1rem;
+        }
+    }
+
+    &__conditions-box {
+        display: flex;
+        align-items: center;
+        column-gap: 30px;
+        backdrop-filter: blur(20px);
+        padding: 10px 15px;
+        border-radius: 10px !important;
+        width: max-content;
+        background: rgba(255, 255, 255, 0.15);
+        z-index: 99;
+
+        @media (max-width: 600px) {
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+        }
+    }
+
+    &__conditions-text {
+        color: #fff;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    &__icon {
+        animation: icons 2s linear infinite alternate;
+
+        @keyframes icons {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    }
+
+    &__form {
+        background-color: #fff;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        max-width: 600px;
+        width: 100%;
+        margin-top: 2rem;
+        z-index: 10;
+        position: relative;
+
+        &-title {
+            font-size: 1.8rem;
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: rgb(255, 169, 48);
+        }
+
+        &-text {
+            font-size: 1rem;
+            text-align: center;
+            color: #555;
+            margin-bottom: 1.5rem;
+        }
+
+        &-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+
+            @media (max-width: 600px) {
+                flex-direction: column;
+            }
+        }
+
+        &-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+
+            label {
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+                color: #333;
+            }
+
+            input,
+            select {
+                padding: 0.7rem;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                font-size: 1rem;
+                transition: border-color 0.3s;
+                background-image: none;
+
+                &:focus {
+                    border-color: #ffa930;
+                    outline: none;
+                }
+            }
+
+            select {
+                padding-right: 2.5rem;
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                background-color: #fff;
+                cursor: pointer;
+            }
+
+            &.full-width {
+                width: 100%;
+                margin-bottom: 1rem;
+            }
+        }
+
+        &-button {
+            width: 100%;
+            background-color: rgb(255, 169, 48);
+            color: #fff;
+            padding: 0.9rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+
+            &:hover {
+                background-color: #16324f;
+            }
+        }
+    }
+
+    &__info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 1.5rem;
+        font-size: 0.95rem;
+        color: #444;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+
+        span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+    }
+
+    &__form-group {
+        position: relative;
+
+        .custom-select {
+            position: relative;
+
+            select {
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                width: 100%;
+                padding: 0.7rem 2.5rem 0.7rem 1rem;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                font-size: 1rem;
+                background-color: #fff;
+                cursor: pointer;
+            }
+
+            .select-icon {
+                position: absolute;
+                top: 50%;
+                right: 1rem;
+                transform: translateY(-50%);
+                pointer-events: none;
+                color: #777;
+                font-size: 0.9rem;
+            }
+        }
+    }
+
+    &__color1 {
+        color: rgb(255, 169, 48);
+        display: flex;
+        align-items: center;
+    }
+
+    &__color2 {
+        color: rgb(63, 224, 0);
+        display: flex;
+        align-items: center;
+    }
+
+    &__color3 {
+        color: rgb(189, 0, 0);
+        display: flex;
+        align-items: center;
+    }
+
+    .disabled-option {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+}

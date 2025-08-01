@@ -1,0 +1,200 @@
+.gallery {
+    margin-top: 100px;
+    padding: 3rem 1rem;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: #0a1f44;
+
+    &__title {
+        text-align: center;
+        text-transform: capitalize;
+        font-size: 40px;
+        font-weight: 600;
+        color: rgb(255, 169, 48);
+        margin-bottom: 5rem;
+    }
+
+
+
+    .gallery__filters {
+        display: none;
+    }
+
+    &__filters {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 3rem;
+
+        &-btn {
+            padding: 0.6rem 1.8rem;
+            font-weight: 700;
+            border-radius: 30px;
+            border: 2px solid #0a1f44;
+            background: transparent;
+            color: #0a1f44;
+            cursor: pointer;
+            transition: all 0.3s ease;
+
+            &:hover,
+            &.active {
+                background: #0a1f44;
+                color: #fff;
+                box-shadow: 0 0 12px rgba(10, 31, 68, 0.8);
+            }
+
+            &:focus {
+                outline: 3px solid #1e3a8a;
+                outline-offset: 2px;
+            }
+        }
+    }
+
+    &__grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.8rem;
+
+
+        .gallery__item {
+           width: calc(33.333% - 1.8rem);
+            height: 280px;
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(10, 31, 68, 0.1);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+
+            img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+                border-radius: 16px;
+                transition: transform 0.6s ease, filter 0.6s ease;
+
+                &::before {
+                    position: absolute;
+                    content: "";
+                    width: 100%;
+                    height: 100%;
+                    background: #000;
+                }
+            }
+
+            &:hover,
+            &:focus {
+                transform: translateY(-8px);
+                box-shadow: 0 15px 35px rgba(10, 31, 68, 0.3);
+
+
+                img {
+                    transform: scale(1.1);
+                    filter: brightness(1.1);
+                }
+
+                .gallery__overlay {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .gallery__overlay {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 1.2rem 1rem;
+                background: linear-gradient(180deg, transparent 0%, rgba(255, 169, 48, 0.64) 90%);
+                color: white;
+                opacity: 0;
+                transform: translateY(50%);
+                transition: opacity 0.3s ease, transform 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 0.7rem;
+                border-bottom-left-radius: 16px;
+                border-bottom-right-radius: 16px;
+                font-weight: 600;
+                font-size: 1.2rem;
+
+                .gallery__icon {
+                    font-size: 1.6rem;
+                    color: #fff;
+                    opacity: 0.9;
+                }
+            }
+        }
+    }
+}
+
+.lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(59, 34, 0, 0.923);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 1rem;
+
+    &__img {
+        max-width: 85vw;
+        max-height: 85vh;
+        border-radius: 20px;
+        box-shadow: 0 0 35px rgba(0, 0, 0, 0.5);
+        user-select: none;
+    }
+
+    &__close,
+    &__prev,
+    &__next {
+        position: absolute;
+        background: rgb(255, 169, 48);
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        color: white;
+        font-size: 2rem;
+        cursor: pointer;
+        // padding: 10px 22px;
+        border-radius: 50%;
+        transition: 0.3s ease;
+        user-select: none;
+    }
+
+    &__close {
+        top: 6.5rem;
+        right: 2.5rem;
+
+        &:hover {
+            background: #0a1f44;
+        }
+    }
+
+    &__prev {
+        top: 50%;
+        left: 2rem;
+        transform: translateY(-50%);
+
+        &:hover {
+            background: #0a1f44;
+        }
+    }
+
+    &__next {
+        top: 50%;
+        right: 2rem;
+        transform: translateY(-50%);
+
+        &:hover {
+            background: #0a1f44;
+        }
+    }
+    .lightbox__close{
+        display: none;
+    }
+}

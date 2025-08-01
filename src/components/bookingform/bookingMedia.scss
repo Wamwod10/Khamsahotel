@@ -1,0 +1,54 @@
+@media (max-width:1024px) {
+    .booking {
+        &__box {
+            justify-content: space-around;
+            row-gap: 35px;
+        }
+    }
+}
+
+@media (max-width:768px) {
+    .booking {
+        &__box {
+            justify-content: center;
+            column-gap: 25px;
+        }
+
+        &__box-offers {
+            max-width: 340px;
+            height: 220px;
+
+        }
+
+        &__title {
+            font-size: 38px;
+        }
+
+        &__text {
+            font-size: 17px;
+        }
+    }
+}
+
+@media (max-width:425px) {
+    .booking {
+        &__box-title {
+            font-size: 18px;
+        }
+    }
+}
+
+@media (max-width:320px) {
+    .booking {
+        &__title{
+            font-size: 29px;
+        }
+        &__text{
+            font-size: 15px;
+        }
+        &__box-text {
+            font-size: 13px;
+            width: 270px;
+        }
+    }
+}
