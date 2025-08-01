@@ -1,5 +1,5 @@
 import React from "react";
-import "./Footer.scss";
+import "./footer.scss";
 import { NavLink } from "react-router-dom";
 import { FaTelegramPlane } from "react-icons/fa";
 import { FiInstagram } from "react-icons/fi";
