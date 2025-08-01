@@ -100,16 +100,16 @@ const Footer = () => {
           </p>
           <div className="footer__payments">
             <a href="">
-              <img src="/public/19.png" alt="" className="footer__payment" />
+              <img src="./public/19.png" alt="" className="footer__payment" />
             </a>
             <a href="">
-              <img src="/public/20.svg" alt="" className="footer__payment" />
+              <img src="./public/20.svg" alt="" className="footer__payment" />
             </a>
             <a href="">
-              <img src="/public/21.png" alt="" className="footer__payment" />
+              <img src="./public/21.png" alt="" className="footer__payment" />
             </a>
             <a href="">
-              <img src="/public/22.svg" alt="" className="footer__payment" />
+              <img src="./public/22.svg" alt="" className="footer__payment" />
             </a>
           </div>
         </div>
