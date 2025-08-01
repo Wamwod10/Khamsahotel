@@ -3,12 +3,12 @@ import "./RoomCard.scss";
 import { FaWifi } from "react-icons/fa6";
 import { TbBath } from "react-icons/tb";
 import { MdOutlineLocalCafe, MdCleaningServices } from "react-icons/md";
-import { PiLockers } from "react-icons/pi";
+import { PiLockers } from "react-icons/pi"; 
 import { useTranslation } from "react-i18next";
 import { FaRulerCombined } from "react-icons/fa";
 import { FiUser, FiMapPin } from "react-icons/fi";
-import RoomModal from "./RoomModal"; // MODAL COMPONENT
-import NoticePopup from "./NoticePopup"; // NOTICE COMPONENT
+import RoomModal from "./RoomModal"; 
+import NoticePopup from "./NoticePopup"; 
 
 const standardImages = [
   "/5.jpg",
@@ -17,7 +17,7 @@ const standardImages = [
   "/23.jpg",
 ];
 
-const familyImages = ["/public/4.jpg", "/public/25.jpg"];
+const familyImages = ["/4.jpg", "/25.jpg"];
 
 const RoomCard = () => {
   const { t } = useTranslation();
@@ -62,7 +62,6 @@ const RoomCard = () => {
         </p>
 
         <div className="room-card__list">
-          {/* Standard Room */}
           <div className="room-card__item">
             <div className="room-card__thumbnails">
               {standardImages.map((img, idx) => (
