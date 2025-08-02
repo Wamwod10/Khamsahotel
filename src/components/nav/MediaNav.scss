@@ -209,7 +209,13 @@
 
     @media (max-width: 390px) {
         &__box {
-            gap: 59px;
+            gap: 50px;
+        }
+    }
+
+    @media (max-width: 381px) {
+        &__box {
+            gap: 45px;
         }
     }
 
