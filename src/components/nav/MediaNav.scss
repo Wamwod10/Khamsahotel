@@ -1,5 +1,5 @@
 .nav {
-     &__close-btn {
+    &__close-btn {
         display: none; // default: yashiringan
         background: none;
         border: none;
@@ -67,7 +67,7 @@
             font-size: 30px;
             font-weight: bold;
             position: relative;
-           left: -3px;
+            left: -3px;
             z-index: 10002;
             cursor: pointer;
             color: rgb(69, 69, 69);
@@ -84,7 +84,6 @@
             z-index: 10001;
             background: none;
             border: none;
-
         }
 
         &__list {
@@ -100,8 +99,8 @@
             row-gap: 12px;
             padding: 24px 20px;
             transform: translateX(100%);
-            transition: transform .3s ease;
-            box-shadow: -5px 0 15px rgba(46, 46, 46, .2);
+            transition: transform 0.3s ease;
+            box-shadow: -5px 0 15px rgba(46, 46, 46, 0.2);
             z-index: 9999;
             font-size: 15px;
             border-radius: 0 0 0 10px;
@@ -122,7 +121,7 @@
                 left: 0;
                 width: 100%;
                 height: calc(100vh - var(--nav-h, 72px));
-                background: rgba(0, 0, 0, .15);
+                background: rgba(0, 0, 0, 0.15);
                 z-index: 9990;
             }
         }
@@ -146,16 +145,13 @@
         }
     }
 
-    @media (max-width:1024px) {
-        
-        
+    @media (max-width: 1024px) {
         &__lang-btn {
             font-size: 20px;
         }
 
         &__booking-link {
             font-size: 17px;
-
         }
 
         &__logo a {
@@ -168,8 +164,6 @@
     }
 
     @media (max-width: 768px) {
-        
-
         &__logo a {
             display: none;
         }
@@ -187,12 +181,13 @@
         }
     }
 
-    @media (max-width:425px) {
+    @media (max-width: 425px) {
         &__box {
             gap: 100px;
         }
 
-        &__lang {}
+        &__lang {
+        }
 
         &__main-box {
             gap: 10px;
@@ -207,7 +202,7 @@
         }
     }
 
-    @media (max-width:375px) {
+    @media (max-width: 375px) {
         .mobile-lang {
             width: 100%;
             display: flex;
@@ -225,13 +220,11 @@
             }
         }
 
-
         .nav__main-box .nav__lang {
             display: none;
         }
 
         &__list {
-
             gap: 12px;
         }
 
@@ -239,5 +232,17 @@
             justify-content: space-between;
             gap: 60px;
         }
+    }
+}
+
+@media (max-width: 410px) {
+    &__box {
+        gap: 70px;
+    }
+}
+
+@media (max-width: 390px) {
+    &__box {
+        gap: 60px;
     }
 }
