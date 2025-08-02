@@ -49,7 +49,7 @@ const Roomcard = () => {
                 </div>
               </div>
               <p className="roomcard__location roomcard__boxes-text">
-                <FaMapLocationDot /> {t('TashkentTrainHotel')}
+                <FaMapLocationDot /> {t('TashkentAirportHotel')}
               </p>
               <p className="roomcard__boxes-text">
                 {t("roomtext1")}
@@ -100,7 +100,7 @@ const Roomcard = () => {
                 </div>
               </div>
               <p className="roomcard__location roomcard__boxes-text">
-                <FaMapLocationDot /> {t("TashkentTrainHotel")}
+                <FaMapLocationDot /> {t("TashkentAirportHotel")}
               </p>
               <p className="roomcard__boxes-text">
                 {t("roomtext2")}

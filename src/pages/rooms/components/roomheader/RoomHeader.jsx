@@ -4,8 +4,11 @@ import { IoCalendar } from "react-icons/io5";
 import "./RoomHeader.scss";
 import { NavLink } from "react-router-dom";
 import NoticePopup from "../roomcard/NoticePopup.jsx";
+import { useTranslation } from "react-i18next";
 
 export default function RoomHeader() {
+  const { t } = useTranslation();
+  
   const [bookingInfo, setBookingInfo] = useState({
     checkIn: "Select date",
     checkOut: "Select date",
@@ -34,7 +37,7 @@ export default function RoomHeader() {
     }
   }, []);
 
-  const { checkIn, checkOut, guests, rooms, hotel } = bookingInfo;
+  const { checkIn, checkOut, guests, rooms,} = bookingInfo;
 
   const handleBack = () => {
     setShowNotice(false);
@@ -51,7 +54,7 @@ export default function RoomHeader() {
           <div className="room-header__item">
             <IoCalendar className="room-header__icon" />
             <div>
-              <p className="room-header__label">Check-in</p>
+              <p className="room-header__label">{t("check-in")}</p>
               <p className="room-header__value">{checkIn}</p>
             </div>
           </div>
@@ -59,7 +62,7 @@ export default function RoomHeader() {
           <div className="room-header__item">
             <IoCalendar className="room-header__icon" />
             <div>
-              <p className="room-header__label">Check-out</p>
+              <p className="room-header__label">{t("check-out")}</p>
               <p className="room-header__value">{checkOut}</p>
             </div>
           </div>
@@ -67,7 +70,7 @@ export default function RoomHeader() {
           <div className="room-header__item">
             <FaUser className="room-header__icon" />
             <div>
-              <p className="room-header__label">Guests</p>
+              <p className="room-header__label">{t("guests")}</p>
               <p className="room-header__value">{guests}</p>
             </div>
           </div>
@@ -75,7 +78,7 @@ export default function RoomHeader() {
           <div className="room-header__item">
             <FaBed className="room-header__icon" />
             <div>
-              <p className="room-header__label">Rooms</p>
+              <p className="room-header__label">{t("rooms")}</p>
               <p className="room-header__value">{rooms}</p>
             </div>
           </div>
@@ -83,8 +86,8 @@ export default function RoomHeader() {
           <div className="room-header__item">
             <FaHotel className="room-header__icon" />
             <div>
-              <p className="room-header__label">Hotel</p>
-              <p className="room-header__value">{hotel}</p>
+              <p className="room-header__label">{t("hotel")}</p>
+              <p className="room-header__value">{t("TashkentAirportHotel")}</p>
             </div>
           </div>
         </div>
