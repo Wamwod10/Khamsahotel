@@ -201,6 +201,17 @@
             font-size: 14px;
         }
     }
+    @media (max-width: 410px) {
+        &__box {
+            gap: 70px;
+        }
+    }
+
+    @media (max-width: 390px) {
+        &__box {
+            gap: 59px;
+        }
+    }
 
     @media (max-width: 375px) {
         .mobile-lang {
@@ -224,25 +235,13 @@
             display: none;
         }
 
-        &__list {
+        .nav__list {
             gap: 12px;
         }
 
-        &__box {
+        .nav__box {
             justify-content: space-between;
             gap: 60px;
         }
-    }
-}
-
-@media (max-width: 410px) {
-    &__box {
-        gap: 70px;
-    }
-}
-
-@media (max-width: 390px) {
-    &__box {
-        gap: 59px;
     }
 }
