@@ -8,13 +8,13 @@ import { useTranslation } from "react-i18next";
 
 export default function RoomHeader() {
   const { t } = useTranslation();
-  
+
   const [bookingInfo, setBookingInfo] = useState({
-    checkIn: "Select date",
-    checkOut: "Select date",
+    checkIn: null,
+    checkOut: null,
     guests: "1 Guest",
     rooms: "Standard Room",
-    hotel: "Tashkent Airport Hotel",
+    hotel: t("TashkentAirportHotel"),
   });
 
   const [showNotice, setShowNotice] = useState(false);
@@ -24,27 +24,47 @@ export default function RoomHeader() {
     const savedData = localStorage.getItem("bookingInfo");
     if (savedData) {
       const data = JSON.parse(savedData);
-      setBookingInfo(data);
 
+      setBookingInfo({
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        guests: data.guests,
+        rooms: data.rooms,
+        hotel: t("TashkentAirportHotel"),
+      });
+
+      // Extract number from guests string, e.g. "2 Guest" => 2
       const guestNum = parseInt(data.guests);
 
       if (guestNum > 3) {
-        setNoticeMessage(
-          "Hurmatli mijoz, Bizda 3 kishigacha bo'lgan xonalarimiz mavjud. Iltimos, qo'shimcha mehmonlar uchun alohida xona tanlashni ko'rib chiqing. Asosiy saxifada sizga mos bo'lgan variantlarni ko'rishingiz mumkin."
-        );
+        setNoticeMessage(t("tooManyGuestsMessage"));
         setShowNotice(true);
       }
     }
-  }, []);
+  }, [t]);
 
-  const { checkIn, checkOut, guests, rooms,} = bookingInfo;
-
-  const handleBack = () => {
-    setShowNotice(false);
+  // Guests uchun mapping
+  const guestKeyMap = {
+    "1 Guest": "guestCount_1",
+    "2 Guest": "guestCount_2",
+    "3 Guest": "guestCount_3",
+    "4 Guest": "guestCount_4",
+    "5 Guest": "guestCount_5",
+    "6 Guest": "guestCount_6",
+    "2 Guests": "guestCount_2",
+    "3 Guests": "guestCount_3",
+    "4 Guests": "guestCount_4",
+    "5 Guests": "guestCount_5",
+    "6 Guests": "guestCount_6",
   };
 
-  const handleContinue = () => {
-    setShowNotice(false);
+  // Rooms uchun mapping
+  const roomKeyMap = {
+    "Standard Room": "roomType_standard",
+    "Family Room": "roomType_family",
+    "2 Standard Rooms": "roomType_twoStandard",
+    "2 Family Rooms": "roomType_twoFamily",
+    "Standard + 1 Family room": "roomType_mixed",
   };
 
   return (
@@ -55,7 +75,9 @@ export default function RoomHeader() {
             <IoCalendar className="room-header__icon" />
             <div>
               <p className="room-header__label">{t("check-in")}</p>
-              <p className="room-header__value">{checkIn}</p>
+              <p className="room-header__value">
+                {bookingInfo.checkIn || t("selectDate")}
+              </p>
             </div>
           </div>
 
@@ -63,7 +85,9 @@ export default function RoomHeader() {
             <IoCalendar className="room-header__icon" />
             <div>
               <p className="room-header__label">{t("check-out")}</p>
-              <p className="room-header__value">{checkOut}</p>
+              <p className="room-header__value">
+                {bookingInfo.checkOut || t("selectDate")}
+              </p>
             </div>
           </div>
 
@@ -71,7 +95,11 @@ export default function RoomHeader() {
             <FaUser className="room-header__icon" />
             <div>
               <p className="room-header__label">{t("guests")}</p>
-              <p className="room-header__value">{guests}</p>
+              <p className="room-header__value">
+                {bookingInfo.guests
+                  ? t(guestKeyMap[bookingInfo.guests] || bookingInfo.guests)
+                  : t("guestCount_1")}
+              </p>
             </div>
           </div>
 
@@ -79,7 +107,9 @@ export default function RoomHeader() {
             <FaBed className="room-header__icon" />
             <div>
               <p className="room-header__label">{t("rooms")}</p>
-              <p className="room-header__value">{rooms}</p>
+              <p className="room-header__value">
+                {t(roomKeyMap[bookingInfo.rooms] || "roomType_standard")}
+              </p>
             </div>
           </div>
 
@@ -92,18 +122,20 @@ export default function RoomHeader() {
           </div>
         </div>
 
-        <NavLink to="/" className="room-header__button">
-          <FaPen className="room-header__button-icon" />
-          Modify Search
+        <NavLink
+          to="/"
+          state={{ clearSearch: true }}
+          className="room-header__button"
+        >
+          <FaPen className="room-header__button-icon" /> {t("modifysearch")}
         </NavLink>
       </div>
 
-      {/* Notice Popup */}
       {showNotice && (
         <NoticePopup
           message={noticeMessage}
-          onBack={handleBack}
-          onContinue={handleContinue}
+          onBack={() => setShowNotice(false)}
+          onContinue={() => setShowNotice(false)}
         />
       )}
     </div>

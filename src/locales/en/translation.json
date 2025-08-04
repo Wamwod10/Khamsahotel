@@ -6,7 +6,7 @@
   "contact": "Contact",
   "mybooking": "My Booking",
   "booknow": "Book Now",
-  
+
   "headertitle": "Where Luxury Meets Tranquility",
   "khamsahotel": "Khamsa Hotel",
   "headertext": "Away from the noise, close to all you need. Khamsa Hotel blends comfort, relaxation, and top service",
@@ -41,7 +41,7 @@
     "twoFamilyRooms": "2 Family Rooms",
     "standardPlusFamilyRoom": "Standard + 1 Family Room"
   },
-  
+
   "roomcardtitle": "Featured Rooms",
   "roomcardtext": "Choose from our carefully selected accommodations",
   "roomprice1": "$40 / to 2 hour",
@@ -62,7 +62,7 @@
   "roomlockers": "Secure Lockers",
   "roomcleaning": "Housekeeping",
   "roomtext3": "Standard single room with cozy bed, private bathroom, free Wi-Fi, and air conditioning",
-  
+
   "whykhamsa": "Why Khamsa?",
   "bookingtext": "Experience exceptional hospitality with our premium amenities and services",
   "bookingwifi": "Free High-Speed WiFi",
@@ -76,7 +76,7 @@
   "bookingtext4": "Secure parking space available for all guests",
   "bookingtext5": "Start your day with our delicious continental breakfast",
   "bookingtext6": "Personal assistance for tours, reservations, and recommendations",
-  
+
   "khamsagallery": "Khamsa Hotel Gallery",
   "hotelview": "Hotel View (Airport)",
   "reception": "Reception",
@@ -89,7 +89,7 @@
   "familyroom": "Family Room",
   "restroom": "Restroom",
   "bath": "Bathroom",
-  
+
   "explorenear": "Places near the Khamsa Hotel",
   "neartext": "Discover the best places to visit around Khamsa Hotel",
   "tashkentrailway": "Banking Services",
@@ -108,9 +108,9 @@
   "hotellocate": "See Hotel Location",
   "hazratiimam": " Baggage Services",
   "hazratiimamtext": "Wrap, store, or secure your luggage anytime",
-  
+
   "logo": "Khamsa Hotel",
-  "description": "Located in the heart of the city, this hotel offers a peaceful and comfortable retreat for travelers, providing warm hospitality and top quality service to all guests.",
+  "description": "Conveniently located inside the airport, this hotel offers a quiet and comfortable retreat for travelers in transit, providing warm hospitality and top-quality service to all guests",
   "quickLinks": "Quick Links",
   "footerrooms": "Rooms",
   "footerservices": "Services",
@@ -118,8 +118,44 @@
   "footercontact": "Contact",
   "footermyBooking": "My Booking",
   "footercontactInfo": "Contact Info",
-  "address": "45 Amir Temur Street, near Toshkent Metro, City Center",
+  "address": "Inside Tashkent International Airport, near Terminal 2, Tashkent city",
+  "rights": "All rights reserved.",
+
+  "selectDate": "Select date",
+  "hotelName_airport": "Tashkent Airport Hotel",
+  "modifysearch": "Modify Search",
+  "roomtitle": "Hourly & Daily Room Options",
+  "roomtext": "Explore our flexible room options designed for short or extended stays. Whether you need a few hours or a full day, we have got the perfect room for you.",
+
+  "guestCount_1": "1 Guest",
+  "guestCount_2": "2 Guests",
+  "guestCount_3": "3 Guests",
+  "guestCount_4": "4 Guests",
+  "guestCount_5": "5 Guests",
+  "guestCount_6": "6 Guests",
+  "roomType_standard": "Standard Room",
+  "roomType_family": "Family Room",
+  "roomType_twoStandard": "2 Standard Rooms",
+  "roomType_twoFamily": "2 Family Rooms",
+  "roomType_mixed": "Standard + 1 Family Room",
+  "tooManyGuestsMessage": "Dear customer, we offer rooms for up to 3 guests only.",
+
+  "numberrooms": "Number of Rooms",
+  "roomcardtext1": "A thoughtfully designed space offering peace, simplicity, and comfort — perfect for solo travelers seeking rest and privacy just minutes from the airport.",
+  "securitycameras": "Security Cameras",
+  "booknow1": "Book Now",
+  "usbcharging": "USB Charging Ports",
+  "roomcardtext2": "A spacious and cozy room designed for families — enjoy comfort and privacy just minutes from the airport",
+
+  "firstName": "First Name",
+  "lastName": "Last Name",
+  "enterFirstName": "Enter your first name",
+  "enterLastName": "Enter your last name",
+  "enterphonenumb": "Enter your phone number",
   "phone": "Phone",
   "email": "Email",
-  "rights": "All rights reserved."
+  "paymentMethod": "Payment Method",
+  "selectMethod": "Select a method",
+  "confirm": "Confirm",
+  "cancel": "Cancel"
 }

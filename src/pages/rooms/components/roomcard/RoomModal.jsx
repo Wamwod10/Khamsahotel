@@ -1,87 +1,109 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { MdArrowDropDown } from "react-icons/md";
-import "./RoomCard.scss"; 
+import { useTranslation } from "react-i18next";
+import "./RoomCard.scss";
 
-const RoomModal = ({ isOpen, onClose, room }) => {
-  if (!isOpen || !room) return null;
+const roomKeyMap = {
+  "Standard Room": "roomType_standard",
+  "Family Room": "roomType_family",
+  "2 Standard Rooms": "roomType_twoStandard",
+  "2 Family Rooms": "roomType_twoFamily",
+  "Standard + 1 Family room": "roomType_mixed",
+};
 
-  const { type, guests, hotel, checkIn, checkOut } = room;
+const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
+  const { t } = useTranslation();
+  const [bookingInfo, setBookingInfo] = useState({
+    checkIn: "",
+    checkOut: "",
+    hotel: t("TashkentAirportHotel"),
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem("bookingInfo");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setBookingInfo({
+        checkIn: parsed.checkIn,
+        checkOut: parsed.checkOut,
+        hotel: t("TashkentAirportHotel"),
+      });
+    }
+  }, [t]);
+
+  if (!isOpen) return null;
+
+  const { checkIn, checkOut, hotel } = bookingInfo;
 
   return (
     <div className="modal-main">
       <div className="modal-overlay">
         <div className="modal">
-          <h2 className="modal__title">Book Your Stay</h2>
+          <h2 className="modal__title">{t("bookyourstay")}</h2>
+
           <div className="modal__section">
-            <label>Check-In:</label>
-            <p>{checkIn}</p>
+            <label>{t("check-in")}:</label>
+            <p>{checkIn || "-"}</p>
           </div>
 
           <div className="modal__section">
-            <label>Check-Out:</label>
-            <p>{checkOut}</p>
+            <label>{t("check-out")}:</label>
+            <p>{checkOut || "-"}</p>
           </div>
 
           <div className="modal__section">
-            <label>Room Type:</label>
-            <p>{type}</p>
+            <label>{t("rooms")}:</label>
+            <p>{rooms ? t(roomKeyMap[rooms] || rooms) : "-"}</p>
           </div>
 
           <div className="modal__section">
-            <label>Guests:</label>
-            <p>{guests}</p>
+            <label>{t("guests")}:</label>
+            <p>{guests ? t(guests) : "-"}</p>
           </div>
 
           <div className="modal__section">
-            <label>Hotel:</label>
+            <label>{t("hotel")}:</label>
             <p>{hotel}</p>
           </div>
 
           {/* Form */}
           <form className="modal__form">
             <div className="modal__field">
-              <label>First Name</label>
-              <input type="text" placeholder="Enter your first name" required />
+              <label>{t("firstName")}</label>
+              <input type="text" placeholder={t("enterFirstName")} required />
             </div>
             <div className="modal__field">
-              <label>Last Name</label>
-              <input type="text" placeholder="Enter your last name" required />
+              <label>{t("lastName")}</label>
+              <input type="text" placeholder={t("enterLastName")} required />
             </div>
             <div className="modal__field">
-              <label>Phone</label>
-              <input type="tel" placeholder="+998..." required />
+              <label>{t("phone")}</label>
+              <input type="tel" placeholder={t("enterphonenumb")} required />
             </div>
             <div className="modal__field">
-              <label>Email</label>
-              <input type="email" placeholder="your@email.com" required />
+              <label>{t("email")}</label>
+              <input type="email" placeholder="Your@gmail.com" required />
             </div>
             <div className="modal__field custom-select">
-              <label htmlFor="payment-method">Payment Method</label>
+              <label htmlFor="payment-method">{t("paymentMethod")}</label>
               <div className="input-wrapper">
+                <img src="/28.png" alt="Octobank" className="input-icon" />
                 <input
-                  list="payment-methods"
                   id="payment-method"
                   name="payment-method"
-                  placeholder="Select a method"
-                  required
+                  value="Octobank"
+                  disabled
                 />
-                <MdArrowDropDown className="dropdown-icon" />
               </div>
-              <datalist id="payment-methods">
-                <option value="Click" />
-                <option value="Payme" />
-                <option value="Paypal" />
-                <option value="Stripe" />
-              </datalist>
             </div>
 
             {/* Buttons */}
             <div className="modal__buttons">
               <button type="submit" className="modal__confirm">
-                Confirm
+                {t("confirm")}
               </button>
               <button type="button" className="modal__cancel" onClick={onClose}>
-                Cancel
+                {t("cancel")}
               </button>
             </div>
           </form>

@@ -14,15 +14,15 @@ export default function Gallery() {
   const images = [
     { id: 1, src: "/12.jpg", altKey: "hotelview", category: "Outside" },
     { id: 2, src: "/8.jpg", altKey: "corridor", category: "Cafe" },
-    { id: 3, src: "/13.jpg", altKey: "standardtr", category: "Outside" },
+    { id: 3, src: "/13.jpg", altKey: "standard", category: "Outside" },
     { id: 4, src: "/4.jpg", altKey: "familyroom", category: "Room" },
     { id: 5, src: "/7.jpg", altKey: "reception", category: "Lobby" },
     { id: 6, src: "/10.jpg", altKey: "cafest", category: "Cafe" },
-    { id: 7, src: "/3.jpg", altKey: "standardair", category: "Room" },
+    { id: 7, src: "/3.jpg", altKey: "standard", category: "Room" },
     { id: 8, src: "/6.jpg", altKey: "restroom", category: "Bath" },
     { id: 9, src: "/9.jpg", altKey: "hallway", category: "Room" },
     { id: 10, src: "/11.jpg", altKey: "bf", category: "Outside" },
-    { id: 11, src: "/5.jpg", altKey: "standardtr", category: "Room" },
+    { id: 11, src: "/5.jpg", altKey: "standard", category: "Room" },
     { id: 12, src: "/14.jpg", altKey: "bath", category: "Outside" },
   ];
 

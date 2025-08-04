@@ -1,24 +1,22 @@
 import React, { useState } from "react";
 import "./RoomCard.scss";
-import './Rmedia/RCmedia.scss'
+import "./Rmedia/RCmedia.scss";
 import { FaWifi } from "react-icons/fa6";
 import { TbBath } from "react-icons/tb";
 import { MdOutlineLocalCafe, MdCleaningServices } from "react-icons/md";
-import { PiLockers } from "react-icons/pi"; 
+import { PiLockers } from "react-icons/pi";
 import { useTranslation } from "react-i18next";
 import { FaRulerCombined } from "react-icons/fa";
 import { FiUser, FiMapPin } from "react-icons/fi";
-import RoomModal from "./RoomModal"; 
-import NoticePopup from "./NoticePopup"; 
+import RoomModal from "./RoomModal";
+import NoticePopup from "./NoticePopup";
+import { GiCctvCamera } from "react-icons/gi";
+import { MdHeadsetMic } from "react-icons/md";
+import { LuCoffee } from "react-icons/lu";
 
-const standardImages = [
-  "/5.jpg",
-  "/24.jpg",
-  "/13.jpg",
-  "/23.jpg",
-];
+const standardImages = ["/5.jpg", "/24.jpg", "/13.jpg", "/23.jpg"];
 
-const familyImages = ["/4.jpg", "/25.jpg"];
+const familyImages = ["/4.jpg", "/25.jpg", "/26.jpg", "/27.jpg"];
 
 const RoomCard = () => {
   const { t } = useTranslation();
@@ -33,15 +31,19 @@ const RoomCard = () => {
 
   const openModalWithCheck = (roomData) => {
     if (roomData.type === "Standard Room" && roomData.guests > 1) {
-      setNoticeMessage("Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz");
+      setNoticeMessage(
+        "Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz"
+      );
       setShowNotice(true);
-      return; 
+      return;
     }
 
     if (roomData.type === "Family Room" && roomData.guests > 3) {
-      setNoticeMessage("Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz");
+      setNoticeMessage(
+        "Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz"
+      );
       setShowNotice(true);
-      return; 
+      return;
     }
 
     setSelectedRoom({
@@ -55,12 +57,8 @@ const RoomCard = () => {
   return (
     <div className="room-card">
       <div className="container">
-        <h1 className="room-card__title">Hourly & Daily Room Options</h1>
-        <p className="room-card__text">
-          Explore our flexible room options designed for short or extended
-          stays. Whether you need a few hours or a full day, we have got the
-          perfect room for you.
-        </p>
+        <h1 className="room-card__title">{t("roomtitle")}</h1>
+        <p className="room-card__text">{t("roomtext")}</p>
 
         <div className="room-card__list">
           <div className="room-card__item">
@@ -90,27 +88,24 @@ const RoomCard = () => {
             <div className="room-card__body">
               <div className="room-card__allprice">
                 <div className="room-card__prices">
-                  <span>$70 / 2hr</span>
-                  <span>$100 / 10hr</span>
-                  <span>$150 / day</span>
+                  <span>{t("roomprice1")}</span>
+                  <span>{t("roomprice2")}</span>
+                  <span>{t("roomprice3")}</span>
                 </div>
-                <p className="room-card__number">Number of Rooms: 23</p>
+                <p className="room-card__number">{t("numberrooms")}: 23</p>
               </div>
 
-              <h3 className="room-card__room-title">Standard Room</h3>
+              <h3 className="room-card__room-title">{t("standard")}</h3>
               <p className="room-card__info">
-                <FiUser /> 1 Guests &nbsp; | &nbsp; <FaRulerCombined /> 3.6 m²
+                <FiUser /> 1 {t("guest")} &nbsp; | &nbsp; <FaRulerCombined />{" "}
+                3.6 m²
               </p>
               <p className="room-card__location">
-                <FiMapPin /> Tashkent Airport Khamsa Hotel
+                <FiMapPin /> {t("TashkentAirportHotel")}
               </p>
-              <p className="room-card__desc">
-                A thoughtfully designed space offering peace, simplicity, and
-                comfort — perfect for solo travelers seeking rest and privacy
-                just minutes from the airport.
-              </p>
+              <p className="room-card__desc">{t("roomcardtext1")}</p>
 
-              <h3 className="room-card__features-title">Features:</h3>
+              <h3 className="room-card__features-title">{t("roomcardft")}:</h3>
               <div className="roomcard__ft-box room-card__ft-box">
                 <span className="roomcard__ft-span">
                   <FaWifi /> {t("roomwifi")}
@@ -118,9 +113,9 @@ const RoomCard = () => {
                 <span className="roomcard__ft-span">
                   <PiLockers /> {t("roomlockers")}
                 </span>
-                <span className="roomcard__ft-span">
+                {/* <span className="roomcard__ft-span">
                   <MdOutlineLocalCafe /> USB Charging Ports
-                </span>
+                </span> */}
                 <span className="roomcard__ft-span">
                   <TbBath /> {t("roombath")}
                 </span>
@@ -128,13 +123,13 @@ const RoomCard = () => {
                   <MdCleaningServices /> {t("roomcleaning")}
                 </span>
                 <span className="roomcard__ft-span">
-                  {t("roomcafe")}
+                  <LuCoffee /> {t("roomcafe")}
                 </span>
                 <span className="roomcard__ft-span">
-                  Security Cameras
+                  <GiCctvCamera /> {t("securitycameras")}
                 </span>
                 <span className="roomcard__ft-span">
-                  24/7 Reception
+                  <MdHeadsetMic /> {t("service24/7")}
                 </span>
               </div>
 
@@ -149,7 +144,7 @@ const RoomCard = () => {
                   })
                 }
               >
-                Book Now
+                {t("booknow1")}
               </button>
             </div>
           </div>
@@ -181,11 +176,11 @@ const RoomCard = () => {
             <div className="room-card__body">
               <div className="room-card__allprice">
                 <div className="room-card__prices">
-                  <span>$70 / 2hr</span>
-                  <span>$100 / 10hr</span>
-                  <span>$150 / day</span>
+                  <span>{t("roomprice4")}</span>
+                  <span>{t("roomprice5")}</span>
+                  <span>{t("roomprice6")}</span>
                 </div>
-                <p className="room-card__number">Number of Rooms: 1</p>
+                <p className="room-card__number">{t("numberrooms")}: 1</p>
               </div>
 
               <h3 className="room-card__room-title">Family Room</h3>
@@ -193,13 +188,9 @@ const RoomCard = () => {
                 <FiUser /> 3 Guests &nbsp; | &nbsp; <FaRulerCombined /> 9.5 m²
               </p>
               <p className="room-card__location">
-                <FiMapPin /> Tashkent Airport Khamsa Hotel
+                <FiMapPin /> {t("TashkentAirportHotel")}
               </p>
-              <p className="room-card__desc">
-                A thoughtfully designed space offering peace, simplicity, and
-                comfort — perfect for solo travelers seeking rest and privacy
-                just minutes from the airport.
-              </p>
+              <p className="room-card__desc">{t("roomcardtext2")}</p>
 
               <h3 className="room-card__features-title">Features:</h3>
               <div className="roomcard__ft-box room-card__ft-box">
@@ -210,7 +201,7 @@ const RoomCard = () => {
                   <PiLockers /> {t("roomlockers")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <MdOutlineLocalCafe /> USB Charging Ports
+                  <MdOutlineLocalCafe /> {t("usbcharging")}
                 </span>
                 <span className="roomcard__ft-span">
                   <TbBath /> {t("roombath")}
@@ -219,13 +210,14 @@ const RoomCard = () => {
                   <MdCleaningServices /> {t("roomcleaning")}
                 </span>
                 <span className="roomcard__ft-span">
+                  <LuCoffee />
                   {t("roomcafe")}
                 </span>
                 <span className="roomcard__ft-span">
-                  Security Cameras
+                  <GiCctvCamera /> {t("securitycameras")}
                 </span>
                 <span className="roomcard__ft-span">
-                  24/7 Reception
+                  <MdHeadsetMic /> 24/7 {t("reception")}
                 </span>
               </div>
 
@@ -240,7 +232,7 @@ const RoomCard = () => {
                   })
                 }
               >
-                Book Now
+                {t("booknow1")}
               </button>
             </div>
           </div>
@@ -260,7 +252,8 @@ const RoomCard = () => {
         <RoomModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          room={selectedRoom}
+          guests={selectedRoom.guests}
+          rooms={selectedRoom.type}
         />
       )}
     </div>

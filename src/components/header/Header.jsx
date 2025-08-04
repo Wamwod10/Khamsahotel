@@ -9,10 +9,12 @@ import { AiOutlineSafety } from "react-icons/ai";
 import { FaCircleCheck } from "react-icons/fa6";
 import { MdOutlineCancel } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 const Header = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const roomKeys = {
     "Standard Room": "standardRoom",
@@ -22,36 +24,24 @@ const Header = () => {
     "Standard + 1 Family room": "standardPlusFamilyRoom",
   };
 
+  // Booking states
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState("1 Guest");
   const [rooms, setRooms] = useState("Standard Room");
-  // const [hotel, setHotel] = useState("Tashkent Airport Hotel");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (!checkIn || !checkOut || !guests || !rooms) {
-      alert("Please fill in all fields!");
-      return;
+  // Clear booking info if instructed
+  useEffect(() => {
+    if (location.state?.clearSearch) {
+      localStorage.removeItem("bookingInfo");
+      setCheckIn("");
+      setCheckOut("");
+      setGuests("1 Guest");
+      setRooms("Standard Room");
     }
+  }, [location.state]);
 
-    // 👉 Ma'lumotlarni localStorage'ga saqlash
-    localStorage.setItem(
-      "bookingInfo",
-      JSON.stringify({ checkIn, checkOut, guests, rooms })
-    );
-
-    const queryParams = new URLSearchParams({
-      checkIn,
-      checkOut,
-      guests,
-      rooms,
-    });
-
-    navigate(`/rooms?${queryParams.toString()}`);
-  };
-
+  // Helpers
   const getNextDay = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -77,8 +67,10 @@ const Header = () => {
     }
   };
 
+  // Extract number from "X Guest(s)"
   const getGuestCount = (guestStr) => parseInt(guestStr);
 
+  // Check room-guest compatibility
   const isRoomSuitableForGuests = (roomOption, guestCount) => {
     switch (roomOption) {
       case "Standard Room":
@@ -96,22 +88,46 @@ const Header = () => {
     }
   };
 
+  // Adjust room selection if not suitable
   useEffect(() => {
     const guestCount = getGuestCount(guests);
-
     if (!isRoomSuitableForGuests(rooms, guestCount)) {
       if (guestCount === 1) setRooms("Standard Room");
       else if (guestCount === 2) setRooms("Family Room");
       else if (guestCount === 3 || guestCount === 4)
         setRooms("Standard + 1 Family room");
-      else if (guestCount === 5 || guestCount === 6) setRooms("2 Family Rooms");
+      else if (guestCount >= 5 && guestCount <= 6) setRooms("2 Family Rooms");
       else setRooms("Standard Room");
     }
   }, [guests, rooms]);
 
+  // Disable unsuitable options
   const isDisabled = (option) => {
     const guestCount = getGuestCount(guests);
     return !isRoomSuitableForGuests(option, guestCount);
+  };
+
+  // Submit handler
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!checkIn || !checkOut || !guests || !rooms) {
+      alert(t("fillAllFields") || "Please fill in all fields!");
+      return;
+    }
+
+    const bookingInfo = { checkIn, checkOut, guests, rooms, hotel: t("TashkentAirportHotel") };
+
+    localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
+
+    const queryParams = new URLSearchParams({
+      checkIn,
+      checkOut,
+      guests,
+      rooms,
+    });
+
+    navigate(`/rooms?${queryParams.toString()}`);
   };
 
   return (
@@ -125,20 +141,16 @@ const Header = () => {
             <p className="header__text">{t("headertext")}</p>
             <div className="header__conditions-box">
               <p className="header__conditions-text">
-                <FaWifi />
-                {t("freewifi")}
+                <FaWifi /> {t("freewifi")}
               </p>
               <p className="header__conditions-text">
-                <IoCarSport />
-                {t("freeparking")}
+                <IoCarSport /> {t("freeparking")}
               </p>
               <p className="header__conditions-text">
-                <GiCoffeeCup />
-                {t("cafe")}
+                <GiCoffeeCup /> {t("cafe")}
               </p>
               <p className="header__conditions-text">
-                <IoTimeOutline className="header__icon" />
-                {t("service24/7")}
+                <IoTimeOutline className="header__icon" /> {t("service24/7")}
               </p>
             </div>
           </div>
@@ -157,6 +169,7 @@ const Header = () => {
                   min={new Date().toISOString().split("T")[0]}
                   onChange={handleCheckInChange}
                   placeholder="ДД.ММ.ГГГГ"
+                  required
                 />
               </div>
 
@@ -166,11 +179,10 @@ const Header = () => {
                   id="checkout"
                   type="date"
                   value={checkOut}
-                  min={getNextDay(
-                    checkIn || new Date().toISOString().split("T")[0]
-                  )}
+                  min={getNextDay(checkIn || new Date().toISOString().split("T")[0])}
                   onChange={handleCheckOutChange}
                   placeholder="ДД.ММ.ГГГГ"
+                  required
                 />
               </div>
             </div>
@@ -184,12 +196,11 @@ const Header = () => {
                     value={guests}
                     onChange={(e) => setGuests(e.target.value)}
                   >
-                    <option>1 Guest</option>
-                    <option>2 Guests</option>
-                    <option>3 Guests</option>
-                    <option>4 Guests</option>
-                    <option>5 Guests</option>
-                    <option>6 Guests</option>
+                    {[1, 2, 3, 4, 5, 6].map((num) => (
+                      <option key={num}>
+                        {num} {t("guest")}
+                      </option>
+                    ))}
                   </select>
                   <FaChevronDown className="select-icon" />
                 </div>
@@ -214,9 +225,7 @@ const Header = () => {
                         key={roomOption}
                         value={roomOption}
                         disabled={isDisabled(roomOption)}
-                        className={
-                          isDisabled(roomOption) ? "disabled-option" : ""
-                        }
+                        className={isDisabled(roomOption) ? "disabled-option" : ""}
                       >
                         {t(`roomspart.${roomKeys[roomOption]}`)}
                       </option>
@@ -233,7 +242,6 @@ const Header = () => {
                 <select id="hotel" value={t("TashkentAirportHotel")} disabled>
                   <option>{t("TashkentAirportHotel")}</option>
                 </select>
-                {/* <FaChevronDown className="select-icon" /> */}
               </div>
             </div>
 
