@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./RoomCard.scss";
+import './Rmedia/RCmedia.scss'
 import { FaWifi } from "react-icons/fa6";
 import { TbBath } from "react-icons/tb";
 import { MdOutlineLocalCafe, MdCleaningServices } from "react-icons/md";
