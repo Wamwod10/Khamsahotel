@@ -1,16 +1,28 @@
-.modal-overlay {
+.modal-main {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.45);
+  z-index: 9999;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
   padding: 1rem;
   overflow-y: auto;
+}
+
+.modal-overlay {
+  position: fixed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.45);
+  z-index: 10000;
 }
 
 .modal {
@@ -23,10 +35,12 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   color: #222;
   opacity: 0;
-  animation: fadeOut 0.5s ease forwards;
+  animation: fadeIn 0.5s ease forwards;
+  z-index: 10000;
+  position: relative;
 }
 
-@keyframes fadeOut {
+@keyframes fadeIn {
   from {
     opacity: 0;
     transform: scale(0.96);
@@ -44,8 +58,6 @@
   margin-bottom: 1.6rem;
   user-select: none;
 }
-
-
 
 .modal__section {
   margin-bottom: 1rem;
@@ -67,8 +79,8 @@
 .modal__form {
   margin-top: 1.3rem;
   display: grid;
-  grid-template-columns: 1fr 1fr; /* ikki ustun */
-  gap: 1rem 1.5rem; /* ustun va qator bo‘shligi */
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.5rem;
 
   .modal__field {
     display: flex;
@@ -108,19 +120,6 @@
     .input-wrapper {
       position: relative;
 
-      input {
-        width: 100%;
-        padding-right: 2rem;
-      }
-    }
-  }
-
-  .custom-select {
-    position: relative;
-
-    .input-wrapper {
-      position: relative;
-
       img.input-icon {
         position: absolute;
         left: 10px;
@@ -130,16 +129,16 @@
         height: 24px;
         border-radius: 4px;
         object-fit: cover;
-        opacity: 0.85;         
+        opacity: 0.85;
         pointer-events: none;
       }
 
       input {
         width: 100%;
-        padding: 10px 12px 10px 42px; // Left padding to avoid overlapping the icon
+        padding: 10px 12px 10px 42px; // left padding for icon
         background-color: #1e3254;
         color: #fff;
-        cursor: pointer ;
+        cursor: pointer;
         border: none;
         border-radius: 6px;
         user-select: none;
@@ -158,16 +157,6 @@
       }
     }
   }
-
-  
-  
-  
-  
-  
-  
-  
-  
-    
 
   .modal__buttons {
     grid-column: 1 / -1;
@@ -190,7 +179,7 @@
         color: #fff;
 
         &:hover {
-          background-color: darken(#f7931e, 10%);
+          background-color: #e6820b; // fixed version of darken
         }
       }
 
@@ -206,7 +195,6 @@
   }
 }
 
-/* Kichik ekranlar uchun (mobil) */
 @media (max-width: 520px) {
   .modal {
     padding: 1.5rem 1.7rem;
@@ -218,12 +206,13 @@
   }
 
   .modal__form {
-    grid-template-columns: 1fr; /* bitta ustunga o‘tadi */
+    grid-template-columns: 1fr;
     gap: 1rem;
 
     .modal__buttons {
       justify-content: center;
       flex-wrap: wrap;
+
       button {
         flex: 1 1 45%;
         font-size: 0.95rem;

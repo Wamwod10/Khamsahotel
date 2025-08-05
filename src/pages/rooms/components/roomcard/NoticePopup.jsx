@@ -1,7 +1,6 @@
 import React from "react";
 import { MdArrowBack, MdArrowForward } from "react-icons/md";
-import "./RoomCard.scss";
-import { NavLink } from "react-router-dom";
+import "./RoomCard.scss"; // Stil fayli, agar sizda bo'lsa
 
 const NoticePopup = ({ message, onBack, onContinue }) => {
   return (
@@ -12,10 +11,10 @@ const NoticePopup = ({ message, onBack, onContinue }) => {
           <p className="notice-message">{message}</p>
           <p className="notice-question">Davom ettirasizmi?</p>
           <div className="notice-buttons">
-            <NavLink to="/" className="btn btn-back" onClick={onBack}>
+            <button className="btn btn-back" onClick={onBack} type="button">
               <MdArrowBack size={20} /> Asosiy Sahifa
-            </NavLink>
-            <button className="btn btn-continue" onClick={onContinue}>
+            </button>
+            <button className="btn btn-continue" onClick={onContinue} type="button">
               Davom etish <MdArrowForward size={20} />
             </button>
           </div>

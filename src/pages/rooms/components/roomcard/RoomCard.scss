@@ -221,17 +221,17 @@
 
 
 .notice {
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.3);
   position: fixed;
   top: 0;
   left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(3px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10000;
-  backdrop-filter: blur(3px);
 }
 
 .notice-popup-overlay {
@@ -299,8 +299,8 @@
   flex: 1;
   padding: 11px 5px;
   font-size: 15px;
-  border-radius: 8px;
   font-weight: 600;
+  border-radius: 8px;
   cursor: pointer;
   user-select: none;
   border: 2px solid transparent;
@@ -308,8 +308,12 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.25s ease;
   box-shadow: 0 3px 6px rgba(255, 165, 0, 0.12);
+  transition: all 0.25s ease;
+
+  &:hover {
+    box-shadow: 0 5px 12px rgba(255, 165, 0, 0.4);
+  }
 }
 
 .btn-back {
@@ -320,7 +324,6 @@
   &:hover {
     background-color: #ffa500;
     color: #fff;
-    box-shadow: 0 5px 12px rgba(255, 165, 0, 0.4);
   }
 }
 

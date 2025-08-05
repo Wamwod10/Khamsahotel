@@ -32,31 +32,26 @@ export default function RoomHeader() {
         rooms: data.rooms,
         hotel: t("TashkentAirportHotel"),
       });
+
+      const guestNum = parseInt(data.guests, 10);
+
+      const lastShownGuestNum = parseInt(localStorage.getItem("noticeShownForGuests") || "0", 10);
+
+      if (guestNum > 3 && guestNum > lastShownGuestNum) {
+        setNoticeMessage(t("tooManyGuestsMessage"));
+        setShowNotice(true);
+      }
     }
   }, [t]);
 
-  // New effect: show notice once per guest count > 3
-  useEffect(() => {
-    if (!bookingInfo.guests) return;
-
-    const guestNum = parseInt(bookingInfo.guests);
-
+  const handleCloseNotice = () => {
+    setShowNotice(false);
+    const guestNum = parseInt(bookingInfo.guests, 10);
     if (guestNum > 3) {
-      // Check if notice was already shown for this guest count or higher
-      const shownForGuests = parseInt(localStorage.getItem("noticeShownForGuests")) || 0;
-
-      if (guestNum > shownForGuests) {
-        setNoticeMessage(t("tooManyGuestsMessage"));
-        setShowNotice(true);
-        localStorage.setItem("noticeShownForGuests", guestNum.toString());
-      }
-    } else {
-      // Reset notice flag if guestNum <= 3 so popup can show again next time if >3
-      localStorage.removeItem("noticeShownForGuests");
+      localStorage.setItem("noticeShownForGuests", guestNum.toString());
     }
-  }, [bookingInfo.guests, t]);
+  };
 
-  // Guests uchun mapping
   const guestKeyMap = {
     "1 Guest": "guestCount_1",
     "2 Guest": "guestCount_2",
@@ -71,7 +66,6 @@ export default function RoomHeader() {
     "6 Guests": "guestCount_6",
   };
 
-  // Rooms uchun mapping
   const roomKeyMap = {
     "Standard Room": "roomType_standard",
     "Family Room": "roomType_family",
@@ -88,9 +82,7 @@ export default function RoomHeader() {
             <IoCalendar className="room-header__icon" />
             <div>
               <p className="room-header__label">{t("check-in")}</p>
-              <p className="room-header__value">
-                {bookingInfo.checkIn || t("selectDate")}
-              </p>
+              <p className="room-header__value">{bookingInfo.checkIn || t("selectDate")}</p>
             </div>
           </div>
 
@@ -98,9 +90,7 @@ export default function RoomHeader() {
             <IoCalendar className="room-header__icon" />
             <div>
               <p className="room-header__label">{t("check-out")}</p>
-              <p className="room-header__value">
-                {bookingInfo.checkOut || t("selectDate")}
-              </p>
+              <p className="room-header__value">{bookingInfo.checkOut || t("selectDate")}</p>
             </div>
           </div>
 
@@ -135,11 +125,7 @@ export default function RoomHeader() {
           </div>
         </div>
 
-        <NavLink
-          to="/"
-          state={{ clearSearch: true }}
-          className="room-header__button"
-        >
+        <NavLink to="/" state={{ clearSearch: true }} className="room-header__button">
           <FaPen className="room-header__button-icon" /> {t("modifysearch")}
         </NavLink>
       </div>
@@ -147,8 +133,8 @@ export default function RoomHeader() {
       {showNotice && (
         <NoticePopup
           message={noticeMessage}
-          onBack={() => setShowNotice(false)}
-          onContinue={() => setShowNotice(false)}
+          onBack={handleCloseNotice}
+          onContinue={handleCloseNotice}
         />
       )}
     </div>
