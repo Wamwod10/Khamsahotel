@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { MdArrowDropDown } from "react-icons/md";
 import { useTranslation } from "react-i18next";
-import "./RoomCard.scss";
+import "./roommodal.scss";
 
 const roomKeyMap = {
   "Standard Room": "roomType_standard",
