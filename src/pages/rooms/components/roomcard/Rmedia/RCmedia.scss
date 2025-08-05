@@ -197,13 +197,15 @@
         &__allprice{
             right: -3%;
             gap: 4px;
+            display: flex;
+            flex-direction: column;
         }
         &__prices{
             gap: 8px;
         }
         &__ft-box{
          gap: 10px;
-        width: 332px;
+         width: 332px;
         }
         &__number{
            position: relative;

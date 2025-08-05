@@ -32,16 +32,29 @@ export default function RoomHeader() {
         rooms: data.rooms,
         hotel: t("TashkentAirportHotel"),
       });
-
-      // Extract number from guests string, e.g. "2 Guest" => 2
-      const guestNum = parseInt(data.guests);
-
-      if (guestNum > 3) {
-        setNoticeMessage(t("tooManyGuestsMessage"));
-        setShowNotice(true);
-      }
     }
   }, [t]);
+
+  // New effect: show notice once per guest count > 3
+  useEffect(() => {
+    if (!bookingInfo.guests) return;
+
+    const guestNum = parseInt(bookingInfo.guests);
+
+    if (guestNum > 3) {
+      // Check if notice was already shown for this guest count or higher
+      const shownForGuests = parseInt(localStorage.getItem("noticeShownForGuests")) || 0;
+
+      if (guestNum > shownForGuests) {
+        setNoticeMessage(t("tooManyGuestsMessage"));
+        setShowNotice(true);
+        localStorage.setItem("noticeShownForGuests", guestNum.toString());
+      }
+    } else {
+      // Reset notice flag if guestNum <= 3 so popup can show again next time if >3
+      localStorage.removeItem("noticeShownForGuests");
+    }
+  }, [bookingInfo.guests, t]);
 
   // Guests uchun mapping
   const guestKeyMap = {
