@@ -20,29 +20,38 @@ export default function RoomHeader() {
   const [showNotice, setShowNotice] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState("");
 
-  useEffect(() => {
-    const savedData = localStorage.getItem("bookingInfo");
-    if (savedData) {
-      const data = JSON.parse(savedData);
+useEffect(() => {
+  const savedData = localStorage.getItem("bookingInfo");
 
-      setBookingInfo({
-        checkIn: data.checkIn,
-        checkOut: data.checkOut,
-        guests: data.guests,
-        rooms: data.rooms,
-        hotel: t("TashkentAirportHotel"),
-      });
+  if (savedData) {
+    const data = JSON.parse(savedData);
 
-      const guestNum = parseInt(data.guests, 10);
+    console.log("bookingInfo (parsed):", data);
 
-      const lastShownGuestNum = parseInt(localStorage.getItem("noticeShownForGuests") || "0", 10);
+    setBookingInfo({
+      checkIn: data.checkIn,
+      checkOut: data.checkOut,
+      guests: data.guests,
+      rooms: data.rooms,
+      hotel: t("TashkentAirportHotel"),
+    });
 
-      if (guestNum > 3 && guestNum > lastShownGuestNum) {
-        setNoticeMessage(t("tooManyGuestsMessage"));
-        setShowNotice(true);
-      }
+    const guestNum = parseInt(data.guests);
+    const lastShownGuestNum = parseInt(localStorage.getItem("noticeShownForGuests") || "0");
+
+    console.log("guestNum:", guestNum);
+    console.log("lastShownGuestNum:", lastShownGuestNum);
+
+    if (guestNum > 3 && guestNum !== lastShownGuestNum) {
+      console.log("✅ NoticePopup sharti BAJARILDI");
+      setNoticeMessage(t("tooManyGuestsMessage"));
+      setShowNotice(true);
+    } else {
+      console.log("❌ NoticePopup sharti bajarilmadi");
     }
-  }, [t]);
+  }
+}, [t]);
+
 
   const handleCloseNotice = () => {
     setShowNotice(false);
@@ -136,7 +145,7 @@ export default function RoomHeader() {
           onBack={handleCloseNotice}
           onContinue={handleCloseNotice}
         />
-      )}
+      )}  
     </div>
   );
 }

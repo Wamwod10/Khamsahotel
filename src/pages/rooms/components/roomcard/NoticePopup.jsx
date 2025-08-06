@@ -1,6 +1,5 @@
-import React from "react";
 import { MdArrowBack, MdArrowForward } from "react-icons/md";
-import "./RoomCard.scss"; // Stil fayli, agar sizda bo'lsa
+import "./RoomCard.scss"; 
 
 const NoticePopup = ({ message, onBack, onContinue }) => {
   return (

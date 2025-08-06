@@ -49,6 +49,7 @@ const Header = () => {
     return date.toISOString().split("T")[0];
   };
 
+
   const handleCheckInChange = (e) => {
     const newCheckIn = e.target.value;
     setCheckIn(newCheckIn);
@@ -116,7 +117,13 @@ const Header = () => {
       return;
     }
 
-    const bookingInfo = { checkIn, checkOut, guests, rooms, hotel: t("TashkentAirportHotel") };
+    const bookingInfo = {
+      checkIn,
+      checkOut,
+      guests,
+      rooms,
+      hotel: t("TashkentAirportHotel"),
+    };
 
     localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
 
@@ -179,7 +186,9 @@ const Header = () => {
                   id="checkout"
                   type="date"
                   value={checkOut}
-                  min={getNextDay(checkIn || new Date().toISOString().split("T")[0])}
+                  min={getNextDay(
+                    checkIn || new Date().toISOString().split("T")[0]
+                  )}
                   onChange={handleCheckOutChange}
                   placeholder="ДД.ММ.ГГГГ"
                   required
@@ -225,7 +234,9 @@ const Header = () => {
                         key={roomOption}
                         value={roomOption}
                         disabled={isDisabled(roomOption)}
-                        className={isDisabled(roomOption) ? "disabled-option" : ""}
+                        className={
+                          isDisabled(roomOption) ? "disabled-option" : ""
+                        }
                       >
                         {t(`roomspart.${roomKeys[roomOption]}`)}
                       </option>
