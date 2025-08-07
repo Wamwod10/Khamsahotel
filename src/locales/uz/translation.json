@@ -157,5 +157,10 @@
   "paymentMethod": "To‘lov usuli",
   "selectMethod": "Usulni tanlang",
   "confirm": "Tasdiqlash",
-  "cancel": "Bekor qilish"
+  "cancel": "Bekor qilish",
+  
+  "attention": "E'tibor bering",
+  "continue?": "Davom ettirmoqchimisiz?",
+  "mainPage": "Asosiy sahifa",
+  "continue": "Davom etish"
 }

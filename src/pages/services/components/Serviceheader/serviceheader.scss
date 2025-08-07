@@ -1,0 +1,68 @@
+// serviceheader.scss
+.service-header {
+    padding: 60px 20px;
+    // background-color: #f9fafc;
+    text-align: center;
+    color: #0d1a2d;
+
+    &__title {
+        font-weight: 700;
+        font-size: 2.8rem;
+        color: rgb(255, 169, 48);
+        margin-bottom: 12px;
+    }
+
+    &__subtitle {
+        font-weight: 500;
+        font-size: 1.2rem;
+        color: #6c757d;
+        margin-bottom: 20px;
+    }
+
+    &__description {
+        font-weight: 400;
+        font-size: 1rem;
+        line-height: 1.6;
+        max-width: 700px;
+        margin: 0 auto 40px auto;
+        color: #4a4a4a;
+    }
+
+    &__buttons {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        max-width: 500px;
+        margin: 0 auto;
+
+        .btn {
+            padding: 12px 28px;
+            font-weight: 600;
+            font-size: 1rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+
+            &.btn-primary {
+                background-color: rgb(255, 169, 48);
+                color: white;
+
+                &:hover {
+                    background-color: rgb(255, 149, 00);
+                }
+            }
+
+            &.btn-secondary {
+                background-color: transparent;
+                color: rgb(255, 169, 48);
+                border: 2px solid rgb(255, 169, 48);
+
+                &:hover {
+                    background-color: rgb(255, 169, 48);
+                    color: white;
+                }
+            }
+        }
+    }
+}

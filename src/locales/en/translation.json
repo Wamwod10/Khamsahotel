@@ -157,5 +157,10 @@
   "paymentMethod": "Payment Method",
   "selectMethod": "Select a method",
   "confirm": "Confirm",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  
+  "attention": "Attention!",
+  "continue": "Continue",
+  "continue?": "Do you want to continue?",
+  "mainPage": "Main Page"
 }
