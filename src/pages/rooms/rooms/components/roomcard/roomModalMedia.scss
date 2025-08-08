@@ -1,0 +1,51 @@
+.modal {
+    @media (max-width:425px) {
+        top: 10px;
+
+        &_all__section {
+            display: flex;
+            flex-wrap: wrap;
+            width: 310px;
+            column-gap: 90px;
+            row-gap: 15px;
+        }
+
+        &__form {
+            gap: 10px;
+        }
+    }
+
+    @media (max-width:320px) {
+        top: 3px;
+
+        &_all__section {
+            column-gap: 40px;
+            row-gap: 10px;
+        }
+
+        &__title {
+            font-size: 20px;
+        }
+
+        &__section {
+            label {
+                font-size: 15px;
+            }
+
+            p {
+                font-size: 14px;
+            }
+        }
+
+        &__cancel,
+        &__confirm {
+            font-size: 13px !important;
+        }
+
+        &__field {
+            label {
+                font-size: 14px !important;
+            }
+        }
+    }
+}

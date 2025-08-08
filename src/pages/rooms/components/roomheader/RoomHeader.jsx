@@ -9,55 +9,67 @@ import { useTranslation } from "react-i18next";
 export default function RoomHeader() {
   const { t } = useTranslation();
 
+  // booking info state
   const [bookingInfo, setBookingInfo] = useState({
     checkIn: null,
     checkOut: null,
-    guests: "1 Guest",
+    guests: t("guest"),   
     rooms: "Standard Room",
     hotel: t("TashkentAirportHotel"),
   });
 
+  // Notice popup state
   const [showNotice, setShowNotice] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState("");
 
-useEffect(() => {
-  const savedData = localStorage.getItem("bookingInfo");
+  // Parse guest count number from string like "4 Guests"
+  const getGuestCount = (guestStr) => {
+    const num = parseInt(guestStr, 10);
+    return isNaN(num) ? 0 : num;
+  };
 
-  if (savedData) {
-    const data = JSON.parse(savedData);
+  // Load booking info on mount, check if notice should show
+  useEffect(() => {
+    const savedData = sessionStorage.getItem("bookingInfo");
 
-    console.log("bookingInfo (parsed):", data);
+    if (savedData) {
+      const data = JSON.parse(savedData);
 
-    setBookingInfo({
-      checkIn: data.checkIn,
-      checkOut: data.checkOut,
-      guests: data.guests,
-      rooms: data.rooms,
-      hotel: t("TashkentAirportHotel"),
-    });
+      setBookingInfo({
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        guests: data.guests,
+        rooms: data.rooms,
+        hotel: t("TashkentAirportHotel"),
+      });
 
-    const guestNum = parseInt(data.guests);
-    const lastShownGuestNum = parseInt(localStorage.getItem("noticeShownForGuests") || "0");
+      const guestNum = getGuestCount(data.guests);
+      const lastShownGuestNum = parseInt(sessionStorage.getItem("noticeShownForGuests") || "0", 10);
 
-    console.log("guestNum:", guestNum);
-    console.log("lastShownGuestNum:", lastShownGuestNum);
-
-    if (guestNum > 3 && guestNum !== lastShownGuestNum) {
-      console.log("✅ NoticePopup sharti BAJARILDI");
-      setNoticeMessage(t("tooManyGuestsMessage"));
-      setShowNotice(true);
-    } else {
-      console.log("❌ NoticePopup sharti bajarilmadi");
+      // Show notice only if guestNum >= 4 AND notice NOT shown yet for this guestNum
+      if (guestNum >= 4 && guestNum !== lastShownGuestNum) {
+        setNoticeMessage(t("tooManyGuestsMessage"));
+        setShowNotice(true);
+      }
     }
-  }
-}, [t]);
+  }, [t]);
 
+  // If bookingInfo.guests changes, clear noticeShownForGuests if guestNum < 4
+  // (Optional, depends on where you reset this in your Main Page)
+  useEffect(() => {
+    const guestNum = getGuestCount(bookingInfo.guests);
+    if (guestNum < 4) {
+      sessionStorage.removeItem("noticeShownForGuests");
+    }
+  }, [bookingInfo.guests]);
 
+  // Close notice handler - save that notice was shown for current guest count
   const handleCloseNotice = () => {
     setShowNotice(false);
-    const guestNum = parseInt(bookingInfo.guests, 10);
-    if (guestNum > 3) {
-      localStorage.setItem("noticeShownForGuests", guestNum.toString());
+
+    const guestNum = getGuestCount(bookingInfo.guests);
+    if (guestNum >= 4) {
+      sessionStorage.setItem("noticeShownForGuests", guestNum.toString());
     }
   };
 
@@ -75,6 +87,7 @@ useEffect(() => {
     "6 Guests": "guestCount_6",
   };
 
+  // Room translation keys map
   const roomKeyMap = {
     "Standard Room": "roomType_standard",
     "Family Room": "roomType_family",
@@ -91,7 +104,9 @@ useEffect(() => {
             <IoCalendar className="room-header__icon" />
             <div>
               <p className="room-header__label">{t("check-in")}</p>
-              <p className="room-header__value">{bookingInfo.checkIn || t("selectDate")}</p>
+              <p className="room-header__value">
+                {bookingInfo.checkIn || t("selectDate")}
+              </p>
             </div>
           </div>
 
@@ -99,7 +114,9 @@ useEffect(() => {
             <IoCalendar className="room-header__icon" />
             <div>
               <p className="room-header__label">{t("check-out")}</p>
-              <p className="room-header__value">{bookingInfo.checkOut || t("selectDate")}</p>
+              <p className="room-header__value">
+                {bookingInfo.checkOut || t("selectDate")}
+              </p>
             </div>
           </div>
 
@@ -134,7 +151,11 @@ useEffect(() => {
           </div>
         </div>
 
-        <NavLink to="/" state={{ clearSearch: true }} className="room-header__button">
+        <NavLink
+          to="/"
+          state={{ clearSearch: true }}
+          className="room-header__button"
+        >
           <FaPen className="room-header__button-icon" /> {t("modifysearch")}
         </NavLink>
       </div>
@@ -145,7 +166,7 @@ useEffect(() => {
           onBack={handleCloseNotice}
           onContinue={handleCloseNotice}
         />
-      )}  
+      )}
     </div>
   );
 }

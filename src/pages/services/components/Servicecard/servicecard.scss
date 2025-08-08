@@ -28,16 +28,110 @@
     box-shadow: 0 8px 24px rgb(0 0 0 / 0.1);
   }
 
-  .icon {
+  .icon__box {
+    border-radius: 12px;
     background-color: #f3f4f6;
+    width: fit-content;
+  }
+
+  .icon {
     color: #ffa930;
     font-size: 22px;
     padding: 14px;
-    border-radius: 12px;
-    width: fit-content;
     display: flex;
     align-items: center;
     justify-content: center;
+
+    &.icon-1 {
+      animation: icon1 2s linear infinite;
+
+      @keyframes icon1 {
+        from {
+          transform: rotateY(0deg);
+        }
+        to {
+          transform: rotateY(360deg);
+        }
+      }
+    }
+
+    &.icon-2 {
+      animation: icon2 2s linear infinite;
+
+      @keyframes icon2 {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    }
+
+    &.icon-3 {
+      animation: icon3 0.9s linear infinite alternate-reverse;
+
+      @keyframes icon3 {
+        from {
+          transform: rotate(-15deg);
+        }
+        to {
+          transform: rotate(15deg);
+        }
+      }
+    }
+
+    &.icon-4 {
+      animation: icon4 4s linear infinite;
+
+      @keyframes icon4 {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    }
+
+    &.icon-5 {
+      animation: icon5 0.5s linear infinite alternate-reverse;
+
+      @keyframes icon5 {
+        from {
+          transform: scale(0.95);
+        }
+        to {
+          transform: scale(1.05);
+        }
+      }
+    }
+
+    &.icon-6 {
+      animation: icon6 0.5s linear infinite alternate-reverse;
+
+      @keyframes icon6 {
+        from {
+          transform: rotate(-10deg);
+        }
+        to {
+          transform: rotate(10deg);
+        }
+      }
+    }
+
+    &.icon-7 {
+      animation: icon7 0.5s linear infinite alternate-reverse;
+
+      @keyframes icon7 {
+        from {
+          transform: rotate(-10deg);
+        }
+        to {
+          transform: rotate(10deg);
+        }
+      }
+    }
   }
 
   .title-row {
@@ -79,8 +173,10 @@
     overflow: hidden;
     max-height: 0;
     opacity: 0;
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-    
+    transition:
+      max-height 0.3s ease,
+      opacity 0.3s ease;
+
     &.expanded {
       max-height: 500px; /* katta qiymat, barcha ro'yxat sigishi uchun */
       opacity: 1;
@@ -110,6 +206,11 @@
         }
       }
     }
+  }
+
+  .card__icon {
+    color: #f6ad2f;
+    font-size: 16px;
   }
 
   .card-footer {

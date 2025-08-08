@@ -1,0 +1,342 @@
+.room-header {
+    @media (max-width:1024px) {
+        &__box {
+            width: 73%;
+            column-gap: 55px;
+            row-gap: 27px;
+        }
+
+        &__button {
+            height: 50px;
+            padding: 12px 17px;
+        }
+    }
+
+    @media (max-width:768px) {
+        margin: 40px 15px 0px 15px;
+
+        &__box {
+            gap: 18px;
+            width: 62%;
+            //    row-gap: 15px;
+        }
+
+        &__button {
+            width: 200px;
+        }
+
+        .container {
+            align-items: center;
+        }
+    }
+
+    @media (max-width:425px) {
+        &__button {
+
+            margin-top: 35px;
+        }
+
+        &__box {
+            position: relative;
+            right: 62px;
+            width: 68%;
+        }
+
+        .container {
+            justify-content: center;
+        }
+    }
+
+    @media (max-width:375px) {
+        &__box {
+            right: 36px;
+            width: 81%;
+        }
+
+        &__value {
+            font-size: 17px;
+        }
+    }
+
+    @media (max-width:320px) {
+        &__box {
+            right: 30px;
+        }
+    }
+}
+
+.room-card {
+
+    @media (max-width: 1024px) {
+        &__title {
+            font-size: 30px;
+        }
+
+        &__text {
+            font-size: 17px;
+        }
+
+        &__room-title {
+            margin-bottom: 90px;
+
+        }
+
+        &__allprice {
+            top: 46px;
+            right: 29px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        &__prices {
+            gap: 9px;
+        }
+
+        &__prices span {
+            font-size: 14px;
+        }
+
+        &__number {
+            position: relative;
+            right: -13px;
+        }
+
+        &__desc {
+            font-size: 14px;
+        }
+    }
+
+    @media (max-width:1000px) {
+        &__allprice {
+            top: 52px;
+            right: 466px;
+        }
+
+        &__item {
+            display: flex;
+            flex-direction: column;
+
+            .room-card__thumbnails {
+                order: 2;
+                display: flex;
+                justify-content: center;
+                flex-direction: row;
+                column-gap: 50px;
+            }
+
+            .room-card__image-wrapper {
+                order: 1;
+            }
+
+            .room-card__body {
+                order: 3;
+            }
+        }
+
+        @media (max-width:982px) {
+            &__room-title {
+                margin-bottom: 160px;
+            }
+
+            &__allprice {
+                top: 42px;
+                left: 5px;
+
+            }
+
+            &__prices {
+                display: flex;
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 768px) {
+            &__allprice {
+                top: 46px;
+                right: 33%;
+
+            }
+
+            &__room-title {
+                margin-bottom: 180px;
+            }
+
+            &__number {
+                margin-top: 0px;
+            }
+
+            &__thumbnails {
+                gap: 50px;
+                margin-bottom: 0;
+            }
+
+            &__item {
+                gap: 20px;
+            }
+
+            &__list {
+                margin: 50px 10px;
+            }
+
+            &__text {
+                font-size: 16px;
+            }
+
+            .room-card__item {
+                display: flex;
+
+                .room-card__thumbnails {
+                    order: 2;
+                }
+
+                .room-card__image-wrapper {
+                    order: 1;
+                }
+
+                .room-card__body {
+                    order: 3;
+                }
+            }
+
+        }
+
+
+
+        @media (max-width:425px) {
+            &__thumbnails {
+                gap: 10px !important;
+            }
+
+            &__thumbnail {
+                width: 70px;
+                height: 70px;
+            }
+
+            &__image {
+                height: 260px;
+            }
+
+            &__allprice {
+                right: 12%;
+                width: 300px;
+            }
+
+            &__prices span {
+                font-size: 13px;
+            }
+
+            &__prices {
+                gap: 14px;
+                flex-direction: column;
+                margin-bottom: 10px;
+            }
+
+            &__desc {
+                font-size: 13px;
+            }
+
+            &__room-title {
+                margin-bottom: 180px;
+                font-size: 24px;
+            }
+
+            &__number {
+                font-size: 17px;
+            }
+
+            &__text {
+                font-size: 15px;
+                width: 340px;
+                margin: 0 auto;
+                margin-top: 10px;
+                text-align: center;
+            }
+
+            &__title {
+                font-size: 27px;
+
+                text-align: center;
+            }
+        }
+
+        @media (max-width:375px) {
+            &__title {
+                font-size: 24px;
+            }
+
+            &__text {
+                font-size: 14px;
+            }
+
+            &__allprice {
+                right: -3%;
+                gap: 4px;
+            }
+
+            &__prices {
+                gap: 8px;
+            }
+
+            &__ft-box {
+                width: 316px;
+                gap: 10px;
+            }
+
+            &__number {
+                position: relative;
+            }
+
+            &__image {
+                position: relative;
+                left: -12px;
+            }
+
+            &__thumbnail {
+                width: 65px;
+                height: 65px;
+            }
+
+            &__btn {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width:340px) {
+            &__room-title {
+                font-size: 22px;
+            }
+
+            &__text {
+                width: 300px;
+            }
+
+            &__image {
+                width: 265px;
+                height: 245px;
+            }
+
+            &__thumbnail {
+                height: 55px;
+                width: 50px;
+            }
+
+            &__allprice {
+                right: -24%;
+            }
+
+            &__prices span {
+                font-size: 12px;
+            }
+
+            &__number {
+                font-size: 15px;
+            }
+
+            &__ft-box {
+                width: 271px;
+                position: relative;
+                left: -7px;
+            }
+        }
+    }
+}

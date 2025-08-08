@@ -15,7 +15,7 @@ const Nav = () => {
     const { t, i18n } = useTranslation();
     const [isLangOpen, setIsLangOpen] = useState(false);
 
-    const savedLang = localStorage.getItem('appLanguage') || 'en';
+    const savedLang = sessionStorage.getItem('appLanguage') || 'en';
     const [currentLangCode, setCurrentLangCode] = useState(savedLang);
 
     const languages = [

@@ -29,7 +29,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem("bookingInfo");
+    const saved = sessionStorage.getItem("bookingInfo");
     if (saved) {
       const parsed = JSON.parse(saved);
       setBookingInfo({

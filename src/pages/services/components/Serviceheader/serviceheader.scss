@@ -1,7 +1,9 @@
 // serviceheader.scss
 .service-header {
     padding: 60px 20px;
-    // background-color: #f9fafc;
+    background: url(/public/29.png) no-repeat center center/cover;
+    width: 100%;
+    height: 440px;
     text-align: center;
     color: #0d1a2d;
 
@@ -15,17 +17,17 @@
     &__subtitle {
         font-weight: 500;
         font-size: 1.2rem;
-        color: #6c757d;
+        color: #c3c3c3;
         margin-bottom: 20px;
     }
 
     &__description {
-        font-weight: 400;
+        font-weight: 500;
         font-size: 1rem;
         line-height: 1.6;
         max-width: 700px;
         margin: 0 auto 40px auto;
-        color: #4a4a4a;
+        color: #f2f2f2;
     }
 
     &__buttons {

@@ -24,16 +24,18 @@ const Header = () => {
     "Standard + 1 Family room": "standardPlusFamilyRoom",
   };
 
-  // Booking states
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState("1 Guest");
   const [rooms, setRooms] = useState("Standard Room");
 
-  // Clear booking info if instructed
+  const [showNotice, setShowNotice] = useState(false);
+  const [noticeMessage, setNoticeMessage] = useState("");
+
   useEffect(() => {
     if (location.state?.clearSearch) {
-      localStorage.removeItem("bookingInfo");
+      sessionStorage.removeItem("bookingInfo");
+      sessionStorage.removeItem("noticeShown");
       setCheckIn("");
       setCheckOut("");
       setGuests("1 Guest");
@@ -41,14 +43,12 @@ const Header = () => {
     }
   }, [location.state]);
 
-  // Helpers
   const getNextDay = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
     date.setDate(date.getDate() + 1);
     return date.toISOString().split("T")[0];
   };
-
 
   const handleCheckInChange = (e) => {
     const newCheckIn = e.target.value;
@@ -68,10 +68,8 @@ const Header = () => {
     }
   };
 
-  // Extract number from "X Guest(s)"
   const getGuestCount = (guestStr) => parseInt(guestStr);
 
-  // Check room-guest compatibility
   const isRoomSuitableForGuests = (roomOption, guestCount) => {
     switch (roomOption) {
       case "Standard Room":
@@ -89,7 +87,6 @@ const Header = () => {
     }
   };
 
-  // Adjust room selection if not suitable
   useEffect(() => {
     const guestCount = getGuestCount(guests);
     if (!isRoomSuitableForGuests(rooms, guestCount)) {
@@ -102,13 +99,28 @@ const Header = () => {
     }
   }, [guests, rooms]);
 
-  // Disable unsuitable options
   const isDisabled = (option) => {
     const guestCount = getGuestCount(guests);
     return !isRoomSuitableForGuests(option, guestCount);
   };
 
-  // Submit handler
+  // Show notice only on Main Page when guest count > 3
+  useEffect(() => {
+    const guestCount = getGuestCount(guests);
+
+    if (guestCount > 3) {
+      const noticeAlreadyShown = sessionStorage.getItem("noticeShown");
+      if (!noticeAlreadyShown) {
+        setNoticeMessage(t("tooManyGuestsMessage"));
+        setShowNotice(true);
+        sessionStorage.setItem("noticeShown", "true");
+      }
+    } else {
+      setShowNotice(false);
+      sessionStorage.removeItem("noticeShown");
+    }
+  }, [guests, t]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -125,7 +137,7 @@ const Header = () => {
       hotel: t("TashkentAirportHotel"),
     };
 
-    localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
+    sessionStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
 
     const queryParams = new URLSearchParams({
       checkIn,
@@ -137,6 +149,8 @@ const Header = () => {
     navigate(`/rooms?${queryParams.toString()}`);
   };
 
+  // handleCloseNotice (if needed)
+  const handleCloseNotice = () => setShowNotice(false);
   return (
     <header className="header">
       <div className="container">

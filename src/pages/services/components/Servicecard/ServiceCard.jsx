@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaStar } from "react-icons/fa";
 import "./servicecard.scss";
 import {
   FaWifi,
@@ -19,7 +20,8 @@ const services = [
     title: "Free Wi-Fi",
     time: "24/7 Available",
     rating: "4.8",
-    description: "Enjoy complimentary high-speed internet throughout the hotel.",
+    description:
+      "Enjoy complimentary high-speed internet throughout the hotel.",
     details: [
       "Unlimited devices",
       "Secure connection",
@@ -90,12 +92,7 @@ const services = [
     time: "06:00 - 23:00",
     rating: "4.6",
     description: "Unlimited tea and coffee available at lounge.",
-    details: [
-      "Freshly brewed",
-      "Wide selection",
-      "Free refills",
-      "Served hot",
-    ],
+    details: ["Freshly brewed", "Wide selection", "Free refills", "Served hot"],
   },
   {
     id: 7,
@@ -126,15 +123,21 @@ const ServiceCard = () => {
         const isExpanded = expandedId === service.id;
         return (
           <div className="card" key={service.id}>
-            <div className="icon">{service.icon}</div>
+            <div className="icon__box">
+              <div className={`icon icon-${service.id}`}>{service.icon}</div>
+            </div>
             <div className="title-row">
               <h3>{service.title}</h3>
-              <span className="rating">⭐ {service.rating}</span>
+              <span className="rating">
+                <FaStar className="card__icon" /> {service.rating}
+              </span>
             </div>
             <p className="time">{service.time}</p>
             <p className="desc">{service.description}</p>
 
-            <div className={`details-container ${isExpanded ? "expanded" : ""}`}>
+            <div
+              className={`details-container ${isExpanded ? "expanded" : ""}`}
+            >
               {isExpanded && (
                 <ul className="details">
                   {service.details.map((item, i) => (
