@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
-import './roomModalMedia.scss';
 
 const roomKeyMap = {
   "Standard Room": "roomType_standard",
@@ -14,7 +13,6 @@ const roomKeyMap = {
 };
 
 const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
-
   const { t } = useTranslation();
 
   const [bookingInfo, setBookingInfo] = useState({
@@ -71,10 +69,8 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       return;
     }
 
-    // ✅ Avval modalni yopamiz
     onClose();
 
-    // ✅ Toastni keyin ko‘rsatamiz
     toast.success(t("Sizning xonangiz bron qilindi"), {
       position: "top-center",
       autoClose: 2500,
@@ -92,7 +88,6 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       <div className="modal">
         <h2 className="modal__title">{t("bookyourstay")}</h2>
         <div className="modal_all__section">
-
           <div className="modal__section">
             <label>{t("check-in")}:</label>
             <p>{checkIn || "-"}</p>
@@ -112,13 +107,13 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
             <label>{t("guests")}:</label>
             <p>{guests || "-"}</p>
           </div>
-
-
         </div>
+
         <div className="modal__section">
           <label>{t("hotel")}:</label>
           <p>{hotel}</p>
         </div>
+
         <form className="modal__form" onSubmit={handleConfirm}>
           <div className="modal__field">
             <label>{t("firstName")}</label>
@@ -185,11 +180,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
             <button type="submit" className="modal__confirm">
               {t("confirm")}
             </button>
-            <button
-              type="button"
-              className="modal__cancel"
-              onClick={onClose}
-            >
+            <button type="button" className="modal__cancel" onClick={onClose}>
               {t("cancel")}
             </button>
           </div>

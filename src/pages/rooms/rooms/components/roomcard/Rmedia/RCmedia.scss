@@ -1,5 +1,5 @@
 .room-header {
-    @media (max-width:1024px) {
+    @media (max-width: 1024px) {
         &__box {
             width: 73%;
             column-gap: 55px;
@@ -12,7 +12,7 @@
         }
     }
 
-    @media (max-width:768px) {
+    @media (max-width: 768px) {
         margin: 40px 15px 0px 15px;
 
         &__box {
@@ -30,9 +30,8 @@
         }
     }
 
-    @media (max-width:425px) {
+    @media (max-width: 425px) {
         &__button {
-
             margin-top: 35px;
         }
 
@@ -47,7 +46,7 @@
         }
     }
 
-    @media (max-width:375px) {
+    @media (max-width: 375px) {
         &__box {
             right: 36px;
             width: 81%;
@@ -58,7 +57,7 @@
         }
     }
 
-    @media (max-width:320px) {
+    @media (max-width: 320px) {
         &__box {
             right: 30px;
         }
@@ -66,7 +65,6 @@
 }
 
 .room-card {
-
     @media (max-width: 1024px) {
         &__title {
             font-size: 30px;
@@ -78,7 +76,6 @@
 
         &__room-title {
             margin-bottom: 90px;
-
         }
 
         &__allprice {
@@ -106,7 +103,7 @@
         }
     }
 
-    @media (max-width:1000px) {
+    @media (max-width: 1000px) {
         &__allprice {
             top: 52px;
             right: 466px;
@@ -133,7 +130,7 @@
             }
         }
 
-        @media (max-width:982px) {
+        @media (max-width: 982px) {
             &__room-title {
                 margin-bottom: 160px;
             }
@@ -141,7 +138,6 @@
             &__allprice {
                 top: 42px;
                 left: 5px;
-
             }
 
             &__prices {
@@ -154,7 +150,6 @@
             &__allprice {
                 top: 46px;
                 right: 33%;
-
             }
 
             &__room-title {
@@ -197,12 +192,9 @@
                     order: 3;
                 }
             }
-
         }
 
-
-
-        @media (max-width:425px) {
+        @media (max-width: 425px) {
             &__thumbnails {
                 gap: 10px !important;
             }
@@ -259,7 +251,7 @@
             }
         }
 
-        @media (max-width:375px) {
+        @media (max-width: 375px) {
             &__title {
                 font-size: 24px;
             }
@@ -301,7 +293,7 @@
             }
         }
 
-        @media (max-width:340px) {
+        @media (max-width: 340px) {
             &__room-title {
                 font-size: 22px;
             }
@@ -336,6 +328,58 @@
                 width: 271px;
                 position: relative;
                 left: -7px;
+            }
+        }
+    }
+}
+
+.modal {
+    @media (max-width: 425px) {
+        top: 10px;
+
+        &_all__section {
+            display: flex;
+            flex-wrap: wrap;
+            width: 310px;
+            column-gap: 90px;
+            row-gap: 15px;
+        }
+
+        &__form {
+            gap: 10px;
+        }
+    }
+
+    @media (max-width: 320px) {
+        top: 3px;
+
+        &_all__section {
+            column-gap: 53px;
+            row-gap: 10px;
+        }
+
+        &__title {
+            font-size: 20px;
+        }
+
+        &__section {
+            label {
+                font-size: 15px;
+            }
+
+            p {
+                font-size: 14px;
+            }
+        }
+
+        &__cancel,
+        &__confirm {
+            font-size: 13px !important;
+        }
+
+        &__field {
+            label {
+                font-size: 14px !important;
             }
         }
     }

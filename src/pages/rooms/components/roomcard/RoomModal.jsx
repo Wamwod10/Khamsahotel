@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
-
+import './roomModalMedai.scss';
 const roomKeyMap = {
   "Standard Room": "roomType_standard",
   "Family Room": "roomType_family",
@@ -90,24 +90,26 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       <div className="modal">
         <h2 className="modal__title">{t("bookyourstay")}</h2>
 
-        <div className="modal__section">
-          <label>{t("check-in")}:</label>
-          <p>{checkIn || "-"}</p>
-        </div>
+        <div className="modal_all__section">
+          <div className="modal__section">
+            <label>{t("check-in")}:</label>
+            <p>{checkIn || "-"}</p>
+          </div>
 
-        <div className="modal__section">
-          <label>{t("check-out")}:</label>
-          <p>{checkOut || "-"}</p>
-        </div>
+          <div className="modal__section">
+            <label>{t("check-out")}:</label>
+            <p>{checkOut || "-"}</p>
+          </div>
 
-        <div className="modal__section">
-          <label>{t("rooms")}:</label>
-          <p>{rooms ? t(roomKeyMap[rooms] || rooms) : "-"}</p>
-        </div>
+          <div className="modal__section">
+            <label>{t("rooms")}:</label>
+            <p>{rooms ? t(roomKeyMap[rooms] || rooms) : "-"}</p>
+          </div>
 
-        <div className="modal__section">
-          <label>{t("guests")}:</label>
-          <p>{guests || "-"}</p>
+          <div className="modal__section">
+            <label>{t("guests")}:</label>
+            <p>{guests || "-"}</p>
+          </div>
         </div>
 
         <div className="modal__section">

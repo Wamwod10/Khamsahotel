@@ -118,56 +118,68 @@ const ServiceCard = () => {
   };
 
   return (
-    <div className="servicecard-wrapper">
-      {services.map((service) => {
-        const isExpanded = expandedId === service.id;
-        return (
-          <div className="card" key={service.id}>
-            <div className="icon__box">
-              <div className={`icon icon-${service.id}`}>{service.icon}</div>
-            </div>
-            <div className="title-row">
-              <h3>{service.title}</h3>
-              <span className="rating">
-                <FaStar className="card__icon" /> {service.rating}
-              </span>
-            </div>
-            <p className="time">{service.time}</p>
-            <p className="desc">{service.description}</p>
+    <div className="servicecard">
+      <div className="container">
+        <h2 className="servicecard__title">Available Services</h2>
+        <p className="servicecard__text">
+          Discover our range of reliable and efficient services designed to support your business and personal needs.
+        </p>
+        <div className="servicecard-wrapper">
+          {services.map((service) => {
+            const isExpanded = expandedId === service.id;
+            return (
+              <div className="card" key={service.id}>
+                <div className="icon__box">
+                  <div className={`icon icon-${service.id}`}>
+                    {service.icon}
+                  </div>
+                </div>
+                <div className="title-row">
+                  <h3>{service.title}</h3>
+                  <span className="rating">
+                    <FaStar className="card__icon" /> {service.rating}
+                  </span>
+                </div>
+                <p className="time">{service.time}</p>
+                <p className="desc">{service.description}</p>
 
-            <div
-              className={`details-container ${isExpanded ? "expanded" : ""}`}
-            >
-              {isExpanded && (
-                <ul className="details">
-                  {service.details.map((item, i) => (
-                    <li key={i}> {item}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                <div
+                  className={`details-container ${
+                    isExpanded ? "expanded" : ""
+                  }`}
+                >
+                  {isExpanded && (
+                    <ul className="details">
+                      {service.details.map((item, i) => (
+                        <li key={i}> {item}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
-            <div className="card-footer">
-              <button
-                className="learn-more"
-                onClick={() => toggleExpand(service.id)}
-                aria-expanded={isExpanded}
-                aria-controls={`details-${service.id}`}
-              >
-                {isExpanded ? (
-                  <>
-                    Show Less <FaChevronUp />
-                  </>
-                ) : (
-                  <>
-                    Learn More <FaChevronDown />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        );
-      })}
+                <div className="card-footer">
+                  <button
+                    className="learn-more"
+                    onClick={() => toggleExpand(service.id)}
+                    aria-expanded={isExpanded}
+                    aria-controls={`details-${service.id}`}
+                  >
+                    {isExpanded ? (
+                      <>
+                        Show Less <FaChevronUp />
+                      </>
+                    ) : (
+                      <>
+                        Learn More <FaChevronDown />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

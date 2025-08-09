@@ -5,12 +5,30 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 24px;
-  // background-color: #f9fafb;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     padding: 20px 10px;
   }
+}
+
+.servicecard {
+  margin-top: 50px;  
+}
+
+.servicecard__title {
+  // text-align: center;
+  color: #f59e0b;
+  font-size: 40px;
+  font-weight: 600;
+}
+
+.servicecard__text {
+  // text-align: center;
+  color: #808080;
+  font-size: 18px;
+  margin-top: 10px;
+  max-width: 550px;
 }
 
 .card {
