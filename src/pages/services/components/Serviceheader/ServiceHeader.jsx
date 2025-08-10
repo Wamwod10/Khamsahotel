@@ -1,19 +1,21 @@
 import "./serviceheader.scss";
+import { useTranslation } from "react-i18next";
 
 const ServiceHeader = () => {
+    const { t } = useTranslation();
   return (
     <section className="service-header">
       <div className="container">
-        <h1 className="service-header__title">Services & Amenities</h1>
+        <h1 className="service-header__title">{t("servicetitle")}</h1>
         <p className="service-header__subtitle">
-          Discover our comprehensive range of services designed to make your stay comfortable and memorable
+          {t("servicesubtitle")}
         </p>
         <p className="service-header__description">
-          At KhamsaHotel, we pride ourselves on providing exceptional services that cater to every aspect of your stay. From round-the-clock assistance to premium amenities, we ensure your comfort is our priority.
+          {t("servicedescription")}
         </p>
         <div className="service-header__buttons">
-          <button className="btn btn-primary">Book a Room</button>
-          <button className="btn btn-secondary">Contact Us</button>
+          <button className="btn btn-primary">{t("serviceprimary")}</button>
+          <button className="btn btn-secondary">{t("servicesecondary")}</button>
         </div>
       </div>
     </section>
