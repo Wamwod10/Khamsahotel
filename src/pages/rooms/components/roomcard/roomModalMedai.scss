@@ -1,51 +1,53 @@
 .modal {
-    @media (max-width:425px) {
-        top: 10px;
+  @media (max-width: 425px) {
+    top: 10px;
 
-        &_all__section {
-            display: flex;
-            flex-wrap: wrap;
-            width: 310px;
-            column-gap: 90px;
-            row-gap: 15px;
-        }
-
-        &__form {
-            gap: 10px;
-        }
+    &_all__section {
+      display: flex;
+      flex-wrap: wrap;
+      width: 310px;
+      column-gap: 60px; // kamaytirdim, 90px dan ixchamroq bo'lsin
+      row-gap: 12px;    // biroz kichikroq
     }
 
-    @media (max-width:320px) {
-        top: 3px;
-
-        &_all__section {
-            column-gap: 53px;
-            row-gap: 10px;
-        }
-
-        &__title {
-            font-size: 20px;
-        }
-
-        &__section {
-            label {
-                font-size: 15px;
-            }
-
-            p {
-                font-size: 14px;
-            }
-        }
-
-        &__cancel,
-        &__confirm {
-            font-size: 13px !important;
-        }
-
-        &__field {
-            label {
-                font-size: 14px !important;
-            }
-        }
+    &__form {
+      gap: 8px; // 10px dan ozroq, ixchamroq
     }
+  }
+
+  @media (max-width: 320px) {
+    top: 5px; // 3px dan ozroq, biroz joy qoldirildi
+
+    &_all__section {
+      column-gap: 40px; // 53px dan ixchamroq
+      row-gap: 8px;     // 10px dan biroz kichikroq
+    }
+
+    &__title {
+      font-size: 18px; // 20px dan ozroq, ixchamroq matn uchun
+      font-weight: 600;
+    }
+
+    &__section {
+      label {
+        font-size: 14px; // 15px dan ozroq
+      }
+
+      p {
+        font-size: 13px; // 14px dan kichikroq
+      }
+    }
+
+    &__cancel,
+    &__confirm {
+      font-size: 12px !important; // 13px dan kichikroq tugmalar uchun
+      padding: 6px 12px;
+    }
+
+    &__field {
+      label {
+        font-size: 13px !important; // 14px dan kichikroq
+      }
+    }
+  }
 }

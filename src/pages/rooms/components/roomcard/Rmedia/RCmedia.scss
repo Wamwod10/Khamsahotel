@@ -340,3 +340,30 @@
         }
     }
 }
+
+
+
+@media (max-width: 480px) {
+  .notice-popup {
+    max-width: 90vw;
+    padding: 20px 24px;
+  }
+
+  .notice-title {
+    font-size: 18px;
+  }
+
+  .notice-message {
+    font-size: 14px;
+  }
+
+  .notice-question {
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .btn {
+    font-size: 14px;
+    padding: 10px 8px;
+  }
+}

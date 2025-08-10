@@ -1,6 +1,7 @@
 import { MdArrowBack, MdArrowForward } from "react-icons/md";
 import "./RoomCard.scss";
 import { useTranslation } from "react-i18next";
+import { NavLink } from "react-router-dom";
 
 const NoticePopup = ({ message, onBack, onContinue }) => {
   const { t } = useTranslation();
@@ -12,9 +13,9 @@ const NoticePopup = ({ message, onBack, onContinue }) => {
           <p className="notice-message">{message}</p>
           <p className="notice-question">{t("continue?")}</p>
           <div className="notice-buttons">
-            <button className="btn btn-back" onClick={onBack} type="button">
+            <NavLink to="/" className="btn btn-back" onClick={onBack} type="button">
               <MdArrowBack size={20} /> {t("mainPage")}
-            </button>
+            </NavLink>
             <button
               className="btn btn-continue"
               onClick={onContinue}
