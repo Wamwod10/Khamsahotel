@@ -1,34 +1,32 @@
-.servicecard-wrapper {
-  max-width: 1320px;
-  margin: 0 auto;
-  padding: 40px 20px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    padding: 20px 10px;
-  }
-}
-
 .servicecard {
-  margin-top: 50px;  
-}
+  margin-top: 50px;
 
-.servicecard__title {
-  // text-align: center;
-  color: #f59e0b;
-  font-size: 40px;
-  font-weight: 600;
-}
+  &__title {
+    color: #f59e0b;
+    font-size: 40px;
+    font-weight: 600;
+  }
 
-.servicecard__text {
-  // text-align: center;
-  color: #808080;
-  font-size: 18px;
-  margin-top: 10px;
-  max-width: 550px;
+  &__text {
+    color: #808080;
+    font-size: 18px;
+    margin-top: 10px;
+    max-width: 550px;
+  }
+
+  &-wrapper {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      padding: 20px 10px;
+    }
+  }
 }
 
 .card {
@@ -125,23 +123,11 @@
       }
     }
 
-    &.icon-6 {
+    &.icon-6,
+    &.icon-7 {
       animation: icon6 0.5s linear infinite alternate-reverse;
 
       @keyframes icon6 {
-        from {
-          transform: rotate(-10deg);
-        }
-        to {
-          transform: rotate(10deg);
-        }
-      }
-    }
-
-    &.icon-7 {
-      animation: icon7 0.5s linear infinite alternate-reverse;
-
-      @keyframes icon7 {
         from {
           transform: rotate(-10deg);
         }
@@ -188,18 +174,9 @@
   }
 
   .details-container {
+    margin-top: 12px;
+    animation: fadeDown 0.3s ease-in-out;
     overflow: hidden;
-    max-height: 0;
-    opacity: 0;
-    transition:
-      max-height 0.3s ease,
-      opacity 0.3s ease;
-
-    &.expanded {
-      max-height: 500px; /* katta qiymat, barcha ro'yxat sigishi uchun */
-      opacity: 1;
-      margin-top: 12px;
-    }
 
     .details {
       list-style: none;
@@ -257,10 +234,39 @@
       }
     }
   }
+
+  .time-1 {
+    color: #28a745;
+  }
+
+  .time-2 {
+    color: #007bff;
+  }
+
+  .time-3 {
+    color: #fd7e14;
+  }
+
+  .time-4 {
+    color: #17a2b8;
+  }
+
+  .time-5 {
+    color: #6c757d;
+  }
+
+  .time-6 {
+    color: #ffc107;
+  }
+
+  .time-7 {
+    color: #6f42c1;
+  }
 }
 
-
-/* ===== RESPONSIVE BREAKPOINTS ===== */
+// =========================
+// ==== RESPONSIVE CSS ====
+// =========================
 
 @media (max-width: 1366px) {
   .servicecard__title {
@@ -370,5 +376,18 @@
   .card .icon {
     font-size: 18px;
     padding: 10px;
+  }
+}
+
+// ==== Animations ====
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

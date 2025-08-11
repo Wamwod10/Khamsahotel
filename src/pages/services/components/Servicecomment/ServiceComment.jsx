@@ -24,7 +24,7 @@ const ServiceComment = () => {
       rating: 5.0,
       comment: t("review_comment_1"),
       date: t("review_date_1"),
-      avatar: "/public/10.jpg",
+      avatar: "/public/30.png",
     },
     {
       name: "Natallia",
@@ -32,7 +32,7 @@ const ServiceComment = () => {
       rating: 4.5,
       comment: t("review_comment_2"),
       date: t("review_date_2"),
-      avatar: "/public/10.jpg",
+      avatar: "/public/31.png",
     },
     {
       name: "Liubov",
@@ -40,7 +40,7 @@ const ServiceComment = () => {
       rating: 4.9,
       comment: t("review_comment_3"),
       date: t("review_date_3"),
-      avatar: "/public/10.jpg",
+      avatar: "/public/32.png",
     },
     {
       name: "Mikalai",
@@ -48,7 +48,7 @@ const ServiceComment = () => {
       rating: 5.0,
       comment: t("review_comment_4"),
       date: t("review_date_4"),
-      avatar: "/public/10.jpg",
+      avatar: "/public/33.png",
     },
     {
       name: "Timur",
@@ -56,7 +56,7 @@ const ServiceComment = () => {
       rating: 4.8,
       comment: t("review_comment_5"),
       date: t("review_date_5"),
-      avatar: "/public/10.jpg",
+      avatar: "/public/34.png",
     },
   ];
 

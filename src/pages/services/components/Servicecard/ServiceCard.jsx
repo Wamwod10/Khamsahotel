@@ -143,18 +143,18 @@ const ServiceCard = () => {
                     <FaStar className="card__icon" /> {service.rating}
                   </span>
                 </div>
-                <p className="time">{service.time}</p>
+                <p className={`time time-${service.id}`}>{service.time}</p>
                 <p className="desc">{service.description}</p>
 
-                <div className={`details-container ${isExpanded ? "expanded" : ""}`}>
-                  {isExpanded && (
+                {isExpanded && (
+                  <div className="details-container expanded" id={`details-${service.id}`}>
                     <ul className="details">
                       {service.details.map((item, i) => (
                         <li key={i}>{item}</li>
                       ))}
                     </ul>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <div className="card-footer">
                   <button
