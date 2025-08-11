@@ -24,7 +24,7 @@ const ServiceComment = () => {
       rating: 5.0,
       comment: t("review_comment_1"),
       date: t("review_date_1"),
-      avatar: "./public/30.png",
+      avatar: "./30.png",
     },
     {
       name: "Natallia",
