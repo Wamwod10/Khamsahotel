@@ -8,7 +8,7 @@ const ServiceHeader = () => {
       <div className="container">
         <h1 className="service-header__title">{t("servicetitle")}</h1>
         <p className="service-header__subtitle">
-          {t("servicesubtitle")}
+          {t("servicesubtitle")}   
         </p>
         <p className="service-header__description">
           {t("servicedescription")}
@@ -20,6 +20,6 @@ const ServiceHeader = () => {
       </div>
     </section>
   );
-};
+};   
 
 export default ServiceHeader;

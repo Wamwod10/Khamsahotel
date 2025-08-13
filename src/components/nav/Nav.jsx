@@ -102,7 +102,7 @@ const Nav = () => {
                         <li className="nav__item"><NavLink to="/" className="nav__link"><IoHome />{t('home')}</NavLink></li>
                         <li className="nav__item"><NavLink to="/rooms" className="nav__link"><RiHotelBedFill />{t('rooms')}</NavLink></li>
                         <li className="nav__item"><NavLink to="/services" className="nav__link"><PiCoffeeFill />{t('services')}</NavLink></li>
-                        <li className="nav__item"><NavLink to="/review" className="nav__link"><FaStar />{t('review')}</NavLink></li>
+                        <li className="nav__item"><NavLink to="/offer" className="nav__link"><FaStar />{t('review')}</NavLink></li>
                         <li className="nav__item"><NavLink to="/contact" className="nav__link"><FaLocationDot />{t('contact')}</NavLink></li>
 
                         <li className="nav__item"><NavLink to="/mybooking" className="nav__link"><PiNotepadFill />{t('mybooking')}</NavLink></li>

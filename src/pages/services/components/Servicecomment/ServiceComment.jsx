@@ -127,7 +127,7 @@ const ServiceComment = () => {
                   <div className="service-comment__bottom-row">
                     <span className="service-comment__verified-icon">
                       <FaCheckCircle />
-                      {t("verified_guest")}
+                      {t("verified_review")}
                     </span>
                     <span className="service-comment__date">
                       <FaRegCalendarAlt />

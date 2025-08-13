@@ -2,7 +2,7 @@
   "home": "Home",
   "rooms": "Rooms",
   "services": "Services",
-  "review": "Review",
+  "review": "Public Offers",
   "contact": "Contact",
   "mybooking": "My Booking",
   "booknow": "Book Now",
@@ -158,7 +158,7 @@
   "selectMethod": "Select a method",
   "confirm": "Confirm",
   "cancel": "Cancel",
-  
+
   "attention": "Attention!",
   "continue": "Continue",
   "continue?": "Do you want to continue?",
@@ -227,6 +227,7 @@
   "comment_title": "What Our Guests Say",
   "comment_subtitle": "Real experiences from guests who have used our services",
   "verified_guest": "Verified Guest",
+  "verified_review": "Verified Review",
   "stayed_on": "Stayed on",
   "review_country_1": "Kazakhstan",
   "review_country_2": "United Kingdom",
@@ -242,6 +243,27 @@
   "review_date_2": "June 2024",
   "review_date_3": "May 2024",
   "review_date_4": "April 2024",
-  "review_date_5": "March 2024"
-}
+  "review_date_5": "March 2024",
 
+  "title": "Public Offer For Khamsa Hotel",
+  "section1_title": "1. Subject of the Offer",
+  "section1_text": "This Offer provides information about the Hotel’s services, including room reservations, payment procedures, cancellation policies and data privacy policies. By booking a room at the Hotel, you (“Guest”) agree to be bound by the terms and conditions set forth in this Offer.",
+  "section2_title": "2. Order and payment methods",
+  "section2_text": "Guests can book rooms through the Hotel’s website or by contacting the front desk at +99895-877-24-24. The hotel accepts the following payment methods: Online payment through a secure payment gateway. Payment by credit card at the time of booking or check-in. Payment in cash upon check-in.",
+  "section3_title": "3. Return of goods (refusal of services)",
+  "section3_text": "Cancellation by guest: Guests can cancel their reservation free of charge up to 7 days before arrival. Cancellations made within [Number] of days prior to arrival will be subject to a cancellation fee equal to [Percentage] of the total booking amount. In case of a \"no show\" (no show without prior cancellation), the full cost of the reservation will be charged. Cancellations must be made by contacting the property at [phone number] or through the online booking platform. Cancellation by hotel: In the rare event that the Hotel needs to cancel a confirmed booking, the Guest will be notified as soon as possible and will be offered an alternative room of equal or higher standard or a full refund of the booking amount.",
+  "section4_title": "4. Provision of services",
+  "section4_text": "Check-in time is [Time], check-out time is [Time]. Early check-in and late check-out may be available upon request, subject to availability and at an additional cost. Guests must present a valid government-issued photo ID and the credit card used to make the reservation upon check-in. The Hotel reserves the right to refuse service to Guests who disrupt the order, are intoxicated or violate the Hotel rules.",
+  "section5_title": "5. Transaction security",
+  "section5_text": "The hotel implements standard security measures to protect all online transactions. Payment information is encrypted using Secure Sockets Layer (SSL) technology.",
+  "section6_title": "6. Privacy Policy",
+  "section6_text": "The Hotel respects the privacy of its Guests and is committed to protecting personal information. Please refer to our separate Privacy Policy for detailed information about how we collect, use and disclose your personal information.",
+  "section7_title": "7. Applicable law",
+  "section7_text": "This Offer and any disputes arising from it shall be governed by and construed in accordance with the laws of Uzbekistan.",
+  "section8_title": "8. Contact information",
+  "section8_text": "For any questions or concerns regarding this Offer, please contact the hotel at:",
+  "section8_phone": "Phone: +99895-877-24-24",
+  "section8_email": "Email: gomoqhotel@mail.ru",
+  "section9_title": "9. Effective date",
+  "section9_text": "This Offer is valid from 05/14/2024. The hotel reserves the right to change the terms of this Offer at any time without prior notice. We recommend that you review this offer before booking."
+}

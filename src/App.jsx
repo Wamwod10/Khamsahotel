@@ -5,7 +5,6 @@ import Header from "./components/header/Header";
 import Roomcard from "./components/roomcard/Roomcard";
 import Room from "./pages/rooms/Room";
 import Services from "./pages/services/Services";
-import Review from "./pages/Reviews/Review";
 import Contact from "./pages/contact/Contact";
 import MyBooking from "./pages/mybooking/Mybooking";
 import Bookingform from "./components/bookingform/Bookingform";
@@ -14,6 +13,7 @@ import Near from "./components/nearby/Near";
 import Footer from "./components/footer/Footer";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Offer from "./pages/offers/Offer";
 
 function App() {
   return (
@@ -31,7 +31,7 @@ function App() {
         />
         <Route path="/rooms" element={<Room />} />
         <Route path="/services" element={<Services />} />
-        <Route path="/review" element={<Review />} />
+        <Route path="/offer" element={<Offer />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/mybooking" element={<MyBooking />} />
       </Routes>
