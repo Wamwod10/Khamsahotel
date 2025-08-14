@@ -1,0 +1,7 @@
+{
+  "rules": {
+    "property-no-unknown": [true, {
+      "ignoreProperties": ["backdrop-filter", "-webkit-backdrop-filter"]
+    }]
+  }
+}
