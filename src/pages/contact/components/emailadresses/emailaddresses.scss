@@ -1,0 +1,110 @@
+.email {
+  &__phone-box {
+    max-width: 430px;
+    height: fit-content;
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    // margin-top: 25px;
+    padding: 17px;
+    padding-bottom: 32px;
+  }
+
+  &__phone-title {
+    font-size: 20px;
+    color: #2d3748;
+    font-weight: 600;
+  }
+
+  &__call-icon {
+    color: #ffa930;
+    z-index: 999;
+    font-size: 20px;
+  }
+
+  &__link {
+    background: #ffffff;
+    padding: 11px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    display: block;
+    width: 40px;
+    height: 40px;
+  }
+
+  &__numb-title {
+    color: #2d3748;
+    font-size: 16px;
+  }
+
+  &__numb-text {
+    color: #718096;
+    font-size: 16px;
+  }
+
+  &__numb-div {
+    display: flex;
+    flex-direction: column;
+    row-gap: 2px;
+  }
+
+  &__copy-icon {
+    font-size: 20px;
+    color: #718096;
+  }
+
+  &__phone-link {
+    background: #ffa930;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    column-gap: 5px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    min-width: 75px;
+    transition: 0.2s;
+
+    &:hover {
+      background: #eb9216;
+    }
+  }
+
+  &__link-icon {
+    font-size: 20px;
+    color: #fff;
+  }
+
+  &__box-phone {
+    margin-top: 32px;
+    padding-left: 12px;
+    padding-right: 12px;
+    display: flex;
+    flex-direction: column;
+    row-gap: 32px;
+  }
+
+  &__phone-div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__check-icon {
+    font-size: 20px;
+    color: rgb(40, 192, 40);
+    transition: all 0.2s ease;
+  }
+
+  &__copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+  }
+}

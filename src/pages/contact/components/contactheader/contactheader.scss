@@ -1,0 +1,103 @@
+.contact-header {
+//   background-color: #f9fafb;
+//   padding: 2rem 1rem;
+
+  .container {
+    max-width: 1366px;
+    margin: 0 auto;
+    text-align: center;
+
+    .contact-header__title {
+      font-size: 40px;
+      font-weight: 700;
+      color: rgb(255, 169, 48);
+      margin-bottom: 0.5rem;
+    }
+
+    .contact-header__subtitle {
+      color: #6b7280;
+      font-size: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .contact-alert {
+      background-color: #fff8e1;
+      border: 1px solid #ffecc7;
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+
+      &__info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+        min-width: 250px;
+      }
+
+      &__icon {
+        font-size: 1.5rem;
+        color: rgb(255, 169, 48);
+      }
+
+      &__text {
+        text-align: left;
+
+        .contact-alert__main-text {
+          font-weight: 500;
+          font-size: 18px;
+          color: rgb(255, 158, 23);
+          margin-bottom: 0.25rem;
+        }
+
+        .contact-alert__number {
+          font-size: 0.875rem;
+          margin-top: 5px;
+          color: #b2851e;
+        }
+      }
+
+      &__button {
+        background-color: rgb(255, 181, 76);
+        font-size: 16px;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+
+        &-icon {
+          font-size: 18px;               
+        }
+
+        &:hover {
+          background-color: rgb(255, 158, 23);
+        }
+      }
+    }
+  }
+}
+
+/* 🔁 Responsive (mobile < 640px) */
+@media (max-width: 640px) {
+  .contact-header {
+    .contact-alert {
+      flex-direction: column;
+      align-items: flex-start;
+
+      &__button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+}

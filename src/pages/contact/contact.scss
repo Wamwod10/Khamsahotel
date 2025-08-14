@@ -3,6 +3,7 @@
 .contact-page {
   margin: 0 auto;
   padding: 20px 15px;
+  margin-top: 30px;
 }
 
 .contact-main {
@@ -14,17 +15,14 @@
 
 /* Chap blok uchun */
 .left-side {
-  flex: 1 1 350px;
+  flex: 1 1 420px;
   min-width: 300px;
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: 0px;
 }
 
-/* O‘ng blok uchun */
-.right-side {
-  
-}
+
 
 /* FaqAccordion va AlternativeContacts uchun margin */
 .faq-accordion, .alternative-contacts {

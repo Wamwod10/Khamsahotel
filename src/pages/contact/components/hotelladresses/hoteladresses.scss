@@ -1,0 +1,82 @@
+.hotel {
+  max-width: 430px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  margin-left: 10px;
+  border-radius: 10px;
+  padding: 20px 25px;
+  margin-top: 15px;
+
+  &__title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffa930;
+    margin-bottom: 20px;
+  }
+
+  &__address-box {
+    display: flex;
+    align-items: flex-start;
+    column-gap: 15px;
+    margin-bottom: 25px;
+  }
+
+  &__icon-wrapper {
+    background-color: #ffffff;
+    border-radius: 10px;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &__icon {
+    font-size: 24px;
+    color: #ffa930;
+  }
+
+  &__text-wrapper {
+    display: flex;
+    flex-direction: column;
+    row-gap: 4px;
+  }
+
+  &__address-line1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+  }
+
+  &__address-line2 {
+    font-size: 14px;
+    font-weight: 400;
+    color: #718096;
+  }
+
+  &__btn {
+    background-color: #ffa930;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    padding: 11px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    width: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    column-gap: 8px;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: #e5911b;
+    }
+  }
+
+  &__btn-icon {
+    font-size: 18px;
+  }
+}
