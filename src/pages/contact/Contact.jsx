@@ -6,10 +6,10 @@ import EmergencyContacts from "./components/emergencycontacts/EmergencyContacts"
 import EmailAddresses from "./components/emailadresses/EmailAddresses";
 import HotelAddress from "./components/hotelladresses/HotelAddress";
 import OperatingHours from "./components/operatinghours/OperatingHours";
-import SocialMediaLinks from "./components/socialmedialinks/SocialMediaLinks";
 import ContactForm from "./components/contactform/ContactForm";
 import FaqAccordion from "./components/faqaccordion/FaqAccordion";
 import AlternativeContacts from "./components/alternativecontacts/AlternativeContacts";
+import SendMessage from "./components/sendmessage/SendMessage";
 
 const Contact = () => {
   return (
@@ -21,10 +21,10 @@ const Contact = () => {
           <EmailAddresses />
           <HotelAddress />
           <OperatingHours />
-          <SocialMediaLinks />
         </div>
         <div className="right-side">
           <ContactForm />
+          <SendMessage />
         </div>
       </div>
       <FaqAccordion />
