@@ -64,7 +64,7 @@ export default function RoomHeader() {
   }, [bookingInfo.guests]);
 
   // Close notice handler - save that notice was shown for current guest count
-  const handleCloseNotice = () => {
+  const handleCloseNotice = () => {  
     setShowNotice(false);
 
     const guestNum = getGuestCount(bookingInfo.guests);
