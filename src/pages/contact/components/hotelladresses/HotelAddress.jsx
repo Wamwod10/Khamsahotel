@@ -13,8 +13,8 @@ const HotelAddress = () => {
         </div>
 
         <div className="hotel__text-wrapper">
-          <p className="hotel__address-line1">15 Amir Temur Avenue</p>
-          <p className="hotel__address-line2">Tashkent, Uzbekistan 100000</p>
+          <p className="hotel__address-line1">Tashkent Airport Hotel</p>
+          <p className="hotel__address-line2">Tashkent International Airport, near Terminal 2</p>
         </div>
       </div>
 

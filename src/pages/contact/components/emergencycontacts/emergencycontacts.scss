@@ -33,6 +33,12 @@
     row-gap: 5px;
   }
 
+  &__extra-div {
+    display: flex;
+    align-items: center;
+    column-gap: 12px;
+  }
+
   &__phone-box {
     max-width: 430px;
     height: fit-content;
@@ -229,8 +235,8 @@
 @media (max-width: 800px) {
   .emergency {
     &__phone-div {
-      flex-direction: column;
-      align-items: flex-start;
+      // flex-direction: column;
+      // align-items: flex-start;
       gap: 10px;
     }
 
@@ -242,7 +248,7 @@
     }
 
     &__icon {
-      font-size: 24px;
+      // font-size: 24px;
     }
 
     &__phone-box {
@@ -341,6 +347,14 @@
       width: 34px;
       height: 34px;
     }
+  }
+}
+
+@media (max-width: 350px) {
+  .emergency__phone-div {
+    // display: flex;
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

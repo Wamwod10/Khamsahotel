@@ -58,7 +58,7 @@
     padding: 13px;
     border-radius: 12px;
     width: 500px;
-    z-index: 9999;
+    // z-index: 9999;
     border: 1px solid #dfdfdf;
   }
 
@@ -178,8 +178,8 @@
 // === TABLET LANDSCAPE ===
 @media (max-width: 992px) {
   .contactform__title-box {
-    flex-direction: column;
-    align-items: flex-start;
+    // flex-direction: column;
+    // align-items: flex-start;
     gap: 10px;
   }
 
@@ -217,9 +217,10 @@
   }
 
   .contactform__nears-box {
+    margin-top: 20px;
     display: flex;
     flex-direction: column;
-    row-gap: 30px;
+    row-gap: 40px;
   }
 
   .contactform__map-div {

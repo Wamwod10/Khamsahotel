@@ -77,33 +77,37 @@ const EmergencyContacts = () => {
           <div className="emergency__box-phone">
             {phoneNumbers.map((phone, index) => (
               <div className="emergency__phone-div" key={index}>
-                <a className="emergency__link" href="#">
-                  {phone.icon}
-                </a>
+                <div className="emergency__extra-div">
+                  <a className="emergency__link" href="#">
+                    {phone.icon}
+                  </a>
 
-                <div className="emergency__numb-div">
-                  <h2 className="emergency__numb-title">{phone.title}</h2>
-                  <p className="emergency__numb-text">{phone.number}</p>
+                  <div className="emergency__numb-div">
+                    <h2 className="emergency__numb-title">{phone.title}</h2>
+                    <p className="emergency__numb-text">{phone.number}</p>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => handleCopy(phone.number, index)}
-                  className="emergency__copy-btn"
-                >
-                  {copiedStates[index] ? (
-                    <FaCheck className="emergency__check-icon" />
-                  ) : (
-                    <IoCopyOutline className="emergency__copy-icon" />
-                  )}
-                </button>
+                <div className="emergency__extra-div">
+                  <button
+                    onClick={() => handleCopy(phone.number, index)}
+                    className="emergency__copy-btn"
+                  >
+                    {copiedStates[index] ? (
+                      <FaCheck className="emergency__check-icon" />
+                    ) : (
+                      <IoCopyOutline className="emergency__copy-icon" />
+                    )}
+                  </button>
 
-                <a
-                  href={`tel:${phone.number.replace(/\s/g, "")}`}
-                  className="emergency__phone-link"
-                >
-                  <IoCallOutline className="emergency__link-icon" />
-                  {phone.buttonText}
-                </a>
+                  <a
+                    href={`tel:${phone.number.replace(/\s/g, "")}`}
+                    className="emergency__phone-link"
+                  >
+                    <IoCallOutline className="emergency__link-icon" />
+                    {phone.buttonText}
+                  </a>
+                </div>
               </div>
             ))}
           </div>

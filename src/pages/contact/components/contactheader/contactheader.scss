@@ -128,7 +128,7 @@
       gap: 0.75rem;
     }
     .contact-alert__main-text {
-      font-size: 16px;
+      font-size: 14px;
     }
   }
 }
@@ -157,7 +157,7 @@
       font-size: 0.95rem;
     }
     .contact-alert__main-text {
-      font-size: 15px;
+      font-size: 13px;
     }
   }
 }
@@ -198,26 +198,26 @@
 
 /* 500px ↓ */
 @media (max-width: 500px) {
-  .contact-header {
+
     .contact-header__title {
       font-size: 24px;
     }
     .contact-header__subtitle {
       font-size: 0.875rem;
     }
-  }
+  
 }
 
 /* 400px ↓ */
 @media (max-width: 400px) {
-  .contact-header {
+
     .contact-alert__main-text {
-      font-size: 14px;
+      font-size: 12px;
     }
     .contact-alert__button-icon {
       font-size: 16px;
     }
-  }
+  
 }
 
 /* 300px ↓ */
