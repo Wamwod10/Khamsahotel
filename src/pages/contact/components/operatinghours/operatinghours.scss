@@ -96,3 +96,77 @@
     font-size: 16px;
   }
 }
+
+@media (max-width: 600px) {
+  .hours {
+    margin-top: 15px;
+
+    &__box {
+      max-width: 100%;
+      padding: 15px 12px 24px;
+      border-radius: 8px;
+    }
+
+    &__title {
+      font-size: 18px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    &__list {
+      padding-left: 0;
+      padding-right: 0;
+      row-gap: 20px;
+    }
+
+    &__item {
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      gap: 8px;
+
+      &.shuttle,
+      &.checkin,
+      &.luggage,
+      &.currency {
+        .hours__icon,
+        .hours__info-title,
+        .hours__info-time {
+          font-size: 18px;
+        }
+      }
+    }
+
+    &__icon-box {
+      width: 36px;
+      height: 36px;
+      padding: 8px;
+    }
+
+    &__icon {
+      font-size: 18px;
+    }
+
+    &__info {
+      width: 100%;
+      margin-left: 0;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    &__info-title {
+      font-size: 15px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    &__info-time {
+      font-size: 15px;
+      font-weight: 400;
+      white-space: nowrap;
+    }
+  }
+}

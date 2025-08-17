@@ -142,3 +142,165 @@
     row-gap: 20px;
   }
 }
+
+// === LARGE LAPTOPS & DESKTOPS ===
+@media (max-width: 1400px) {
+  .contactform__box {
+    width: 100%;
+  }
+
+  .contactform__map-div {
+    left: 50px;
+    width: 460px;
+  }
+}
+
+// === LAPTOP / SMALLER DESKTOPS ===
+@media (max-width: 1200px) {
+  .contactform__map-div {
+    left: 30px;
+    width: 420px;
+  }
+
+  .contactform__map-title {
+    font-size: 17px;
+  }
+
+  .contactform__map-text {
+    font-size: 15px;
+  }
+
+  .contactform__nears-title {
+    font-size: 18px;
+  }
+}
+
+// === TABLET LANDSCAPE ===
+@media (max-width: 992px) {
+  .contactform__title-box {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .contactform__map {
+    height: 300px;
+  }
+
+  .contactform__map-div {
+    left: 20px;
+    width: 360px;
+    padding: 10px;
+  }
+
+  .contactform__link {
+    font-size: 15px;
+    width: 150px;
+    padding: 7px 10px;
+  }
+
+  .contactform__div-title {
+    font-size: 15px;
+  }
+
+  .contactform__div-text {
+    font-size: 13px;
+  }
+}
+
+// === TABLET PORTRAIT ===
+@media (max-width: 768px) {
+  .contactform__link {
+    font-size: 14px;
+    width: 140px;
+    padding: 6px 10px;
+  }
+
+  .contactform__nears-box {
+    display: flex;
+    flex-direction: column;
+    row-gap: 30px;
+  }
+
+  .contactform__map-div {
+    left: 15px;
+    width: 320px;
+  }
+
+  .contactform__nears-div {
+    // flex-direction: column;
+    // align-items: flex-start;
+    gap: 8px;
+  }
+
+  .contactform__nears-title {
+    font-size: 17px;
+  }
+}
+
+// === MOBILE LARGE (e.g. iPhone 14 Pro Max) ===
+@media (max-width: 576px) {
+  .contactform__title {
+    font-size: 20px;
+  }
+
+  .contactform__link {
+    font-size: 13px;
+    width: 130px;
+    padding: 5px 8px;
+  }
+
+  .contactform__map {
+    height: 260px;
+  }
+
+  .contactform__map-div {
+    width: 260px;
+    left: 10px;
+    padding: 8px;
+  }
+
+  .contactform__div-title {
+    font-size: 14px;
+  }
+
+  .contactform__div-text {
+    font-size: 12px;
+  }
+}
+
+// === MOBILE MEDIUM (e.g. Galaxy Fold) ===
+@media (max-width: 400px) {
+  .contactform__map-div {
+    width: 220px;
+  }
+
+  .contactform__div-title {
+    font-size: 13px;
+  }
+
+  .contactform__div-text {
+    font-size: 11px;
+  }
+
+  .contactform__map-title {
+    font-size: 16px;
+  }
+
+  .contactform__map-text {
+    font-size: 12px;
+  }
+}
+
+// === MOBILE SMALL ===
+@media (max-width: 320px) {
+  .contactform__map-div {
+    width: 200px;
+    padding: 6px;
+  }
+
+  .contactform__link {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -80,3 +80,131 @@
     font-size: 18px;
   }
 }
+
+
+.hotel {
+  max-width: 430px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  margin-left: 10px;
+  border-radius: 10px;
+  padding: 20px 25px;
+  margin-top: 15px;
+
+  &__title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffa930;
+    margin-bottom: 20px;
+  }
+
+  &__address-box {
+    display: flex;
+    align-items: flex-start;
+    column-gap: 15px;
+    margin-bottom: 25px;
+  }
+
+  &__icon-wrapper {
+    background-color: #ffffff;
+    border-radius: 10px;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &__icon {
+    font-size: 24px;
+    color: #ffa930;
+  }
+
+  &__text-wrapper {
+    display: flex;
+    flex-direction: column;
+    row-gap: 4px;
+  }
+
+  &__address-line1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+  }
+
+  &__address-line2 {
+    font-size: 14px;
+    font-weight: 400;
+    color: #718096;
+  }
+
+  &__btn {
+    background-color: #ffa930;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    padding: 11px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    width: 100%;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    column-gap: 8px;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: #e5911b;
+    }
+  }
+
+  &__btn-icon {
+    font-size: 18px;
+  }
+
+  // Media queries
+  @media (max-width: 480px) {
+    max-width: 100%;
+    margin-left: 0;
+    padding: 15px 20px;
+    margin-top: 10px;
+
+    &__title {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+
+    &__address-box {
+      column-gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    &__icon-wrapper {
+      width: 40px;
+      height: 40px;
+    }
+
+    &__icon {
+      font-size: 20px;
+    }
+
+    &__address-line1 {
+      font-size: 14px;
+    }
+
+    &__address-line2 {
+      font-size: 13px;
+    }
+
+    &__btn {
+      font-size: 14px;
+      padding: 10px 15px;
+    }
+
+    &__btn-icon {
+      font-size: 16px;
+    }
+  }
+}

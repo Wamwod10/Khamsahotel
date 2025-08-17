@@ -163,3 +163,61 @@
         flex-wrap: wrap;
     }
 }
+
+
+@media (max-width: 768px) {
+    .sendmessage {
+      &__box {
+        width: 100%;
+        padding: 20px 15px;
+      }
+  
+      &-form {
+        max-width: 100%;
+        flex-direction: column;
+        gap: 15px;
+  
+        .sendmessage__form-group {
+          input,
+          select,
+          textarea {
+            width: 100% !important;
+            max-width: 100%;
+          }
+        }
+      }
+  
+      &__form {
+        textarea {
+          width: 100% !important;
+          max-width: 100%;
+          height: 140px;
+        }
+  
+        button {
+          width: 100%;
+          height: 44px;
+          font-size: 16px;
+        }
+      }
+  
+      &__form-but {
+        justify-content: center;
+      }
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .sendmessage {
+      &__title {
+        font-size: 22px;
+        text-align: center;
+      }
+  
+      &__text {
+        font-size: 14px;
+        text-align: center;
+      }
+    }
+  }
+  

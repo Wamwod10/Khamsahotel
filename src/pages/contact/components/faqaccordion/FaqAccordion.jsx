@@ -52,7 +52,7 @@ const FaqAccordion = () => {
         Find answers to common questions about our hotel and services
       </p>
 
-      <div className="faq__wrapper">
+      <div className="faq__wrapper container">
         {/* FAQ list */}
         <div className="faq__list">
           {faqData.map((item, index) => {
