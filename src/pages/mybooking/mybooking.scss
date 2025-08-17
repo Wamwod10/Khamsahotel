@@ -1,0 +1,116 @@
+$primary-color: #009688;
+$text-color: #333;
+$light-bg: #fdfdfd;
+$border-radius: 8px;
+
+.mybooking {
+  padding: 50px 20px;
+  background-color: $light-bg;
+  min-height: 100vh;
+
+  .container {
+    max-width: 700px;
+    margin: 0 auto;
+    background: white;
+    border-radius: $border-radius;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+  }
+
+  .title {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 24px;
+    color: $text-color;
+  }
+
+  .card {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+
+    @media (min-width: 480px) {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .field {
+      display: flex;
+      align-items: flex-start;
+      padding: 16px;
+      background: #fafafa;
+      border-left: 4px solid $primary-color;
+      border-radius: $border-radius;
+
+      .icon {
+        font-size: 24px;
+        color: $primary-color;
+        margin-right: 12px;
+        flex-shrink: 0;
+      }
+
+      .info {
+        p {
+          margin: 4px 0;
+          color: $text-color;
+          font-size: 15px;
+
+          strong {
+            color: $text-color;
+          }
+
+          svg {
+            vertical-align: middle;
+            margin-right: 6px;
+            color: $primary-color;
+          }
+        }
+      }
+    }
+  }
+
+  .actions {
+    margin-top: 30px;
+    text-align: center;
+
+    .btn {
+      background: $primary-color;
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      border-radius: $border-radius;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background: darken($primary-color, 8%);
+      }
+    }
+  }
+
+  .mybooking__empty {
+    text-align: center;
+    padding: 100px 20px;
+
+    h2 {
+      font-size: 22px;
+      margin-bottom: 16px;
+      color: $text-color;
+    }
+
+    button {
+      background: $primary-color;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      font-size: 15px;
+      border-radius: $border-radius;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background: darken($primary-color, 8%);
+      }
+    }
+  }
+}

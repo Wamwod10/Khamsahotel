@@ -1,9 +1,11 @@
+// RoomModal.jsx
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
-import './roomModalMedai.scss';
+import "./roomModalMedai.scss";
+
 const roomKeyMap = {
   "Standard Room": "roomType_standard",
   "Family Room": "roomType_family",
@@ -19,6 +21,8 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     checkIn: "",
     checkOut: "",
     hotel: t("TashkentAirportHotel"),
+    guests,
+    rooms,
   });
 
   const [formData, setFormData] = useState({
@@ -33,12 +37,13 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     if (saved) {
       const parsed = JSON.parse(saved);
       setBookingInfo({
-        checkIn: parsed.checkIn,
-        checkOut: parsed.checkOut,
+        ...parsed,
         hotel: t("TashkentAirportHotel"),
+        guests,
+        rooms,
       });
     }
-  }, [t]);
+  }, [t, guests, rooms]);
 
   const { checkIn, checkOut, hotel } = bookingInfo;
 
@@ -55,32 +60,25 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   const handleConfirm = (e) => {
     e.preventDefault();
 
-    if (!checkIn || checkIn === "-" || !checkOut || checkOut === "-") {
+    if (!checkIn || !checkOut) {
       toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz"), {
         position: "top-center",
         autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        style: { opacity: 1, zIndex: 99999 },
-        toastId: "incomplete-dates-toast",
       });
       return;
     }
 
-    // ✅ Avval modalni yopamiz
+    // ✅ Save formData to sessionStorage
+    sessionStorage.setItem("customerInfo", JSON.stringify(formData));
+    sessionStorage.setItem("userInfo", JSON.stringify(formData));
+
+    // ✅ Close modal
     onClose();
 
-    // ✅ Toastni keyin ko‘rsatamiz
+    // ✅ Show success toast
     toast.success(t("Sizning xonangiz bron qilindi"), {
       position: "top-center",
       autoClose: 2500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: false,
-      draggable: false,
-      style: { opacity: 1, zIndex: 99999 },
     });
   };
 
@@ -91,30 +89,11 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
         <h2 className="modal__title">{t("bookyourstay")}</h2>
 
         <div className="modal_all__section">
-          <div className="modal__section">
-            <label>{t("check-in")}:</label>
-            <p>{checkIn || "-"}</p>
-          </div>
-
-          <div className="modal__section">
-            <label>{t("check-out")}:</label>
-            <p>{checkOut || "-"}</p>
-          </div>
-
-          <div className="modal__section">
-            <label>{t("rooms")}:</label>
-            <p>{rooms ? t(roomKeyMap[rooms] || rooms) : "-"}</p>
-          </div>
-
-          <div className="modal__section">
-            <label>{t("guests")}:</label>
-            <p>{guests || "-"}</p>
-          </div>
-        </div>
-
-        <div className="modal__section">
-          <label>{t("hotel")}:</label>
-          <p>{hotel}</p>
+          <div className="modal__section"><label>{t("check-in")}:</label><p>{checkIn || "-"}</p></div>
+          <div className="modal__section"><label>{t("check-out")}:</label><p>{checkOut || "-"}</p></div>
+          <div className="modal__section"><label>{t("rooms")}:</label><p>{rooms ? t(roomKeyMap[rooms]) : "-"}</p></div>
+          <div className="modal__section"><label>{t("guests")}:</label><p>{guests || "-"}</p></div>
+          <div className="modal__section"><label>{t("hotel")}:</label><p>{hotel}</p></div>
         </div>
 
         <form className="modal__form" onSubmit={handleConfirm}>
@@ -170,26 +149,13 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
             <label htmlFor="payment-method">{t("paymentMethod")}</label>
             <div className="input-wrapper">
               <img src="/28.png" alt="Octobank" className="input-icon" />
-              <input
-                id="payment-method"
-                name="payment-method"
-                value="Octobank"
-                disabled
-              />
+              <input id="payment-method" value="Octobank" disabled />
             </div>
           </div>
 
           <div className="modal__buttons">
-            <button type="submit" className="modal__confirm">
-              {t("confirm")}
-            </button>
-            <button
-              type="button"
-              className="modal__cancel"
-              onClick={onClose}
-            >
-              {t("cancel")}
-            </button>
+            <button type="submit" className="modal__confirm">{t("confirm")}</button>
+            <button type="button" className="modal__cancel" onClick={onClose}>{t("cancel")}</button>
           </div>
         </form>
       </div>
