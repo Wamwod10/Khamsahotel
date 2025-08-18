@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Nav from "./components/nav/Nav";
 import Header from "./components/header/Header";
 import Roomcard from "./components/roomcard/Roomcard";
@@ -10,22 +10,34 @@ import MyBooking from "./pages/mybooking/Mybooking";
 import Bookingform from "./components/bookingform/Bookingform";
 import Gallery from "./components/gallery/Gallery";
 import Near from "./components/nearby/Near";
-import Footer from "./components/footer/Footer";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Offer from "./pages/offers/Offer";
+import Login from "./pages/admin/Login/Login";
 
-function App() {
+function AppWrapper() {
+  // useNavigate ni shu yerda ishlatamiz
+  const navigate = useNavigate();
+
+  const navigateToAddBooking = () => {
+    // Bu yerda yangi booking qo'shish sahifasiga yo'naltiramiz
+    // Masalan, bosh sahifaga yoki booking form joylashgan sahifaga:
+    navigate("/");
+  };
+
+  return <App navigateToAddBooking={navigateToAddBooking} />;
+}
+
+function App({ navigateToAddBooking }) {
   return (
-    <BrowserRouter>
+    <>
       <Nav />
       <Routes>
         <Route
           path="/"
           element={
             <>
-              {" "}
-              <Header /> <Roomcard /> <Bookingform /> <Gallery /> <Near />{" "}
+              <Header /> <Roomcard /> <Bookingform /> <Gallery /> <Near />
             </>
           }
         />
@@ -33,9 +45,12 @@ function App() {
         <Route path="/services" element={<Services />} />
         <Route path="/offer" element={<Offer />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="/mybooking" element={<MyBooking />} />
+        <Route
+          path="/mybooking"
+          element={<MyBooking navigateToAddBooking={navigateToAddBooking} />}
+        />
+        <Route path="/admin" element={<Login />} />
       </Routes>
-      <Footer />
       <ToastContainer
         position="top-center"
         autoClose={2500}
@@ -46,8 +61,15 @@ function App() {
         draggable={false}
         style={{ zIndex: 99999 }}
       />
-    </BrowserRouter>
+    </>
   );
 }
 
-export default App;
+export default function Root() {
+  // Bosh komponent sifatida BrowserRouter va AppWrapper ni tashlaymiz
+  return (
+    <BrowserRouter>
+      <AppWrapper />
+    </BrowserRouter>
+  );
+}

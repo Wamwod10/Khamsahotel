@@ -1,275 +1,226 @@
-$primary-color: #009688;
-$primary-hover: #00796b;
-$text-color: #333;
-$light-bg: #fdfdfd;
-$border-radius: 8px;
-$modal-bg: rgba(0, 0, 0, 0.5);
+.mybooking-container {
+  max-width: 700px;
+  margin: 3rem auto;
+  background: #f5f8fa;
+  border-radius: 15px;
+  padding: 2rem 3rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 
-.mybooking {
-  padding: 50px 20px;
-  background-color: $light-bg;
-  min-height: 100vh;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  color: $text-color;
-
-  .container {
-    max-width: 700px;
-    margin: 0 auto;
-    background: white;
-    border-radius: $border-radius;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-    padding: 30px;
-  }
-
-  .title {
+  h1 {
     text-align: center;
-    font-size: 28px;
-    margin-bottom: 24px;
+    margin-bottom: 2rem;
+    color: #2c3e50;
+    font-weight: 700;
   }
 
-  .card {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .booking-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 8px 18px rgba(44, 62, 80, 0.1);
+  }
 
-    @media (min-width: 480px) {
-      grid-template-columns: 1fr 1fr;
+  .booking-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #dce3ea;
+    font-size: 1.1rem;
+    color: #34495e;
+
+    &:last-child {
+      border-bottom: none;
     }
 
-    .field {
-      display: flex;
-      align-items: flex-start;
-      padding: 16px;
-      background: #fafafa;
-      border-left: 4px solid $primary-color;
-      border-radius: $border-radius;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    span:first-child {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+  }
 
-      .icon {
-        font-size: 24px;
-        color: $primary-color;
-        margin-right: 12px;
-        flex-shrink: 0;
-        min-width: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+  h3 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #dce3ea;
+    padding-bottom: 0.5rem;
+    color: #2c3e50;
+    font-weight: 600;
+  }
+
+  .action-buttons {
+    margin-top: 1.8rem;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+
+    &.btn-edit {
+      background-color: #3498db;
+      color: white;
+
+      &:hover {
+        background-color: #2980b9;
       }
+    }
 
-      .info {
-        p {
-          margin: 4px 0;
-          font-size: 15px;
-          word-wrap: break-word;
+    &.btn-delete {
+      background-color: #e74c3c;
+      color: white;
 
-          strong {
-            color: $text-color;
-          }
+      &:hover {
+        background-color: #c0392b;
+      }
+    }
 
-          svg {
-            vertical-align: middle;
-            margin-right: 6px;
-            color: $primary-color;
-          }
+    &.btn-add {
+      background-color: #27ae60;
+      color: white;
+
+      &:hover {
+        background-color: #1e8449;
+      }
+    }
+
+    &.btn-pay {
+      background-color: #f39c12;
+      color: white;
+
+      &:hover {
+        background-color: #d68910;
+      }
+    }
+
+    &.btn-save {
+      background-color: #2ecc71;
+      color: white;
+
+      &:hover {
+        background-color: #27ae60;
+      }
+    }
+
+    &.btn-cancel {
+      background-color: #95a5a6;
+      color: white;
+
+      &:hover {
+        background-color: #7f8c8d;
+      }
+    }
+
+    &.btn-close {
+      background-color: #34495e;
+      color: white;
+
+      &:hover {
+        background-color: #2c3e50;
+      }
+    }
+  }
+
+  .edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    label {
+      display: flex;
+      flex-direction: column;
+      font-weight: 600;
+      color: #34495e;
+      font-size: 1rem;
+
+      input {
+        margin-top: 0.3rem;
+        padding: 0.5rem;
+        font-size: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+
+        &:focus {
+          outline: none;
+          border-color: #3498db;
+          box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
         }
       }
     }
-  }
 
-  .actions {
-    margin-top: 30px;
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    flex-wrap: wrap;
-
-    .btn {
-      background: $primary-color;
-      color: white;
-      border: none;
-      padding: 12px 28px;
-      border-radius: $border-radius;
-      font-size: 16px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: background-color 0.3s ease;
-
-      &:hover,
-      &:focus {
-        background: $primary-hover;
-        outline: none;
-      }
-    }
-
-    .edit-btn {
-      background: #0288d1;
-      &:hover,
-      &:focus {
-        background: #026aa7;
-      }
-    }
-
-    .delete-btn {
-      background: #d32f2f;
-      &:hover,
-      &:focus {
-        background: #9a2323;
-      }
-    }
-  }
-
-  .mybooking__empty {
-    text-align: center;
-    padding: 100px 20px;
-    font-size: 18px;
-
-    h2 {
-      font-size: 22px;
-      margin-bottom: 16px;
-    }
-
-    button {
-      background: $primary-color;
-      color: white;
-      border: none;
-      padding: 10px 24px;
-      font-size: 15px;
-      border-radius: $border-radius;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-
-      &:hover,
-      &:focus {
-        background: $primary-hover;
-        outline: none;
-      }
+    .edit-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+      justify-content: flex-end;
     }
   }
 }
 
-/* Modal styles */
-.modal-overlay {
+.mybooking-empty {
+  max-width: 500px;
+  margin: 6rem auto;
+  text-align: center;
+  color: #95a5a6;
+
+  h2 {
+    font-size: 1.7rem;
+    margin-bottom: 1rem;
+  }
+
+  button {
+    margin-top: 1.5rem;
+    padding: 0.6rem 1.3rem;
+    font-size: 1.1rem;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background-color: #1e8449;
+    }
+  }
+}
+
+/* Pay Now modal styles */
+.pay-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: $modal-bg;
+  background-color: rgba(44, 62, 80, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999;
 }
 
-.modal {
+.pay-modal {
   background: white;
-  border-radius: $border-radius;
+  padding: 2rem 3rem;
+  border-radius: 12px;
+  max-width: 400px;
   width: 90%;
-  max-width: 480px;
-  padding: 24px 28px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  outline: none;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-
-    h2 {
-      margin: 0;
-      font-size: 22px;
-      color: $text-color;
-    }
-
-    .modal-close-btn {
-      background: transparent;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-      color: $primary-color;
-      transition: color 0.3s ease;
-
-      &:hover,
-      &:focus {
-        color: $primary-hover;
-        outline: none;
-      }
-    }
+  h2 {
+    margin-bottom: 1.2rem;
+    color: #2c3e50;
+    font-weight: 700;
   }
 
-  .modal-form {
-    display: flex;
-    flex-direction: column;
-
-    label {
-      margin-bottom: 6px;
-      font-weight: 600;
-      font-size: 14px;
-      color: $text-color;
-    }
-
-    input {
-      margin-bottom: 16px;
-      padding: 10px 12px;
-      font-size: 15px;
-      border: 1.5px solid #ccc;
-      border-radius: 6px;
-      transition: border-color 0.3s ease;
-
-      &:focus {
-        border-color: $primary-color;
-        outline: none;
-      }
-    }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-
-      .btn {
-        padding: 10px 24px;
-        font-size: 16px;
-      }
-
-      .save-btn {
-        background: $primary-color;
-        color: white;
-
-        &:hover,
-        &:focus {
-          background: $primary-hover;
-          outline: none;
-        }
-      }
-
-      .cancel-btn {
-        background: #757575;
-        color: white;
-
-        &:hover,
-        &:focus {
-          background: #4a4a4a;
-          outline: none;
-        }
-      }
-    }
+  p {
+    margin-bottom: 2rem;
+    color: #34495e;
   }
-}
-
-/* Visually hidden for screen readers */
-.visually-hidden {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  padding: 0 !important;
-  margin: -1px !important;
-  overflow: hidden !important;
-  clip: rect(0, 0, 0, 0) !important;
-  white-space: nowrap !important;
-  border: 0 !important;
 }

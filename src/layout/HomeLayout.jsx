@@ -1,14 +1,20 @@
-import React from 'react'
-import Nav from '../components/nav/Nav'
-import { Outlet } from 'react-router-dom'
+import React from "react";
+import { useLocation, Outlet } from "react-router-dom";
+import Nav from '../components/nav/Nav';
+import Footer from "../Components/Footer/Footer";
 
-const HomeLayout = () => {
+const Layout = ({ cartCount }) => {
+  const location = useLocation();
+
+  const hideFooter = location.pathname === "/admin";
+
   return (
     <div>
-        <Nav/>
-        <Outlet/>
+      <Nav cartCount={cartCount} />
+      <Outlet /> {/* This will render the child route component */}
+      {!hideFooter && <Footer />}
     </div>
-  )
-}
+  );
+};
 
-export default HomeLayout
+export default Layout;

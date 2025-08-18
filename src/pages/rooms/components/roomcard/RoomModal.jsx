@@ -1,4 +1,3 @@
-// RoomModal.jsx
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
@@ -33,15 +32,29 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   });
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("bookingInfo");
-    if (saved) {
-      const parsed = JSON.parse(saved);
+    // Agar avval sessionStorageda booking ma'lumotlari bo'lsa, ularni yuklaymiz
+    const savedBooking = sessionStorage.getItem("bookingInfo");
+    if (savedBooking) {
+      const parsed = JSON.parse(savedBooking);
       setBookingInfo({
         ...parsed,
         hotel: t("TashkentAirportHotel"),
         guests,
         rooms,
       });
+      setFormData({
+        firstName: parsed.firstName || "",
+        lastName: parsed.lastName || "",
+        phone: parsed.phone || "",
+        email: parsed.email || "",
+      });
+    } else {
+      setBookingInfo((prev) => ({
+        ...prev,
+        hotel: t("TashkentAirportHotel"),
+        guests,
+        rooms,
+      }));
     }
   }, [t, guests, rooms]);
 
@@ -68,14 +81,31 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       return;
     }
 
-    // ✅ Save formData to sessionStorage
+    if (!formData.firstName || !formData.lastName || !formData.phone || !formData.email) {
+      toast.error(t("Iltimos, barcha maydonlarni to'ldiring"), {
+        position: "top-center",
+        autoClose: 3000,
+      });
+      return;
+    }
+
+    // Booking ma'lumotlarini to'liq shaklda yaratamiz
+    const fullBookingInfo = {
+      checkIn,
+      checkOut,
+      hotel,
+      guests,
+      rooms,
+      ...formData,
+    };
+
+    // sessionStorage ga yozamiz
+    sessionStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
     sessionStorage.setItem("customerInfo", JSON.stringify(formData));
     sessionStorage.setItem("userInfo", JSON.stringify(formData));
 
-    // ✅ Close modal
     onClose();
 
-    // ✅ Show success toast
     toast.success(t("Sizning xonangiz bron qilindi"), {
       position: "top-center",
       autoClose: 2500,
@@ -89,11 +119,26 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
         <h2 className="modal__title">{t("bookyourstay")}</h2>
 
         <div className="modal_all__section">
-          <div className="modal__section"><label>{t("check-in")}:</label><p>{checkIn || "-"}</p></div>
-          <div className="modal__section"><label>{t("check-out")}:</label><p>{checkOut || "-"}</p></div>
-          <div className="modal__section"><label>{t("rooms")}:</label><p>{rooms ? t(roomKeyMap[rooms]) : "-"}</p></div>
-          <div className="modal__section"><label>{t("guests")}:</label><p>{guests || "-"}</p></div>
-          <div className="modal__section"><label>{t("hotel")}:</label><p>{hotel}</p></div>
+          <div className="modal__section">
+            <label>{t("check-in")}:</label>
+            <p>{checkIn || "-"}</p>
+          </div>
+          <div className="modal__section">
+            <label>{t("check-out")}:</label>
+            <p>{checkOut || "-"}</p>
+          </div>
+          <div className="modal__section">
+            <label>{t("rooms")}:</label>
+            <p>{rooms ? t(roomKeyMap[rooms]) : "-"}</p>
+          </div>
+          <div className="modal__section">
+            <label>{t("guests")}:</label>
+            <p>{guests || "-"}</p>
+          </div>
+          <div className="modal__section">
+            <label>{t("hotel")}:</label>
+            <p>{hotel}</p>
+          </div>
         </div>
 
         <form className="modal__form" onSubmit={handleConfirm}>
@@ -154,8 +199,12 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
           </div>
 
           <div className="modal__buttons">
-            <button type="submit" className="modal__confirm">{t("confirm")}</button>
-            <button type="button" className="modal__cancel" onClick={onClose}>{t("cancel")}</button>
+            <button type="submit" className="modal__confirm">
+              {t("confirm")}
+            </button>
+            <button type="button" className="modal__cancel" onClick={onClose}>
+              {t("cancel")}
+            </button>
           </div>
         </form>
       </div>
