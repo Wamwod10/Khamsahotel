@@ -1,12 +1,16 @@
 $primary-color: #009688;
+$primary-hover: #00796b;
 $text-color: #333;
 $light-bg: #fdfdfd;
 $border-radius: 8px;
+$modal-bg: rgba(0, 0, 0, 0.5);
 
 .mybooking {
   padding: 50px 20px;
   background-color: $light-bg;
   min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: $text-color;
 
   .container {
     max-width: 700px;
@@ -21,7 +25,6 @@ $border-radius: 8px;
     text-align: center;
     font-size: 28px;
     margin-bottom: 24px;
-    color: $text-color;
   }
 
   .card {
@@ -40,19 +43,24 @@ $border-radius: 8px;
       background: #fafafa;
       border-left: 4px solid $primary-color;
       border-radius: $border-radius;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 
       .icon {
         font-size: 24px;
         color: $primary-color;
         margin-right: 12px;
         flex-shrink: 0;
+        min-width: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .info {
         p {
           margin: 4px 0;
-          color: $text-color;
           font-size: 15px;
+          word-wrap: break-word;
 
           strong {
             color: $text-color;
@@ -71,6 +79,10 @@ $border-radius: 8px;
   .actions {
     margin-top: 30px;
     text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
 
     .btn {
       background: $primary-color;
@@ -80,10 +92,31 @@ $border-radius: 8px;
       border-radius: $border-radius;
       font-size: 16px;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       transition: background-color 0.3s ease;
 
-      &:hover {
-        background: darken($primary-color, 8%);
+      &:hover,
+      &:focus {
+        background: $primary-hover;
+        outline: none;
+      }
+    }
+
+    .edit-btn {
+      background: #0288d1;
+      &:hover,
+      &:focus {
+        background: #026aa7;
+      }
+    }
+
+    .delete-btn {
+      background: #d32f2f;
+      &:hover,
+      &:focus {
+        background: #9a2323;
       }
     }
   }
@@ -91,11 +124,11 @@ $border-radius: 8px;
   .mybooking__empty {
     text-align: center;
     padding: 100px 20px;
+    font-size: 18px;
 
     h2 {
       font-size: 22px;
       margin-bottom: 16px;
-      color: $text-color;
     }
 
     button {
@@ -108,9 +141,135 @@ $border-radius: 8px;
       cursor: pointer;
       transition: background-color 0.3s ease;
 
-      &:hover {
-        background: darken($primary-color, 8%);
+      &:hover,
+      &:focus {
+        background: $primary-hover;
+        outline: none;
       }
     }
   }
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: $modal-bg;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: $border-radius;
+  width: 90%;
+  max-width: 480px;
+  padding: 24px 28px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  outline: none;
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+
+    h2 {
+      margin: 0;
+      font-size: 22px;
+      color: $text-color;
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: $primary-color;
+      transition: color 0.3s ease;
+
+      &:hover,
+      &:focus {
+        color: $primary-hover;
+        outline: none;
+      }
+    }
+  }
+
+  .modal-form {
+    display: flex;
+    flex-direction: column;
+
+    label {
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      color: $text-color;
+    }
+
+    input {
+      margin-bottom: 16px;
+      padding: 10px 12px;
+      font-size: 15px;
+      border: 1.5px solid #ccc;
+      border-radius: 6px;
+      transition: border-color 0.3s ease;
+
+      &:focus {
+        border-color: $primary-color;
+        outline: none;
+      }
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+
+      .btn {
+        padding: 10px 24px;
+        font-size: 16px;
+      }
+
+      .save-btn {
+        background: $primary-color;
+        color: white;
+
+        &:hover,
+        &:focus {
+          background: $primary-hover;
+          outline: none;
+        }
+      }
+
+      .cancel-btn {
+        background: #757575;
+        color: white;
+
+        &:hover,
+        &:focus {
+          background: #4a4a4a;
+          outline: none;
+        }
+      }
+    }
+  }
+}
+
+/* Visually hidden for screen readers */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
