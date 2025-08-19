@@ -73,6 +73,7 @@ const Bookingform = () => {
               {t("bookingtext6")}
             </p>
           </div>
+         
         </div>
       </div>
     </div>

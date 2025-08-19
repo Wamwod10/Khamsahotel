@@ -6,7 +6,6 @@
   "contact": "Contact",
   "mybooking": "My Booking",
   "booknow": "Book Now",
-
   "headertitle": "Where Luxury Meets Tranquility",
   "khamsahotel": "Khamsa Hotel",
   "headertext": "Away from the noise, close to all you need. Khamsa Hotel blends comfort, relaxation, and top service",
@@ -33,7 +32,6 @@
   "instantconfirm": "Instant Confirmation",
   "freecancel": "Free Cancelation",
   "hotel": "Hotel",
-
   "roomspart": {
     "standardRoom": "Standard Room",
     "familyRoom": "Family Room",
@@ -41,7 +39,6 @@
     "twoFamilyRooms": "2 Family Rooms",
     "standardPlusFamilyRoom": "Standard + 1 Family Room"
   },
-
   "roomcardtitle": "Featured Rooms",
   "roomcardtext": "Choose from our carefully selected accommodations",
   "roomprice1": "$40 / to 2 hour",
@@ -62,7 +59,6 @@
   "roomlockers": "Secure Lockers",
   "roomcleaning": "Housekeeping",
   "roomtext3": "Standard single room with cozy bed, private bathroom, free Wi-Fi, and air conditioning",
-
   "whykhamsa": "Why Khamsa?",
   "bookingtext": "Experience exceptional hospitality with our premium amenities and services",
   "bookingwifi": "Free High-Speed WiFi",
@@ -76,7 +72,6 @@
   "bookingtext4": "Secure parking space available for all guests",
   "bookingtext5": "Start your day with our delicious continental breakfast",
   "bookingtext6": "Personal assistance for tours, reservations, and recommendations",
-
   "khamsagallery": "Khamsa Hotel Gallery",
   "hotelview": "Hotel View (Airport)",
   "reception": "Reception",
@@ -89,7 +84,6 @@
   "familyroom": "Family Room",
   "restroom": "Restroom",
   "bath": "Bathroom",
-
   "explorenear": "Places near the Khamsa Hotel",
   "neartext": "Discover the best places to visit around Khamsa Hotel",
   "tashkentrailway": "Banking Services",
@@ -108,7 +102,6 @@
   "hotellocate": "See Hotel Location",
   "hazratiimam": " Baggage Services",
   "hazratiimamtext": "Wrap, store, or secure your luggage anytime",
-
   "logo": "Khamsa Hotel",
   "description": "Conveniently located inside the airport, this hotel offers a quiet and comfortable retreat for travelers in transit, providing warm hospitality and top-quality service to all guests",
   "quickLinks": "Quick Links",
@@ -120,13 +113,11 @@
   "footercontactInfo": "Contact Info",
   "address": "Inside Tashkent International Airport, near Terminal 2, Tashkent city",
   "rights": "All rights reserved.",
-
   "selectDate": "Select date",
   "hotelName_airport": "Tashkent Airport Hotel",
   "modifysearch": "Modify Search",
   "roomtitle": "Hourly & Daily Room Options",
   "roomtext": "Explore our flexible room options designed for short or extended stays. Whether you need a few hours or a full day, we have got the perfect room for you.",
-
   "guestCount_1": "1 Guest",
   "guestCount_2": "2 Guests",
   "guestCount_3": "3 Guests",
@@ -139,14 +130,12 @@
   "roomType_twoFamily": "2 Family Rooms",
   "roomType_mixed": "Standard + 1 Family Room",
   "tooManyGuestsMessage": "Dear guest, we offer rooms for up to 3 people. Please consider booking a separate room for additional guests. You can view suitable options on the main page",
-
   "numberrooms": "Number of Rooms",
   "roomcardtext1": "A thoughtfully designed space offering peace, simplicity, and comfort — perfect for solo travelers seeking rest and privacy just minutes from the airport.",
   "securitycameras": "Security Cameras",
   "booknow1": "Book Now",
   "usbcharging": "USB Charging Ports",
   "roomcardtext2": "A spacious and cozy room designed for families — enjoy comfort and privacy just minutes from the airport",
-
   "firstName": "First Name",
   "lastName": "Last Name",
   "enterFirstName": "Enter your first name",
@@ -158,18 +147,15 @@
   "selectMethod": "Select a method",
   "confirm": "Confirm",
   "cancel": "Cancel",
-
   "attention": "Attention!",
   "continue": "Continue",
   "continue?": "Do you want to continue?",
   "mainPage": "Main Page",
-
   "servicetitle": "Services & Amenities",
   "servicesubtitle": "Discover our comprehensive range of services designed to make your stay comfortable and memorable",
   "servicedescription": "At KhamsaHotel, we pride ourselves on providing exceptional services that cater to every aspect of your stay. From round-the-clock assistance to premium amenities, we ensure your comfort is our priority.",
   "serviceprimary": "Book a Room",
   "servicesecondary": "Contact Us",
-
   "serviceTitle": "Available Services",
   "serviceText": "Discover our range of reliable and efficient services designed to support your business and personal needs.",
   "servicewifi": "Free Wi-Fi",
@@ -223,7 +209,6 @@
   "servicedetail28": "Delicate fabrics",
   "learnmore": "Learn More",
   "showless": "Show Less",
-
   "comment_title": "What Our Guests Say",
   "comment_subtitle": "Real experiences from guests who have used our services",
   "verified_guest": "Verified Guest",
@@ -244,7 +229,6 @@
   "review_date_3": "May 2024",
   "review_date_4": "April 2024",
   "review_date_5": "March 2024",
-
   "title": "Public Offer For Khamsa Hotel",
   "section1_title": "1. Subject of the Offer",
   "section1_text": "This Offer provides information about the Hotel’s services, including room reservations, payment procedures, cancellation policies and data privacy policies. By booking a room at the Hotel, you (“Guest”) agree to be bound by the terms and conditions set forth in this Offer.",
@@ -265,5 +249,11 @@
   "section8_phone": "Phone: +99895-877-24-24",
   "section8_email": "Email: gomoqhotel@mail.ru",
   "section9_title": "9. Effective date",
-  "section9_text": "This Offer is valid from 05/14/2024. The hotel reserves the right to change the terms of this Offer at any time without prior notice. We recommend that you review this offer before booking."
+  "section9_text": "This Offer is valid from 05/14/2024. The hotel reserves the right to change the terms of this Offer at any time without prior notice. We recommend that you review this offer before booking.",
+  "roomcard_view_all": "View All",
+  "roomcard_book_room": "Order a Room",
+  "booking_title": "Need Help Choosing?",
+  "booking_subtitle": "Our team is here to help you find the perfect room for your stay",
+  "booking_contact_phone": "Contact Us",
+  "booking_contact_chat": "Contact Us"
 }

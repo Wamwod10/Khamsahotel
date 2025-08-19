@@ -1,7 +1,7 @@
 import React from "react";
 import "./roomcard.scss";
 import './roomcardMedia.scss'
-import { FaRegUser } from "react-icons/fa";
+import { FaArrowRight, FaRegUser } from "react-icons/fa";
 import { IoResizeSharp } from "react-icons/io5";
 import { FaWifi } from "react-icons/fa6";
 import { RiCustomerServiceLine } from "react-icons/ri";
@@ -184,6 +184,7 @@ const Roomcard = () => {
               </div>
             </div>
           </div>
+         
         </div>
       </div>
     </div>

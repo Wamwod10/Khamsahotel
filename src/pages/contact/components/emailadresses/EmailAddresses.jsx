@@ -4,25 +4,28 @@ import { BsCalendar3, BsHeadphones } from "react-icons/bs";
 import { IoCopyOutline } from "react-icons/io5";
 import { FaCheck } from "react-icons/fa6";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const EmailAddresses = () => {
+  const { t } = useTranslation();
+
   const emails = [
     {
-      title: "General Inquiries",
+      title: t("emailaddr_general_title"),
       email: "info@khamsahotel.uz",
-      buttonText: "Send",
+      buttonText: t("emailaddr_button"),
       icon: <HiOutlineMail className="email__call-icon" />,
     },
     {
-      title: "Reservations",
+      title: t("emailaddr_reservations_title"),
       email: "booking@khamsahotel.uz",
-      buttonText: "Send",
+      buttonText: t("emailaddr_button"),
       icon: <BsCalendar3 className="email__call-icon" />,
     },
     {
-      title: "Customer Support",
+      title: t("emailaddr_support_title"),
       email: "support@khamsahotel.uz",
-      buttonText: "Send",
+      buttonText: t("emailaddr_button"),
       icon: <BsHeadphones className="email__call-icon" />,
     },
   ];
@@ -55,7 +58,7 @@ const EmailAddresses = () => {
     <div className="email">
       <div className="container">
         <div className="email__phone-box">
-          <h2 className="email__phone-title">Email Addresses</h2>
+          <h2 className="email__phone-title">{t("emailaddr_title")}</h2>
           <div className="email__box-phone">
             {emails.map((item, index) => (
               <div className="email__phone-div" key={index}>

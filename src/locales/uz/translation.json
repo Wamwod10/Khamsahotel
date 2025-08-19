@@ -33,7 +33,6 @@
   "instantconfirm": "Darhol tasdiqlash",
   "freecancel": "Bepul bekor qilish",
   "hotel": "Mehmonxona",
-
   "roomspart": {
     "standardRoom": "Standart xona",
     "familyRoom": "Oilaviy xona",
@@ -41,7 +40,6 @@
     "twoFamilyRooms": "2 ta oilaviy xona",
     "standardPlusFamilyRoom": "Standart + 1 ta oilaviy xona"
   },
-
   "roomcardtitle": "Tavsiya etilgan xonalar",
   "roomcardtext": "Ehtiyotkorlik bilan tanlangan xonalarimizdan birini tanlang",
   "roomprice1": "$40 / 2 soatgacha",
@@ -62,7 +60,6 @@
   "roomlockers": "Xavfsiz shkaflar",
   "roomcleaning": "Xona tozaligi",
   "roomtext3": "Qulay karavotli, shaxsiy hammomli, bepul Wi-Fi va konditsionerli standart bir kishilik xona",
-
   "whykhamsa": "Nega aynan Khamsa?",
   "bookingtext": "Birinchi darajali xizmat va qulayliklar bilan mehmondo‘stlikni his eting",
   "bookingwifi": "Bepul yuqori tezlikdagi Wi-Fi",
@@ -76,7 +73,6 @@
   "bookingtext4": "Mehmonlar uchun xavfsiz avtoturargoh mavjud",
   "bookingtext5": "Mazali kontinental nonushta bilan kuningizni boshlang",
   "bookingtext6": "Sayohat, buyurtma va tavsiyalar uchun shaxsiy yordam",
-
   "khamsagallery": "Khamsa mehmonxonasi galereyasi",
   "hotelview": "Mehmonxona manzarasi (aeroport)",
   "reception": "Qabulxona",
@@ -89,7 +85,6 @@
   "familyroom": "Oilaviy xona",
   "restroom": "Hojatxona va Yuvinish honasi",
   "bath": "Hammom",
-
   "explorenear": "Khamsa mehmonxonasi yaqinidagi joylar",
   "neartext": "Khamsa mehmonxonasi atrofida borish mumkin bo‘lgan eng yaxshi joylarni kashf eting",
   "tashkentrailway": "Bank xizmatlari",
@@ -108,7 +103,6 @@
   "hotellocate": "Mehmonxona Manzili",
   "hazratiimam": "Bagaj xizmatlari",
   "hazratiimamtext": "Bagajingizni o‘rash, saqlash yoki xavfsiz joyga topshirish",
-
   "logo": "Khamsa Mehmonxonasi",
   "description": "Aeroport ichida qulay joylashgan ushbu mehmonxona tranzitdagi sayohatchilar uchun tinch va shinam dam olish maskanini taklif etadi, barcha mehmonlarga iliq mehmondo‘stlik va yuqori darajadagi xizmat ko‘rsatadi",
   "quickLinks": "Tez havolalar",
@@ -120,13 +114,11 @@
   "footercontactInfo": "Aloqa ma'lumotlari",
   "address": "Toshkent xalqaro aeroporti ichida, 2-terminal yonida, Toshkent shahri",
   "rights": "Barcha huquqlar himoyalangan.",
-
   "selectDate": "Sana tanlang",
   "hotelName_airport": "Toshkent Aeroport Mehmonxonasi",
   "modifysearch": "O'zgartirish",
   "roomtitle": "Soatlik va kunlik xona variantlari",
   "roomtext": "Bizning qisqa yoki uzoq muddatli qolish uchun mo'ljallangan moslashuvchan xona variantlarimizni kashf eting. Sizga bir necha soat yoki to'liq kun kerak bo'lsa, bizda siz uchun mukammal xona mavjud.",
-
   "guestCount_1": "1 kishi",
   "guestCount_2": "2 kishi",
   "guestCount_3": "3 kishi",
@@ -139,14 +131,12 @@
   "roomType_twoFamily": "2 Oilaviy xona",
   "roomType_mixed": "Standart + 1 Oilaviy xona",
   "tooManyGuestsMessage": "Hurmatli mijoz, Bizda 3 kishigacha bo'lgan xonalarimiz mavjud. Iltimos, qo'shimcha mehmonlar uchun alohida xona tanlashni ko'rib chiqing. Asosiy saxifada sizga mos bo'lgan variantlarni ko'rishingiz mumkin.",
-
   "numberrooms": "Xonalar soni",
   "roomcardtext1": "Yolg'iz sayohatchilar uchun qulay xona, Wi-Fi va zarur qulayliklar bilan",
   "securitycameras": "Xavfsizlik kameralari",
   "booknow1": "Band qilish",
   "usbcharging": "USB zaryadlash portlari",
   "roomcardtext2": "Bitta ikki kishilik va bitta bir kishilik karavotli keng xona, kichik oilalar uchun ideal",
-
   "firstName": "Ism",
   "lastName": "Familiya",
   "enterFirstName": "Ismingizni kiriting",
@@ -158,7 +148,6 @@
   "selectMethod": "Usulni tanlang",
   "confirm": "Tasdiqlash",
   "cancel": "Bekor qilish",
-
   "attention": "E'tibor bering",
   "continue?": "Davom ettirmoqchimisiz?",
   "mainPage": "Asosiy sahifa",
@@ -241,7 +230,6 @@
   "review_date_3": "May 2024",
   "review_date_4": "Aprel 2024",
   "review_date_5": "Mart 2024",
-
   "title": "Khamsa mehmonxonasi uchun ommaviy taklif",
   "section1_title": "1. Taklif predmeti",
   "section1_text": "Ushbu taklif mehmonxonaning xizmatlari haqida ma'lumot beradi, jumladan xona band qilish, to‘lov tartiblari, bekor qilish siyosati va ma'lumotlarni himoya qilish siyosati. Mehmonxonada xona band qilish orqali siz (“Mehmon”) ushbu taklif shartlariga rozilik bildirasiz.",
@@ -262,5 +250,11 @@
   "section8_phone": "Telefon: +99895-877-24-24",
   "section8_email": "Elektron pochta: gomoqhotel@mail.ru",
   "section9_title": "9. Amal qilish sanasi",
-  "section9_text": "Taklif 14.05.2024 dan amal qiladi. Mehmonxona oldindan xabar bermasdan taklif shartlarini o‘zgartirish huquqini o‘zida saqlaydi. Band qilishdan oldin ushbu taklifni ko‘rib chiqishni tavsiya qilamiz."
+  "section9_text": "Taklif 14.05.2024 dan amal qiladi. Mehmonxona oldindan xabar bermasdan taklif shartlarini o‘zgartirish huquqini o‘zida saqlaydi. Band qilishdan oldin ushbu taklifni ko‘rib chiqishni tavsiya qilamiz.",
+  "roomcard_view_all": "Barchasini Ko'rish",
+  "roomcard_book_room": "Xona Bron Qilish",
+  "booking_title": "Tanlashda yordam kerakmi?",
+  "booking_subtitle": "Bizning jamoamiz sizga qolishingiz uchun eng yaxshi xonani topishda yordam beradi",
+  "booking_contact_phone": "Biz bilan bog‘laning",
+  "booking_contact_chat": "Biz bilan bog‘laning"
 }

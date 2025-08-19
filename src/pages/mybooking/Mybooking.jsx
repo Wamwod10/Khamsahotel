@@ -11,46 +11,44 @@ const MyBooking = () => {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
   useEffect(() => {
-    // SessionStorage dan allBookings ni o‘qiymiz
     const savedBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-
-    // SessionStorage dan bookingInfo ni ham o‘qiymiz (oxirgi qo‘shilgan booking)
     const bookingInfo = JSON.parse(sessionStorage.getItem("bookingInfo"));
+    let updatedBookings = [];
 
-    // Agar bookingInfo mavjud bo‘lsa va allBookings ichida yo‘q bo‘lsa, uni qo‘shamiz
-    let updatedBookings = [...savedBookings];
     if (bookingInfo) {
-      // Agar bookingInfo da id bo‘lmasa, hozir yaratamiz
       if (!bookingInfo.id) {
         bookingInfo.id = Date.now();
       }
 
-      const exists = savedBookings.some((b) => b.id === bookingInfo.id);
-      if (!exists) {
-        updatedBookings.push(bookingInfo);
-      }
+      // BookingInfo ni boshida joylashtiramiz va takrorlanishini oldini olamiz
+      const filteredBookings = savedBookings.filter(b => b.id !== bookingInfo.id);
+      updatedBookings = [bookingInfo, ...filteredBookings];
+
+      // BookingInfo ni sessiondan olib tashlaymiz, takrorlanmasligi uchun
+      sessionStorage.removeItem("bookingInfo");
+
+      // Va yangilangan ro'yxatni sessionStorage ga saqlaymiz
+      sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
+    } else {
+      updatedBookings = savedBookings;
     }
 
     setBookings(updatedBookings);
   }, []);
 
-  // Saqlash funksiyasi (har safar bookinglar o‘zgarganda chaqiriladi)
   const saveBookingsToStorage = (bookingsArray) => {
     sessionStorage.setItem("allBookings", JSON.stringify(bookingsArray));
   };
 
-  // Yangi booking qo‘shish sahifasiga yo‘naltirish
   const addNewBooking = () => {
     window.location.href = "/";
   };
 
-  // Tahrirlash modalini ochish
   const handleEditBooking = (booking) => {
     setEditingBooking(booking);
     setIsEditOpen(true);
   };
 
-  // Tahrirlangan bookingni saqlash
   const handleSaveBooking = (updatedBooking) => {
     const updatedList = bookings.map((b) =>
       b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
@@ -60,7 +58,6 @@ const MyBooking = () => {
     setIsEditOpen(false);
   };
 
-  // Bookingni o‘chirish
   const handleDeleteBooking = (booking) => {
     const filtered = bookings.filter((b) => b.id !== booking.id);
     setBookings(filtered);
@@ -69,30 +66,38 @@ const MyBooking = () => {
 
   return (
     <div className="my-booking-container">
-      <button className="btn-add" onClick={addNewBooking}>
-        Add a New Booking
-      </button>
+      <div className="booking-header">
+        <h1>My Bookings</h1>
+        <button className="btn btn-add" onClick={addNewBooking}>
+          + New Booking
+        </button>
+      </div>
 
       {bookings.length === 0 ? (
         <div className="my-booking-empty">
-          <p>No bookings yet.</p>
+          <p>No Bookings yet</p>
         </div>
       ) : (
-        bookings.map((booking) => (
-          <BookingCard
-            key={booking.id}
-            booking={booking}
-            onEdit={() => handleEditBooking(booking)}
-            onDelete={() => handleDeleteBooking(booking)}
-          />
-        ))
-      )}
+        <>
+          {bookings.map((booking) => (
+            <BookingCard
+              key={booking.id}
+              booking={booking}
+              onEdit={() => handleEditBooking(booking)}
+              onDelete={() => handleDeleteBooking(booking)}
+            />
+          ))}
 
-      <div className="my-booking-buttons">
-        <button className="btn-pay" onClick={() => setIsPaymentOpen(true)}>
-          Pay Now
-        </button>
-      </div>
+          <div className="my-booking-buttons">
+            <button
+              className="btn btn-pay"
+              onClick={() => setIsPaymentOpen(true)}
+            >
+              Pay Now
+            </button>
+          </div>
+        </>
+      )}
 
       <EditBookingModal
         isOpen={isEditOpen}

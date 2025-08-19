@@ -1,31 +1,30 @@
 import "./emergencycontacts.scss";
 import { BiError } from "react-icons/bi";
-import {
-  IoCall,
-  IoCallOutline,
-  IoCopyOutline
-} from "react-icons/io5";
+import { IoCall, IoCallOutline, IoCopyOutline } from "react-icons/io5";
 import { FaCheck, FaWhatsapp } from "react-icons/fa6";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const EmergencyContacts = () => {
+  const { t } = useTranslation();
+
   const phoneNumbers = [
     {
-      title: "Reception",
-      number: "+998 71 123 4567",
-      buttonText: "Call Now",
+      title: t("emergency_reception_title"),
+      number: t("emergency_reception_number"),
+      buttonText: t("emergency_reception_button"),
       icon: <IoCall className="emergency__call-icon" />,
     },
     {
-      title: "Reservations",
-      number: "+998 71 765 4321",
-      buttonText: "Call Now",
+      title: t("emergency_reservations_title"),
+      number: t("emergency_reservations_number"),
+      buttonText: t("emergency_reservations_button"),
       icon: <IoCallOutline className="emergency__call-icon" />,
     },
     {
-      title: "WhatsApp",
-      number: "+998 71 111 2233",
-      buttonText: "WhatsApp",
+      title: t("emergency_whatsapp_title"),
+      number: t("emergency_whatsapp_number"),
+      buttonText: t("emergency_whatsapp_button"),
       icon: <FaWhatsapp className="emergency__call-icon" />,
     },
   ];
@@ -65,15 +64,15 @@ const EmergencyContacts = () => {
             <BiError className="emergency__icon" />
           </div>
           <div className="emergency__text-box">
-            <h2 className="emergency__title">Emergency Contact</h2>
+            <h2 className="emergency__title">{t("emergency_title")}</h2>
             <p className="emergency__text-number">
-              24/7 Emergency: +998 71 123 4567
+              {t("emergency_text_number")}
             </p>
           </div>
         </div>
 
         <div className="emergency__phone-box">
-          <h2 className="emergency__phone-title">Phone Numbers</h2>
+          <h2 className="emergency__phone-title">{t("emergency_phone_title")}</h2>
           <div className="emergency__box-phone">
             {phoneNumbers.map((phone, index) => (
               <div className="emergency__phone-div" key={index}>

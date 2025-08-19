@@ -5,7 +5,6 @@ import Header from "./components/header/Header";
 import Roomcard from "./components/roomcard/Roomcard";
 import Room from "./pages/rooms/Room";
 import Services from "./pages/services/Services";
-import Contact from "./pages/contact/Contact";
 import MyBooking from "./pages/mybooking/Mybooking";
 import Bookingform from "./components/bookingform/Bookingform";
 import Gallery from "./components/gallery/Gallery";
@@ -15,6 +14,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Offer from "./pages/offers/Offer";
 import Login from "./pages/admin/Login/Login";
 import Footer from "./components/footer/Footer";
+import Contact from "./pages/contact/Contact";
 
 function AppWrapper() {
   // useNavigate ni shu yerda ishlatamiz
