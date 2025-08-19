@@ -62,7 +62,7 @@ const MyBooking = () => {
 
   return (
     <div className="my-booking-container">
-      <h1>Booking Details</h1>
+     
 
       <button className="btn-add" onClick={addNewBooking}>
         Add a New Booking
