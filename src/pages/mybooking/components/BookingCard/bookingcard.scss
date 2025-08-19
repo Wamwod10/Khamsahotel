@@ -1,0 +1,75 @@
+/* BookingCard.scss */
+.booking-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 8px 18px rgba(44, 62, 80, 0.1);
+  max-width: 700px;
+  margin: 2rem auto;
+
+  h2 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+  }
+
+  .booking-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #dce3ea;
+    padding: 0.5rem 0;
+    font-size: 1.1rem;
+    color: #34495e;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    span:first-child {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+  }
+
+  h3 {
+    margin-top: 1.8rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #dce3ea;
+    padding-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+  }
+
+  .booking-actions {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+
+    .btn {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+
+      &.btn-edit {
+        background-color: #3498db;
+        color: #fff;
+
+        &:hover {
+          background-color: #2980b9;
+        }
+      }
+
+      &.btn-delete {
+        background-color: #e74c3c;
+        color: #fff;
+
+        &:hover {
+          background-color: #c0392b;
+        }
+      }
+    }
+  }
+}

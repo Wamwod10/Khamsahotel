@@ -20,8 +20,6 @@ function AppWrapper() {
   const navigate = useNavigate();
 
   const navigateToAddBooking = () => {
-    // Bu yerda yangi booking qo'shish sahifasiga yo'naltiramiz
-    // Masalan, bosh sahifaga yoki booking form joylashgan sahifaga:
     navigate("/");
   };
 

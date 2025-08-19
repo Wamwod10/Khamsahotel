@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
-import "./roomModalMedai.scss";
+import "./roomModalMedia.scss"; 
 
 const roomKeyMap = {
   "Standard Room": "roomType_standard",
@@ -13,6 +13,14 @@ const roomKeyMap = {
   "Standard + 1 Family room": "roomType_mixed",
 };
 
+const guestCountByRoomType = {
+  "Standard Room": 1,
+  "Family Room": 3,
+  "2 Standard Rooms": 2,
+  "2 Family Rooms": 6,
+  "Standard + 1 Family room": 4,
+};
+
 const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   const { t } = useTranslation();
 
@@ -20,7 +28,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     checkIn: "",
     checkOut: "",
     hotel: t("TashkentAirportHotel"),
-    guests,
+    guests: guestCountByRoomType[rooms] || guests,
     rooms,
   });
 
@@ -32,15 +40,15 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   });
 
   useEffect(() => {
-    // Agar avval sessionStorageda booking ma'lumotlari bo'lsa, ularni yuklaymiz
     const savedBooking = sessionStorage.getItem("bookingInfo");
     if (savedBooking) {
       const parsed = JSON.parse(savedBooking);
       setBookingInfo({
-        ...parsed,
+        checkIn: parsed.checkIn || "",
+        checkOut: parsed.checkOut || "",
         hotel: t("TashkentAirportHotel"),
-        guests,
-        rooms,
+        guests: guestCountByRoomType[parsed.rooms] || parsed.guests || guests,
+        rooms: parsed.rooms || rooms,
       });
       setFormData({
         firstName: parsed.firstName || "",
@@ -51,9 +59,9 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     } else {
       setBookingInfo((prev) => ({
         ...prev,
-        hotel: t("TashkentAirportHotel"),
-        guests,
+        guests: guestCountByRoomType[rooms] || guests,
         rooms,
+        hotel: t("TashkentAirportHotel"),
       }));
     }
   }, [t, guests, rooms]);
@@ -81,7 +89,9 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       return;
     }
 
-    if (!formData.firstName || !formData.lastName || !formData.phone || !formData.email) {
+    const { firstName, lastName, phone, email } = formData;
+
+    if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim()) {
       toast.error(t("Iltimos, barcha maydonlarni to'ldiring"), {
         position: "top-center",
         autoClose: 3000,
@@ -89,17 +99,15 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       return;
     }
 
-    // Booking ma'lumotlarini to'liq shaklda yaratamiz
     const fullBookingInfo = {
       checkIn,
       checkOut,
       hotel,
-      guests,
-      rooms,
+      guests: guestCountByRoomType[bookingInfo.rooms] || 1,
+      rooms: bookingInfo.rooms,
       ...formData,
     };
 
-    // sessionStorage ga yozamiz
     sessionStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
     sessionStorage.setItem("customerInfo", JSON.stringify(formData));
     sessionStorage.setItem("userInfo", JSON.stringify(formData));
@@ -115,8 +123,8 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   return (
     <div className="modal-main">
       <div className="modal-overlay" onClick={onClose} />
-      <div className="modal">
-        <h2 className="modal__title">{t("bookyourstay")}</h2>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <h2 className="modal__title" id="modal-title">{t("bookyourstay")}</h2>
 
         <div className="modal_all__section">
           <div className="modal__section">
@@ -133,7 +141,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
           </div>
           <div className="modal__section">
             <label>{t("guests")}:</label>
-            <p>{guests || "-"}</p>
+            <p>{guestCountByRoomType[rooms] || "-"}</p>
           </div>
           <div className="modal__section">
             <label>{t("hotel")}:</label>
@@ -141,52 +149,60 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
           </div>
         </div>
 
-        <form className="modal__form" onSubmit={handleConfirm}>
+        <form className="modal__form" onSubmit={handleConfirm} noValidate>
           <div className="modal__field">
-            <label>{t("firstName")}</label>
+            <label htmlFor="firstName">{t("firstName")}</label>
             <input
+              id="firstName"
               type="text"
               name="firstName"
               placeholder={t("enterFirstName")}
               required
               value={formData.firstName}
               onChange={handleInputChange}
+              autoComplete="given-name"
             />
           </div>
 
           <div className="modal__field">
-            <label>{t("lastName")}</label>
+            <label htmlFor="lastName">{t("lastName")}</label>
             <input
+              id="lastName"
               type="text"
               name="lastName"
               placeholder={t("enterLastName")}
               required
               value={formData.lastName}
               onChange={handleInputChange}
+              autoComplete="family-name"
             />
           </div>
 
           <div className="modal__field">
-            <label>{t("phone")}</label>
+            <label htmlFor="phone">{t("phone")}</label>
             <input
+              id="phone"
               type="tel"
               name="phone"
               placeholder={t("enterphonenumb")}
               required
               value={formData.phone}
               onChange={handleInputChange}
+              autoComplete="tel"
             />
           </div>
 
           <div className="modal__field">
-            <label>{t("email")}</label>
+            <label htmlFor="email">{t("email")}</label>
             <input
+              id="email"
               type="email"
               name="email"
               placeholder="you@example.com"
               required
               value={formData.email}
               onChange={handleInputChange}
+              autoComplete="email"
             />
           </div>
 

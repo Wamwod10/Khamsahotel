@@ -1,0 +1,49 @@
+/* PaymentModal.scss */
+.payment-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(44, 62, 80, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.payment-modal {
+  background: white;
+  padding: 2rem 3rem;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+
+  h2 {
+    margin-bottom: 1.2rem;
+    color: #2c3e50;
+    font-weight: 700;
+  }
+
+  p {
+    margin-bottom: 2rem;
+    color: #34495e;
+    font-size: 1.1rem;
+  }
+
+  .btn-close {
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    background-color: #34495e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background-color: #2c3e50;
+    }
+  }
+}
