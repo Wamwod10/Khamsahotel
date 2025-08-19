@@ -41,7 +41,6 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
     onClose();
   };
 
-  // Limit guests field based on room type
   const guestMin = 1;
   const guestMax = editData.rooms === "Standard Room" ? 1 : 3;
 

@@ -53,6 +53,7 @@ export default function RoomHeader() {
       }
     }
   }, [t]);
+  
 
   // If bookingInfo.guests changes, clear noticeShownForGuests if guestNum < 4
   // (Optional, depends on where you reset this in your Main Page)

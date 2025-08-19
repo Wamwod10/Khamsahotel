@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
-import "./roomModalMedia.scss"; 
+import "./roomModalMedia.scss";
 
 const roomKeyMap = {
   "Standard Room": "roomType_standard",
@@ -66,8 +66,6 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     }
   }, [t, guests, rooms]);
 
-  const { checkIn, checkOut, hotel } = bookingInfo;
-
   if (!isOpen) return null;
 
   const handleInputChange = (e) => {
@@ -81,7 +79,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   const handleConfirm = (e) => {
     e.preventDefault();
 
-    if (!checkIn || !checkOut) {
+    if (!bookingInfo.checkIn || !bookingInfo.checkOut) {
       toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz"), {
         position: "top-center",
         autoClose: 3000,
@@ -100,17 +98,27 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     }
 
     const fullBookingInfo = {
-      checkIn,
-      checkOut,
-      hotel,
+      checkIn: bookingInfo.checkIn,
+      checkOut: bookingInfo.checkOut,
+      hotel: bookingInfo.hotel,
       guests: guestCountByRoomType[bookingInfo.rooms] || 1,
       rooms: bookingInfo.rooms,
-      ...formData,
+      firstName,
+      lastName,
+      phone,
+      email,
+      id: Date.now(),
     };
 
+    // Avval mavjud bookinglarni o'qib olamiz
+    const existingBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
+
+    // Yangi bookingni qo'shamiz
+    const updatedBookings = [...existingBookings, fullBookingInfo];
+
+    // SessionStorage ga saqlaymiz
+    sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
     sessionStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
-    sessionStorage.setItem("customerInfo", JSON.stringify(formData));
-    sessionStorage.setItem("userInfo", JSON.stringify(formData));
 
     onClose();
 
@@ -118,22 +126,30 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       position: "top-center",
       autoClose: 2500,
     });
+
   };
 
   return (
     <div className="modal-main">
       <div className="modal-overlay" onClick={onClose} />
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <h2 className="modal__title" id="modal-title">{t("bookyourstay")}</h2>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <h2 className="modal__title" id="modal-title">
+          {t("bookyourstay")}
+        </h2>
 
         <div className="modal_all__section">
           <div className="modal__section">
             <label>{t("check-in")}:</label>
-            <p>{checkIn || "-"}</p>
+            <p>{bookingInfo.checkIn || "-"}</p>
           </div>
           <div className="modal__section">
             <label>{t("check-out")}:</label>
-            <p>{checkOut || "-"}</p>
+            <p>{bookingInfo.checkOut || "-"}</p>
           </div>
           <div className="modal__section">
             <label>{t("rooms")}:</label>
@@ -145,7 +161,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
           </div>
           <div className="modal__section">
             <label>{t("hotel")}:</label>
-            <p>{hotel}</p>
+            <p>{bookingInfo.hotel}</p>
           </div>
         </div>
 

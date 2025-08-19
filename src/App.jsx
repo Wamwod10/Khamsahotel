@@ -14,6 +14,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Offer from "./pages/offers/Offer";
 import Login from "./pages/admin/Login/Login";
+import Footer from "./components/footer/Footer";
 
 function AppWrapper() {
   // useNavigate ni shu yerda ishlatamiz
@@ -49,6 +50,7 @@ function App({ navigateToAddBooking }) {
         />
         <Route path="/admin" element={<Login />} />
       </Routes>
+      <Footer/>
       <ToastContainer
         position="top-center"
         autoClose={2500}

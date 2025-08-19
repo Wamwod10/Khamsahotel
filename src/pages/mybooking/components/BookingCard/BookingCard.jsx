@@ -1,4 +1,3 @@
-// BookingCard.jsx
 import React from "react";
 import "./bookingcard.scss";
 
@@ -52,10 +51,10 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
       </div>
 
       <div className="booking-actions">
-        <button className="btn btn-edit" onClick={onEdit}>
+        <button className="btn btn-edit" onClick={() => onEdit(booking)}>
           Edit
         </button>
-        <button className="btn btn-delete" onClick={onDelete}>
+        <button className="btn btn-delete" onClick={() => onDelete(booking)}>
           Delete
         </button>
       </div>

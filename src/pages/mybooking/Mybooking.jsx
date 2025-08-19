@@ -10,40 +10,47 @@ const MyBooking = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
-  // Dastlab sessionStorage dan bookinglarni o‘qib olish
   useEffect(() => {
-    const savedBookings = sessionStorage.getItem("allBookings");
-    if (savedBookings) {
-      setBookings(JSON.parse(savedBookings));
+    // SessionStorage dan allBookings ni o‘qiymiz
+    const savedBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
+
+    // SessionStorage dan bookingInfo ni ham o‘qiymiz (oxirgi qo‘shilgan booking)
+    const bookingInfo = JSON.parse(sessionStorage.getItem("bookingInfo"));
+
+    // Agar bookingInfo mavjud bo‘lsa va allBookings ichida yo‘q bo‘lsa, uni qo‘shamiz
+    let updatedBookings = [...savedBookings];
+    if (bookingInfo) {
+      // Agar bookingInfo da id bo‘lmasa, hozir yaratamiz
+      if (!bookingInfo.id) {
+        bookingInfo.id = Date.now();
+      }
+
+      const exists = savedBookings.some((b) => b.id === bookingInfo.id);
+      if (!exists) {
+        updatedBookings.push(bookingInfo);
+      }
     }
+
+    setBookings(updatedBookings);
   }, []);
 
-  // Bookinglarni sessionStorage ga saqlash uchun yordamchi funksiya
+  // Saqlash funksiyasi (har safar bookinglar o‘zgarganda chaqiriladi)
   const saveBookingsToStorage = (bookingsArray) => {
     sessionStorage.setItem("allBookings", JSON.stringify(bookingsArray));
   };
 
-  // Yangi booking qo‘shish
+  // Yangi booking qo‘shish sahifasiga yo‘naltirish
   const addNewBooking = () => {
-    // Masalan, RoomModal ga redirect qilish uchun:
-    window.location.href = "/"; // yoki sizning RoomModal sahifangiz manzili
+    window.location.href = "/";
   };
 
-  // RoomModal dan kelgan yangi bookingni qo‘shish (bu funksiya RoomModal dan chaqirilishi mumkin)
-  const addBookingFromModal = (newBooking) => {
-    const bookingWithId = { ...newBooking, id: Date.now() };
-    const updatedBookings = [...bookings, bookingWithId];
-    setBookings(updatedBookings);
-    saveBookingsToStorage(updatedBookings);
-  };
-
-  // Edit qilish uchun bookingni ochish
+  // Tahrirlash modalini ochish
   const handleEditBooking = (booking) => {
     setEditingBooking(booking);
     setIsEditOpen(true);
   };
 
-  // Saqlash (edit qilingan bookingni yangilash)
+  // Tahrirlangan bookingni saqlash
   const handleSaveBooking = (updatedBooking) => {
     const updatedList = bookings.map((b) =>
       b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
@@ -53,7 +60,7 @@ const MyBooking = () => {
     setIsEditOpen(false);
   };
 
-  // O‘chirish
+  // Bookingni o‘chirish
   const handleDeleteBooking = (booking) => {
     const filtered = bookings.filter((b) => b.id !== booking.id);
     setBookings(filtered);
@@ -62,8 +69,6 @@ const MyBooking = () => {
 
   return (
     <div className="my-booking-container">
-     
-
       <button className="btn-add" onClick={addNewBooking}>
         Add a New Booking
       </button>
