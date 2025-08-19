@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./mybooking.scss";
 import BookingCard from "./components/BookingCard/BookingCard";
 import PaymentModal from "./components/PaymentModal/PaymentModal";
-import EditBookingModal from "./components/Edit/Editbookingmodal";
+import EditBookingModal from "./components/Edit/EditBookingModal";
 
 const MyBooking = () => {
   const [bookings, setBookings] = useState([]);
