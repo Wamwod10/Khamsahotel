@@ -5,30 +5,33 @@ import {
   MdOutlineAttachMoney,
   MdOutlineLogin,
 } from "react-icons/md";
+import { useTranslation } from "react-i18next";
 
 const OperatingHours = () => {
+  const { t } = useTranslation();
+
   const services = [
     {
-      title: "Shuttle Service",
-      time: "5:00 - 23:30",
+      title: t("operatingHours.shuttle"),
+      time: t("operatingHours.shuttleTime"),
       icon: <MdOutlineAirportShuttle className="hours__icon" />,
       className: "shuttle",
     },
     {
-      title: "Express Check-In",
-      time: "Always Open",
+      title: t("operatingHours.checkin"),
+      time: t("operatingHours.checkinTime"),
       icon: <MdOutlineLogin className="hours__icon" />,
       className: "checkin",
     },
     {
-      title: "Luggage Storage",
-      time: "05:00 – 23:00",
+      title: t("operatingHours.luggage"),
+      time: t("operatingHours.luggageTime"),
       icon: <MdOutlineLuggage className="hours__icon" />,
       className: "luggage",
     },
     {
-      title: "Currency Exchange",
-      time: "Always Open",
+      title: t("operatingHours.currency"),
+      time: t("operatingHours.currencyTime"),
       icon: <MdOutlineAttachMoney className="hours__icon" />,
       className: "currency",
     },
@@ -38,7 +41,7 @@ const OperatingHours = () => {
     <div className="hours">
       <div className="container">
         <div className="hours__box">
-          <h2 className="hours__title">Quick Services in Airport</h2>
+          <h2 className="hours__title">{t("operatingHours.title")}</h2>
           <div className="hours__list">
             {services.map((service, index) => (
               <div className={`hours__item ${service.className}`} key={index}>

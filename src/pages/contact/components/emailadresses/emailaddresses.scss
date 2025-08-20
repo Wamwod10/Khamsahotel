@@ -41,7 +41,7 @@
 
   &__numb-text {
     color: #718096;
-    font-size: 16px;
+    font-size: 14px;
   }
 
   &__numb-div {
@@ -58,7 +58,7 @@
   &__phone-link {
     background: #ffa930;
     color: #fff;
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -67,6 +67,7 @@
     border-radius: 10px;
     min-width: 75px;
     transition: 0.2s;
+    justify-content: center;  
 
     &:hover {
       background: #eb9216;

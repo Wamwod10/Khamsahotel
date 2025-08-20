@@ -15,6 +15,7 @@ import Offer from "./pages/offers/Offer";
 import Login from "./pages/admin/Login/Login";
 import Footer from "./components/footer/Footer";
 import Contact from "./pages/contact/Contact";
+// import Contact from "./pages/contact/Contact";
 
 function AppWrapper() {
   // useNavigate ni shu yerda ishlatamiz

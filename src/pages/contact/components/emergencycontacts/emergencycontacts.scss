@@ -98,7 +98,7 @@
   &__phone-link {
     background: #ffa930;
     color: #fff;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -107,7 +107,7 @@
     border-radius: 10px;
     width: 125px;
     transition: 0.2s;
-
+    justify-content: center;
     &:hover {
       background: #eb9216;
     }
@@ -154,6 +154,7 @@
 /* 1400px ↓ */
 @media (max-width: 1400px) {
   .emergency {
+
     &__box,
     &__phone-box {
       max-width: 100%;
@@ -204,6 +205,7 @@
 /* 1000px ↓ */
 @media (max-width: 1000px) {
   .emergency {
+
     &__numb-title,
     &__numb-text {
       font-size: 14px;
