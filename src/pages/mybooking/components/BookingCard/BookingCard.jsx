@@ -4,12 +4,15 @@ import { useTranslation } from "react-i18next";
 
 const BookingCard = ({ booking, onEdit, onDelete }) => {
   const { t } = useTranslation();
+
+  // Agar booking bo'lmasa, hech narsa ko'rsatilmaydi
   if (!booking) return null;
 
   return (
     <div className="booking-card">
       <h2>{t("bookingcard_hotel")}</h2>
 
+      {/* Bron ma'lumotlari bo'limi */}
       <div className="booking-section">
         <div className="booking-row">
           <span>{t("bookingcard_checkin")}</span>
@@ -34,6 +37,7 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
 
       <h3>{t("bookingcard_guestinfo")}</h3>
 
+      {/* Mehmon haqida ma'lumotlar */}
       <div className="booking-section">
         <div className="booking-row">
           <span>{t("bookingcard_firstname")}</span>
@@ -51,18 +55,26 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
         </div>
 
         <div className="booking-row">
-         <div className="booking-row_gmail">
-           <span>{t("bookingcard_email")}</span>
-          <span>{booking.email}</span>
-         </div>
+          <div className="booking-row_gmail">
+            <span>{t("bookingcard_email")}</span>
+            <span>{booking.email}</span>
+          </div>
         </div>
       </div>
 
+      {/* Tahrirlash va o'chirish tugmalari */}
       <div className="booking-actions">
-        <button className="btn btn-edit" onClick={() => onEdit(booking)}>
+        <button
+          className="btn btn-edit"
+          onClick={() => onEdit(booking)}
+        >
           {t("bookingcard_edit")}
         </button>
-        <button className="btn btn-delete" onClick={() => onDelete(booking)}>
+
+        <button
+          className="btn btn-delete"
+          onClick={() => onDelete(booking)}
+        >
           {t("bookingcard_delete")}
         </button>
       </div>

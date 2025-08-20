@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
 
+// Room turlarini tarjima kalitlariga bog'lash uchun obyekt
 const roomKeyMap = {
   "Standard Room": "roomType_standard",
   "Family Room": "roomType_family",
@@ -12,14 +13,8 @@ const roomKeyMap = {
   "Standard + 1 Family room": "roomType_mixed",
 };
 
-const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
+const RoomModal = ({ isOpen, onClose, checkIn, checkOut, guests, rooms }) => {
   const { t } = useTranslation();
-
-  const [bookingInfo, setBookingInfo] = useState({
-    checkIn: "",
-    checkOut: "",
-    hotel: t("TashkentAirportHotel"),
-  });
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -28,81 +23,77 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     email: "",
   });
 
-  useEffect(() => {
-    const saved = localStorage.getItem("bookingInfo");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setBookingInfo({
-        checkIn: parsed.checkIn,
-        checkOut: parsed.checkOut,
-        hotel: t("TashkentAirportHotel"),
-      });
-    }
-  }, [t]);
-
-  const { checkIn, checkOut, hotel } = bookingInfo;
-
-  if (!isOpen) return null;
-
+  // Forma inputlarini boshqarish uchun funksiyalar
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleConfirm = (e) => {
     e.preventDefault();
 
-    if (!checkIn || checkIn === "-" || !checkOut || checkOut === "-") {
+    // Zarur maydonlar to'liq to'ldirilganligini tekshirish
+    if (!checkIn || !checkOut || !guests || !rooms) {
       toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz"), {
         position: "top-center",
         autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
         style: { opacity: 1, zIndex: 99999 },
-        toastId: "incomplete-dates-toast",
+        toastId: "incomplete-fields",
       });
       return;
     }
 
+    // Yangi booking obyekti yaratish
+    const newBooking = {
+      id: Date.now(),
+      checkIn,
+      checkOut,
+      guests,
+      rooms,
+      hotel: t("TashkentAirportHotel"),
+      ...formData,
+    };
+
+    // Avvalgi bronlarni sessionStorage dan olish yoki bo'sh array
+    const existing = JSON.parse(sessionStorage.getItem("allBookings")) || [];
+
+    // Yangi bookingni qo'shish va saqlash
+    const updated = [newBooking, ...existing];
+    sessionStorage.setItem("allBookings", JSON.stringify(updated));
+
+    // Modalni yopish
     onClose();
 
+    // Muvaffaqiyatli bron haqida xabar
     toast.success(t("Sizning xonangiz bron qilindi"), {
       position: "top-center",
       autoClose: 2500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: false,
-      draggable: false,
       style: { opacity: 1, zIndex: 99999 },
     });
   };
+
+  // Agar modal ochilmagan bo'lsa hech narsa render qilinmaydi
+  if (!isOpen) return null;
 
   return (
     <div className="modal-main">
       <div className="modal-overlay" onClick={onClose} />
       <div className="modal">
         <h2 className="modal__title">{t("bookyourstay")}</h2>
+
         <div className="modal_all__section">
           <div className="modal__section">
             <label>{t("check-in")}:</label>
             <p>{checkIn || "-"}</p>
           </div>
-
           <div className="modal__section">
             <label>{t("check-out")}:</label>
             <p>{checkOut || "-"}</p>
           </div>
-
           <div className="modal__section">
             <label>{t("rooms")}:</label>
             <p>{rooms ? t(roomKeyMap[rooms] || rooms) : "-"}</p>
           </div>
-
           <div className="modal__section">
             <label>{t("guests")}:</label>
             <p>{guests || "-"}</p>
@@ -111,7 +102,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
 
         <div className="modal__section">
           <label>{t("hotel")}:</label>
-          <p>{hotel}</p>
+          <p>{t("TashkentAirportHotel")}</p>
         </div>
 
         <form className="modal__form" onSubmit={handleConfirm}>

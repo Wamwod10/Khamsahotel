@@ -15,7 +15,6 @@ import { MdHeadsetMic } from "react-icons/md";
 import { LuCoffee } from "react-icons/lu";
 
 const standardImages = ["/5.jpg", "/24.jpg", "/13.jpg", "/23.jpg"];
-
 const familyImages = ["/4.jpg", "/25.jpg", "/26.jpg", "/27.jpg"];
 
 const RoomCard = () => {
@@ -30,26 +29,33 @@ const RoomCard = () => {
   const [showNotice, setShowNotice] = useState(false);
 
   const openModalWithCheck = (roomData) => {
-    if (roomData.type === "Standard Room" && roomData.guests > 1) {
+    const { type, guests } = roomData;
+
+    if (type === "Standard Room" && guests > 1) {
       setNoticeMessage(
-        "Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz"
+        t("standardRoomGuestLimit") ||
+          "Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz"
       );
       setShowNotice(true);
       return;
     }
 
-    if (roomData.type === "Family Room" && roomData.guests > 3) {
+    if (type === "Family Room" && guests > 3) {
       setNoticeMessage(
-        "Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz"
+        t("familyRoomGuestLimit") ||
+          "Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz"
       );
       setShowNotice(true);
       return;
     }
+
+    const today = new Date().toISOString().split("T")[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
     setSelectedRoom({
       ...roomData,
-      checkIn: new Date().toLocaleDateString(),
-      checkOut: new Date(Date.now() + 86400000).toLocaleDateString(),
+      checkIn: today,
+      checkOut: tomorrow,
     });
     setIsModalOpen(true);
   };
@@ -61,6 +67,7 @@ const RoomCard = () => {
         <p className="room-card__text">{t("roomtext")}</p>
 
         <div className="room-card__list">
+          {/* Standard Room Card */}
           <div className="room-card__item">
             <div className="room-card__thumbnails">
               {standardImages.map((img, idx) => (
@@ -80,7 +87,7 @@ const RoomCard = () => {
             <div className="room-card__image-wrapper">
               <img
                 src={mainImage}
-                alt="Main Room"
+                alt="Standard Room"
                 className="room-card__image"
               />
             </div>
@@ -97,8 +104,8 @@ const RoomCard = () => {
 
               <h3 className="room-card__room-title">{t("standard")}</h3>
               <p className="room-card__info">
-                <FiUser /> 1 {t("guest")} &nbsp; | &nbsp; <FaRulerCombined />{" "}
-                3.6 m²
+                <FiUser /> 1 {t("guest")} &nbsp; | &nbsp; <FaRulerCombined /> 3.6
+                m²
               </p>
               <p className="room-card__location">
                 <FiMapPin /> {t("TashkentAirportHotel")}
@@ -113,9 +120,6 @@ const RoomCard = () => {
                 <span className="roomcard__ft-span">
                   <PiLockers /> {t("roomlockers")}
                 </span>
-                {/* <span className="roomcard__ft-span">
-                  <MdOutlineLocalCafe /> USB Charging Ports
-                </span> */}
                 <span className="roomcard__ft-span">
                   <TbBath /> {t("roombath")}
                 </span>
@@ -140,7 +144,7 @@ const RoomCard = () => {
                     type: "Standard Room",
                     guests: 1,
                     size: "3.6 m²",
-                    hotel: "Tashkent Airport Khamsa Hotel",
+                    hotel: t("TashkentAirportHotel"),
                   })
                 }
               >
@@ -149,6 +153,7 @@ const RoomCard = () => {
             </div>
           </div>
 
+          {/* Family Room Card */}
           <div className="room-card__item">
             <div className="room-card__thumbnails">
               {familyImages.map((img, idx) => (
@@ -168,7 +173,7 @@ const RoomCard = () => {
             <div className="room-card__image-wrapper">
               <img
                 src={familyImage}
-                alt="Main Room"
+                alt="Family Room"
                 className="room-card__image"
               />
             </div>
@@ -183,16 +188,17 @@ const RoomCard = () => {
                 <p className="room-card__number">{t("numberrooms")}: 1</p>
               </div>
 
-              <h3 className="room-card__room-title">Family Room</h3>
+              <h3 className="room-card__room-title">{t("family")}</h3>
               <p className="room-card__info">
-                <FiUser /> 3 Guests &nbsp; | &nbsp; <FaRulerCombined /> 9.5 m²
+                <FiUser /> 3 {t("guests")} &nbsp; | &nbsp; <FaRulerCombined /> 9.5
+                m²
               </p>
               <p className="room-card__location">
                 <FiMapPin /> {t("TashkentAirportHotel")}
               </p>
               <p className="room-card__desc">{t("roomcardtext2")}</p>
 
-              <h3 className="room-card__features-title">Features:</h3>
+              <h3 className="room-card__features-title">{t("roomcardft")}:</h3>
               <div className="roomcard__ft-box room-card__ft-box">
                 <span className="roomcard__ft-span">
                   <FaWifi /> {t("roomwifi")}
@@ -210,8 +216,7 @@ const RoomCard = () => {
                   <MdCleaningServices /> {t("roomcleaning")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <LuCoffee />
-                  {t("roomcafe")}
+                  <LuCoffee /> {t("roomcafe")}
                 </span>
                 <span className="roomcard__ft-span">
                   <GiCctvCamera /> {t("securitycameras")}
@@ -226,9 +231,9 @@ const RoomCard = () => {
                 onClick={() =>
                   openModalWithCheck({
                     type: "Family Room",
-                    guests: "1-3",
+                    guests: 3,
                     size: "9.5 m²",
-                    hotel: "Tashkent Airport Khamsa Hotel",
+                    hotel: t("TashkentAirportHotel"),
                   })
                 }
               >
@@ -242,9 +247,7 @@ const RoomCard = () => {
       {showNotice && (
         <NoticePopup
           message={noticeMessage}
-          onOk={() => {
-            setShowNotice(false);
-          }}
+          onOk={() => setShowNotice(false)}
         />
       )}
 
@@ -254,6 +257,10 @@ const RoomCard = () => {
           onClose={() => setIsModalOpen(false)}
           guests={selectedRoom.guests}
           rooms={selectedRoom.type}
+          size={selectedRoom.size}
+          hotel={selectedRoom.hotel}
+          checkIn={selectedRoom.checkIn}
+          checkOut={selectedRoom.checkOut}
         />
       )}
     </div>

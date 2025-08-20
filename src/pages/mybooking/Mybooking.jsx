@@ -12,22 +12,18 @@ const MyBooking = () => {
 
   useEffect(() => {
     const savedBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-    const bookingInfo = JSON.parse(sessionStorage.getItem("bookingInfo"));
+    const roomModalData = JSON.parse(localStorage.getItem("bookingInfo"));
     let updatedBookings = [];
 
-    if (bookingInfo) {
-      if (!bookingInfo.id) {
-        bookingInfo.id = Date.now();
+    if (roomModalData && roomModalData.firstName) {
+      if (!roomModalData.id) {
+        roomModalData.id = Date.now();
       }
 
-      // BookingInfo ni boshida joylashtiramiz va takrorlanishini oldini olamiz
-      const filteredBookings = savedBookings.filter(b => b.id !== bookingInfo.id);
-      updatedBookings = [bookingInfo, ...filteredBookings];
+      const filteredBookings = savedBookings.filter(b => b.id !== roomModalData.id);
+      updatedBookings = [roomModalData, ...filteredBookings];
 
-      // BookingInfo ni sessiondan olib tashlaymiz, takrorlanmasligi uchun
-      sessionStorage.removeItem("bookingInfo");
-
-      // Va yangilangan ro'yxatni sessionStorage ga saqlaymiz
+      localStorage.removeItem("bookingInfo");
       sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
     } else {
       updatedBookings = savedBookings;
