@@ -67,4 +67,35 @@
       }
     }
   }
+
+  .booking-row_gmail {
+    width: 100%;
+    display: flex !important;
+    justify-content: space-between !important;
+  }
+}
+
+@media (max-width: 439px) {
+  .booking-row {
+    span {
+      font-size: 14px;
+    }
+  }
+}
+
+@media (max-width:411px) {
+  .booking-card {
+    font-size: 22px;
+
+
+  }
+
+}
+
+@media (max-width:320px) {
+  .booking-row_gmail {
+    display: flex;
+    flex-direction: column;
+    row-gap: 5px;
+  }
 }

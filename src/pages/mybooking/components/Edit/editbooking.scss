@@ -89,3 +89,18 @@
     }
   }
 }
+
+@media (max-width:375px) {
+  .edit-modal-form {
+    label {
+      font-size: 15px !important;
+    }
+
+  }
+
+  .edit-modal {
+    h2 {
+      font-size: 22px;
+    }
+  }
+}

@@ -1,8 +1,11 @@
 // PaymentModal.jsx
 import React from "react";
 import "./paymentmodal.scss";
+import { useTranslation } from "react-i18next";
 
 const PaymentModal = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   return (
@@ -13,10 +16,10 @@ const PaymentModal = ({ isOpen, onClose }) => {
         role="dialog"
         aria-modal="true"
       >
-        <h2>Pay Now</h2>
-        <p>To'lov uchun tizim hali ishlab chiqilmoqda.</p>
+        <h2>{t("paymentmodal_title")}</h2>
+        <p>{t("paymentmodal_text")}</p>
         <button className="btn btn-close" onClick={onClose}>
-          Close
+          {t("paymentmodal_close")}
         </button>
       </div>
     </div>
