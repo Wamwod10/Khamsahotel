@@ -158,6 +158,29 @@
     }
   }
 
+  /* Yangi styling totalPrice uchun form ichida */
+  .total-price-display {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+    column-gap: 10px;
+
+    label {
+      font-weight: 600;
+      color: #444;
+      margin-top: 2px;
+      font-size: 1.2rem;
+    }
+
+    p {
+      font-size: 1.8rem;
+      // margin: 0.25rem 0 0;
+      text-align: end;
+      color: #f7931e;
+      font-weight: 600;
+    }
+  }
+
   .modal__buttons {
     grid-column: 1 / -1;
     display: flex;
@@ -207,17 +230,5 @@
 
   .modal__form {
     grid-template-columns: 1fr;
-    gap: 1rem;
-
-    .modal__buttons {
-      justify-content: center;
-      flex-wrap: wrap;
-
-      button {
-        flex: 1 1 45%;
-        font-size: 0.95rem;
-        padding: 0.5rem 1rem;
-      }
-    }
   }
 }

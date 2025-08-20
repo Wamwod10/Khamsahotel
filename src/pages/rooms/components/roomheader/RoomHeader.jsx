@@ -1,173 +1,137 @@
-import { useEffect, useState } from "react";
-import { FaHotel, FaUser, FaBed, FaPen } from "react-icons/fa";
-import { IoCalendar } from "react-icons/io5";
-import "./RoomHeader.scss";
-import { NavLink } from "react-router-dom";
-import NoticePopup from "../roomcard/NoticePopup.jsx";
+import React, { useEffect, useState } from "react";
+import { FaHotel, FaBed, FaClock } from "react-icons/fa";
+import { IoCalendar, IoSearch } from "react-icons/io5";
 import { useTranslation } from "react-i18next";
+import { NavLink, useLocation } from "react-router-dom";
+import "./RoomHeader.scss";
 
 export default function RoomHeader() {
   const { t } = useTranslation();
+  const location = useLocation();
 
-  // booking info state
   const [bookingInfo, setBookingInfo] = useState({
     checkIn: null,
     checkOut: null,
-    guests: t("guest"),   
-    rooms: "Standard Room",
-    hotel: t("TashkentAirportHotel"),
+    checkOutTime: null,
+    duration: null,
+    rooms: null,
+    hotel: null,
   });
 
-  // Notice popup state
-  const [showNotice, setShowNotice] = useState(false);
-  const [noticeMessage, setNoticeMessage] = useState("");
-
-  // Parse guest count number from string like "4 Guests"
-  const getGuestCount = (guestStr) => {
-    const num = parseInt(guestStr, 10);
-    return isNaN(num) ? 0 : num;
-  };
-
-  // Load booking info on mount, check if notice should show
   useEffect(() => {
-    const savedData = sessionStorage.getItem("bookingInfo");
-
+    const savedData = localStorage.getItem("bookingInfo");
     if (savedData) {
-      const data = JSON.parse(savedData);
-
-      setBookingInfo({
-        checkIn: data.checkIn,
-        checkOut: data.checkOut,
-        guests: data.guests,
-        rooms: data.rooms,
-        hotel: t("TashkentAirportHotel"),
-      });
-
-      const guestNum = getGuestCount(data.guests);
-      const lastShownGuestNum = parseInt(sessionStorage.getItem("noticeShownForGuests") || "0", 10);
-
-      // Show notice only if guestNum >= 4 AND notice NOT shown yet for this guestNum
-      if (guestNum >= 4 && guestNum !== lastShownGuestNum) {
-        setNoticeMessage(t("tooManyGuestsMessage"));
-        setShowNotice(true);
+      try {
+        const data = JSON.parse(savedData);
+        setBookingInfo({
+          checkIn: data.checkIn,
+          checkOut: data.checkOut,
+          checkOutTime: data.checkOutTime,
+          duration: data.duration,
+          rooms: data.rooms,
+          hotel: data.hotel || t("TashkentAirportHotel"),
+        });
+      } catch (error) {
+        console.error("Error parsing bookingInfo:", error);
       }
     }
-  }, [t]);
-  
+  }, [location.key, t]);
 
-  // If bookingInfo.guests changes, clear noticeShownForGuests if guestNum < 4
-  // (Optional, depends on where you reset this in your Main Page)
-  useEffect(() => {
-    const guestNum = getGuestCount(bookingInfo.guests);
-    if (guestNum < 4) {
-      sessionStorage.removeItem("noticeShownForGuests");
-    }
-  }, [bookingInfo.guests]);
+  const formatDate = (dateString) => {
+    if (!dateString) return t("selectDate");
 
-  // Close notice handler - save that notice was shown for current guest count
-  const handleCloseNotice = () => {  
-    setShowNotice(false);
-
-    const guestNum = getGuestCount(bookingInfo.guests);
-    if (guestNum >= 4) {
-      sessionStorage.setItem("noticeShownForGuests", guestNum.toString());
+    try {
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}.${month}.${year}`; // 👉 22.08.2025
+    } catch (error) {
+      return dateString;
     }
   };
 
-  const guestKeyMap = {
-    "1 Guest": "guestCount_1",
-    "2 Guest": "guestCount_2",
-    "3 Guest": "guestCount_3",
-    "4 Guest": "guestCount_4",
-    "5 Guest": "guestCount_5",
-    "6 Guest": "guestCount_6",
-    "2 Guests": "guestCount_2",
-    "3 Guests": "guestCount_3",
-    "4 Guests": "guestCount_4",
-    "5 Guests": "guestCount_5",
-    "6 Guests": "guestCount_6",
+  const formatTime = (timeString) => {
+    if (!timeString) return t("selectTime");
+
+    try {
+      // ISO formatda bo'lsa (masalan: "2025-08-22T03:31")
+      if (timeString.includes("T")) {
+        return timeString.split("T")[1]?.slice(0, 5); // faqat "03:31"
+      }
+
+      // Faqat vaqt bo'lsa (masalan: "03:31")
+      return timeString.slice(0, 5);
+    } catch (error) {
+      return timeString;
+    }
   };
 
-  // Room translation keys map
-  const roomKeyMap = {
-    "Standard Room": "roomType_standard",
-    "Family Room": "roomType_family",
-    "2 Standard Rooms": "roomType_twoStandard",
-    "2 Family Rooms": "roomType_twoFamily",
-    "Standard + 1 Family room": "roomType_mixed",
+
+  const getCheckOutDate = () => {
+    return bookingInfo.checkOut ? formatDate(bookingInfo.checkOut) : t("selectDate");
   };
+
+  const getCheckOutTime = () => {
+    return bookingInfo.checkOutTime ? formatTime(bookingInfo.checkOutTime) : t("selectTime");
+  };
+
 
   return (
     <div className="room-header">
-      <div className="container">
-        <div className="room-header__box">
-          <div className="room-header__item">
-            <IoCalendar className="room-header__icon" />
-            <div>
-              <p className="room-header__label">{t("check-in")}</p>
-              <p className="room-header__value">
-                {bookingInfo.checkIn || t("selectDate")}
-              </p>
-            </div>
-          </div>
-
-          <div className="room-header__item">
-            <IoCalendar className="room-header__icon" />
-            <div>
-              <p className="room-header__label">{t("check-out")}</p>
-              <p className="room-header__value">
-                {bookingInfo.checkOut || t("selectDate")}
-              </p>
-            </div>
-          </div>
-
-          <div className="room-header__item">
-            <FaUser className="room-header__icon" />
-            <div>
-              <p className="room-header__label">{t("guests")}</p>
-              <p className="room-header__value">
-                {bookingInfo.guests
-                  ? t(guestKeyMap[bookingInfo.guests] || bookingInfo.guests)
-                  : t("guestCount_1")}
-              </p>
-            </div>
-          </div>
-
-          <div className="room-header__item">
-            <FaBed className="room-header__icon" />
-            <div>
-              <p className="room-header__label">{t("rooms")}</p>
-              <p className="room-header__value">
-                {t(roomKeyMap[bookingInfo.rooms] || "roomType_standard")}
-              </p>
-            </div>
-          </div>
-
-          <div className="room-header__item">
-            <FaHotel className="room-header__icon" />
-            <div>
-              <p className="room-header__label">{t("hotel")}</p>
-              <p className="room-header__value">{t("TashkentAirportHotel")}</p>
-            </div>
+      <div className="room-header__box">
+        <div className="room-header__item">
+          <IoCalendar className="room-header__icon" />
+          <div>
+            <p className="room-header__label">{t("check-in")}</p>
+            <p className="room-header__value">
+              {getCheckOutDate()}
+            </p>
           </div>
         </div>
 
-        <NavLink
-          to="/"
-          state={{ clearSearch: true }}
-          className="room-header__button"
-        >
-          <FaPen className="room-header__button-icon" /> {t("modifysearch")}
-        </NavLink>
-      </div>
+        <div className="room-header__item">
+          <IoCalendar className="room-header__icon" />
+          <div>
+            <p className="room-header__label">{t("check-in-hours")}</p>
+            <p className="room-header__value">
+              {getCheckOutTime()}  
+            </p>
+          </div>
+        </div>
 
-      {showNotice && (
-        <NoticePopup
-          message={noticeMessage}
-          onBack={handleCloseNotice}
-          onContinue={handleCloseNotice}
-        />
-      )}
+        <div className="room-header__item">
+          <FaClock className="room-header__icon" />
+          <div>
+            <p className="room-header__label">{t("duration")}</p>
+            <p className="room-header__value">
+              {bookingInfo.duration || t("notSelected")}
+            </p>
+          </div>
+        </div>
+
+        <div className="room-header__item">
+          <FaBed className="room-header__icon" />
+          <div>
+            <p className="room-header__label">{t("rooms")}</p>
+            <p className="room-header__value">
+              {bookingInfo.rooms || t("notSelected")}
+            </p>
+          </div>
+        </div>
+
+        <div className="room-header__item">
+          <FaHotel className="room-header__icon" />
+          <div>
+            <p className="room-header__label">{t("hotel")}</p>
+            <p className="room-header__value">
+              {bookingInfo.hotel || t("notSelected")}
+            </p>
+          </div>
+        </div>
+
+      </div>
+      <NavLink to="/" className="room-header__button"><IoSearch className="room-header-icon" />{t("modifysearch")}</NavLink>
     </div>
   );
-}
+};

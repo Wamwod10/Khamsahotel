@@ -2,42 +2,74 @@ import React from "react";
 import "./bookingcard.scss";
 import { useTranslation } from "react-i18next";
 
+const roomKeyMap = {
+  "Standard Room": "roomType_standard",
+  "Family Room": "roomType_family",
+  "2 Standard Rooms": "roomType_twoStandard",
+  "2 Family Rooms": "roomType_twoFamily",
+  "Standard + 1 Family room": "roomType_mixed",
+};
+
 const BookingCard = ({ booking, onEdit, onDelete }) => {
   const { t } = useTranslation();
 
-  // Agar booking bo'lmasa, hech narsa ko'rsatilmaydi
   if (!booking) return null;
+
+  // Sanalarni formatlash funksiyasi
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const [year, month, day] = dateStr.split("-");
+    return `${day}.${month}.${year}`;
+  };
+
+  // Vaqtni formatlash funksiyasi
+  const formatTime = (timeStr) => {
+    if (!timeStr) {
+      console.warn("No time provided to formatTime");
+      return "-";
+    }
+
+    if (timeStr.includes("T")) {
+      return timeStr.split("T")[1].slice(0, 5);
+    }
+
+    return timeStr.slice(0, 5);
+  };
+
+  console.log("Booking info:", booking);
+  console.log("checkInTime:", booking.checkInTime);
+
+  // Room nomini tarjima qilish
+  const roomLabel = booking.rooms ? t(roomKeyMap[booking.rooms] || booking.rooms) : "-";
 
   return (
     <div className="booking-card">
       <h2>{t("bookingcard_hotel")}</h2>
 
-      {/* Bron ma'lumotlari bo'limi */}
       <div className="booking-section">
         <div className="booking-row">
           <span>{t("bookingcard_checkin")}</span>
-          <span>{booking.checkIn}</span>
+          <span>{formatDate(booking.checkIn)}</span>
         </div>
 
         <div className="booking-row">
-          <span>{t("bookingcard_checkout")}</span>
-          <span>{booking.checkOut}</span>
+          <span>{t("check-in-hours")}</span>
+          <span>{formatTime(booking.checkOutTime)}</span>
         </div>
 
         <div className="booking-row">
           <span>{t("bookingcard_roomtype")}</span>
-          <span>{booking.rooms}</span>
+          <span>{roomLabel}</span>
         </div>
 
         <div className="booking-row">
-          <span>{t("bookingcard_guests")}</span>
-          <span>{booking.guests}</span>
+          <span>{t("duration")}:</span>
+          <span>{t(booking.duration)}</span>
         </div>
       </div>
 
       <h3>{t("bookingcard_guestinfo")}</h3>
 
-      {/* Mehmon haqida ma'lumotlar */}
       <div className="booking-section">
         <div className="booking-row">
           <span>{t("bookingcard_firstname")}</span>
@@ -62,7 +94,6 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
         </div>
       </div>
 
-      {/* Tahrirlash va o'chirish tugmalari */}
       <div className="booking-actions">
         <button
           className="btn btn-edit"

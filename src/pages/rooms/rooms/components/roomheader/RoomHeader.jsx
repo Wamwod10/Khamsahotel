@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { FaHotel, FaBed, FaClock } from "react-icons/fa";
 import { IoCalendar } from "react-icons/io5";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import "./RoomHeader.scss";
 
 export default function RoomHeader() {
   const { t } = useTranslation();
+  const location = useLocation(); 
 
   const [bookingInfo, setBookingInfo] = useState({
     checkIn: null,
@@ -21,61 +23,43 @@ export default function RoomHeader() {
     if (savedData) {
       try {
         const data = JSON.parse(savedData);
-        console.log("Loaded from localStorage:", data);
-        
         setBookingInfo({
-          checkIn: data.checkIn || null,
-          checkOut: data.checkOut || null,
-          checkOutTime: data.checkOutTime || null,
-          duration: data.duration || null,
-          rooms: data.rooms || null,
+          checkIn: data.checkIn,
+          checkOut: data.checkOut,
+          checkOutTime: data.checkOutTime,
+          duration: data.duration,
+          rooms: data.rooms,
           hotel: data.hotel || t("TashkentAirportHotel"),
         });
       } catch (error) {
-        console.error("Error parsing localStorage data:", error);
+        console.error("Error parsing bookingInfo:", error);
       }
     }
-  }, [t]);
+  }, [location.key, t]);
 
-  // Sana va vaqtni formatlash funksiyasi
   const formatDate = (dateString) => {
     if (!dateString) return t("selectDate");
-    
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch (error) {
-      return dateString;
-    }
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
-  // Vaqtni formatlash funksiyasi
   const formatTime = (timeString) => {
     if (!timeString) return t("selectTime");
-    
-    try {
-      // Agar to'liq ISO string bo'lsa
-      if (timeString.includes('T')) {
-        const date = new Date(timeString);
-        return date.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        });
-      }
-      
-      // Agar faqat vaqt bo'lsa (HH:MM formatida)
-      return timeString;
-    } catch (error) {
-      return timeString;
+    if (timeString.includes("T")) {
+      const date = new Date(timeString);
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
     }
+    return timeString;
   };
 
-  // Check-out ni to'liq ko'rsatish
   const getCheckOutDisplay = () => {
     if (bookingInfo.checkOut) {
       const date = formatDate(bookingInfo.checkOut);
@@ -140,4 +124,4 @@ export default function RoomHeader() {
       </div>
     </div>
   );
-}
+};

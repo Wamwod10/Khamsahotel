@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { MdWidthFull } from "react-icons/md";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
@@ -21,15 +22,30 @@ const guestCountByRoomType = {
   "Standard + 1 Family room": 4,
 };
 
+// Narxlar jadvali
+const priceTable = {
+  "Standard Room": {
+    "Up to 2 hours": 40,
+    "Up to 10 hours": 60,
+    "1 day": 100,
+  },
+  "Family Room": {
+    "Up to 2 hours": 70,
+    "Up to 10 hours": 100,
+    "1 day": 150,
+  },
+};
+
 const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   const { t } = useTranslation();
 
   const [bookingInfo, setBookingInfo] = useState({
     checkIn: "",
-    checkOut: "",
+    checkOutTime: "",
+    duration: "",
     hotel: t("TashkentAirportHotel"),
-    guests: guestCountByRoomType[rooms] || guests,
-    rooms,
+    guests: guests,
+    rooms: rooms,
   });
 
   const [formData, setFormData] = useState({
@@ -40,21 +56,16 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   });
 
   useEffect(() => {
-    const savedBooking = sessionStorage.getItem("bookingInfo");
+    const savedBooking = localStorage.getItem("bookingInfo");
     if (savedBooking) {
       const parsed = JSON.parse(savedBooking);
       setBookingInfo({
         checkIn: parsed.checkIn || "",
-        checkOut: parsed.checkOut || "",
-        hotel: t("TashkentAirportHotel"),
-        guests: guestCountByRoomType[parsed.rooms] || parsed.guests || guests,
+        checkOutTime: parsed.checkOutTime || "",
+        duration: parsed.duration || "",
+        hotel: parsed.hotel || t("TashkentAirportHotel"),
+        guests: guestCountByRoomType[parsed.rooms] || guests,
         rooms: parsed.rooms || rooms,
-      });
-      setFormData({
-        firstName: parsed.firstName || "",
-        lastName: parsed.lastName || "",
-        phone: parsed.phone || "",
-        email: parsed.email || "",
       });
     } else {
       setBookingInfo((prev) => ({
@@ -66,7 +77,16 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     }
   }, [t, guests, rooms]);
 
-  if (!isOpen) return null;
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const [year, month, day] = dateStr.split("-");
+    return `${day}.${month}.${year}`;
+  };
+
+  const formatTime = (timeStr) => {
+    if (!timeStr) return "-";
+    return timeStr.length > 5 ? timeStr.slice(11, 16) : timeStr;
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -79,9 +99,10 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   const handleConfirm = (e) => {
     e.preventDefault();
 
-    if (!bookingInfo.checkIn || !bookingInfo.checkOut) {
-      toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz"), {
+    if (!bookingInfo.checkIn || !bookingInfo.checkOutTime) {
+      toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz!"), {
         position: "top-center",
+        width: "500px",
         autoClose: 3000,
       });
       return;
@@ -92,17 +113,14 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim()) {
       toast.error(t("Iltimos, barcha maydonlarni to'ldiring"), {
         position: "top-center",
+        width: "500px",
         autoClose: 3000,
       });
       return;
     }
 
     const fullBookingInfo = {
-      checkIn: bookingInfo.checkIn,
-      checkOut: bookingInfo.checkOut,
-      hotel: bookingInfo.hotel,
-      guests: guestCountByRoomType[bookingInfo.rooms] || 1,
-      rooms: bookingInfo.rooms,
+      ...bookingInfo,
       firstName,
       lastName,
       phone,
@@ -110,46 +128,44 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       id: Date.now(),
     };
 
-    // Avval mavjud bookinglarni o'qib olamiz
     const existingBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-
-    // Yangi bookingni qo'shamiz
     const updatedBookings = [...existingBookings, fullBookingInfo];
 
-    // SessionStorage ga saqlaymiz
     sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
     sessionStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
 
     onClose();
 
-    toast.success(t("Sizning xonangiz bron qilindi"), {
+    toast.success(t("Sizning xonangiz bron qilindi, Mening Bronlarim sahifasida ko'rishingiz mumkin"), {
       position: "top-center",
-      autoClose: 2500,
+      width: "500px",
+      autoClose: 4000, 
     });
-
   };
+
+  if (!isOpen) return null;
+
+  const price =
+    priceTable[bookingInfo.rooms]?.[bookingInfo.duration] || "-";
 
   return (
     <div className="modal-main">
       <div className="modal-overlay" onClick={onClose} />
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-      >
-        <h2 className="modal__title" id="modal-title">
-          {t("bookyourstay")}
-        </h2>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <h2 className="modal__title" id="modal-title">{t("bookyourstay")}</h2>
 
         <div className="modal_all__section">
           <div className="modal__section">
             <label>{t("check-in")}:</label>
-            <p>{bookingInfo.checkIn || "-"}</p>
+            <p>{formatDate(bookingInfo.checkIn)}</p>
           </div>
           <div className="modal__section">
-            <label>{t("check-out")}:</label>
-            <p>{bookingInfo.checkOut || "-"}</p>
+            <label>{t("check-in-hours")}:</label>
+            <p>{formatTime(bookingInfo.checkOutTime)}</p>
+          </div>
+          <div className="modal__section">
+            <label>{t("duration")}:</label>
+            <p>{bookingInfo.duration}</p>
           </div>
           <div className="modal__section">
             <label>{t("rooms")}:</label>
@@ -230,10 +246,16 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
             </div>
           </div>
 
+          {/* Yangi joyga narx ko'rsatish */}
+          <div className="total-price-display">
+            <label>{t("totalPrice")}:</label>
+            <p style={{ fontWeight: "600", color: "#f7931e", marginTop: "0.2rem" }}>
+              {price !== "-" ? `${price}$` : "-"}
+            </p>
+          </div>
+
           <div className="modal__buttons">
-            <button type="submit" className="modal__confirm">
-              {t("confirm")}
-            </button>
+            <button type="submit" className="modal__confirm">{t("confirm")}</button>
             <button type="button" className="modal__cancel" onClick={onClose}>
               {t("cancel")}
             </button>

@@ -1,6 +1,6 @@
 import React from "react";
-import RoomHeader from "../rooms/components/roomheader/RoomHeader";
 import RoomCard from "./components/roomcard/RoomCard";
+import RoomHeader from "./components/roomheader/RoomHeader";
 
 const Room = () => {
   return (

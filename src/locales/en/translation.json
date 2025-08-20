@@ -378,5 +378,7 @@
   "paymentmodal_text": "Payment system is still under development.",
   "paymentmodal_close": "Close",
   "standardRoomGuestLimit": "You can only book this room for 1 guest.",
-  "familyRoomGuestLimit": "Maximum 3 guests are allowed in this room."
+  "familyRoomGuestLimit": "Maximum 3 guests are allowed in this room.",
+  "check-in-hours": "Check-in Time",
+  "totalPrice": "Total Price"
 }

@@ -20,6 +20,11 @@ const MyBooking = () => {
         roomModalData.id = Date.now();
       }
 
+      // BookingInfo ichida checkOutTime borligini checkOut deb yozamiz
+      if (roomModalData.checkOutTime && !roomModalData.checkOut) {
+        roomModalData.checkOut = roomModalData.checkOutTime;
+      }
+
       const filteredBookings = savedBookings.filter(b => b.id !== roomModalData.id);
       updatedBookings = [roomModalData, ...filteredBookings];
 

@@ -20,6 +20,8 @@ const Header = () => {
   const [duration, setDuration] = useState("Up to 2 hours");
   const [rooms, setRooms] = useState("Standard Room");
 
+  const today = new Date().toISOString().split("T")[0];
+
   useEffect(() => {
     if (location.state?.clearSearch) {
       localStorage.removeItem("bookingInfo");
@@ -38,36 +40,20 @@ const Header = () => {
       return;
     }
 
-    // To'liq check-out sanasini yaratish (check-in sanasi + kiritilgan vaqt)
     const formattedCheckOut = `${checkIn}T${checkOutTime}`;
-
     const bookingInfo = {
-      checkIn: checkIn,
+      checkIn,
       checkOut: formattedCheckOut,
-      checkOutTime: checkOutTime, // Vaqtni alohida saqlash
+      checkOutTime,
       duration,
       rooms,
       hotel: t("TashkentAirportHotel"),
-      timestamp: new Date().toISOString() // Cache busting uchun
+      timestamp: new Date().toISOString(),
     };
 
-    // Booking ma'lumotlarini localStorage ga saqlaymiz
     localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
-    console.log("Saved to localStorage:", bookingInfo);
-
-    // Query params orqali /rooms sahifasiga yo'naltiramiz
-    const queryParams = new URLSearchParams({
-      checkIn,
-      checkOut: formattedCheckOut,
-      duration,
-      rooms,
-    });
-
-    navigate(`/rooms?${queryParams.toString()}`);
+    navigate("/rooms");
   };
-
-  // Bugungi sanani olish
-  const today = new Date().toISOString().split('T')[0];
 
   return (
     <header className="header">
@@ -79,18 +65,10 @@ const Header = () => {
             </h1>
             <p className="header__text">{t("headertext")}</p>
             <div className="header__conditions-box">
-              <p className="header__conditions-text">
-                <FaWifi /> {t("freewifi")}
-              </p>
-              <p className="header__conditions-text">
-                <IoCarSport /> {t("freeparking")}
-              </p>
-              <p className="header__conditions-text">
-                <GiCoffeeCup /> {t("cafe")}
-              </p>
-              <p className="header__conditions-text">
-                <IoTimeOutline className="header__icon" /> {t("service24/7")}
-              </p>
+              <p className="header__conditions-text"><FaWifi /> {t("freewifi")}</p>
+              <p className="header__conditions-text"><IoCarSport /> {t("freeparking")}</p>
+              <p className="header__conditions-text"><GiCoffeeCup /> {t("cafe")}</p>
+              <p className="header__conditions-text"><IoTimeOutline /> {t("service24/7")}</p>
             </div>
           </div>
 
@@ -112,14 +90,14 @@ const Header = () => {
               </div>
 
               <div className="header__form-group">
-                <label htmlFor="checkout">{t("check-out")} (Vaqt)</label>
+                <label htmlFor="checkout">{t("check-in-hours")}</label>
                 <input
                   id="checkout"
                   type="time"
                   value={checkOutTime}
                   onChange={(e) => setCheckOutTime(e.target.value)}
                   required
-                  disabled={!checkIn} // Faqat check-in tanlanganida ishlaydi
+                  disabled={!checkIn}
                 />
               </div>
             </div>
@@ -162,8 +140,8 @@ const Header = () => {
               <input id="hotel" value={t("TashkentAirportHotel")} disabled />
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="header__form-button"
               disabled={!checkIn || !checkOutTime}
             >
@@ -171,15 +149,9 @@ const Header = () => {
             </button>
 
             <div className="header__info-row">
-              <span className="header__color1">
-                <AiOutlineSafety /> {t("secure")}
-              </span>
-              <span className="header__color2">
-                <FaCircleCheck /> {t("instantconfirm")}
-              </span>
-              <span className="header__color3">
-                <MdOutlineCancel /> {t("freecancel")}
-              </span>
+              <span className="header__color1"><AiOutlineSafety /> {t("secure")}</span>
+              <span className="header__color2"><FaCircleCheck /> {t("instantconfirm")}</span>
+              <span className="header__color3"><MdOutlineCancel /> {t("freecancel")}</span>
             </div>
           </form>
         </div>
