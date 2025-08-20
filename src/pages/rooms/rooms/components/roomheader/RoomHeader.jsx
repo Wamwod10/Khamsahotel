@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
-import { FaHotel, FaUser, FaBed, FaPen } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import { FaHotel, FaBed, FaClock } from "react-icons/fa";
 import { IoCalendar } from "react-icons/io5";
-import "./RoomHeader.scss";
-import { NavLink } from "react-router-dom";
-import NoticePopup from "../roomcard/NoticePopup.jsx";
 import { useTranslation } from "react-i18next";
+import "./RoomHeader.scss";
 
 export default function RoomHeader() {
   const { t } = useTranslation();
@@ -12,140 +10,134 @@ export default function RoomHeader() {
   const [bookingInfo, setBookingInfo] = useState({
     checkIn: null,
     checkOut: null,
-    guests: "1 Guest",
-    rooms: "Standard Room",
-    hotel: t("TashkentAirportHotel"),
+    checkOutTime: null,
+    duration: null,
+    rooms: null,
+    hotel: null,
   });
 
-  const [showNotice, setShowNotice] = useState(false);
-  const [noticeMessage, setNoticeMessage] = useState("");
-
-useEffect(() => {
-  const savedData = localStorage.getItem("bookingInfo");
-
-  if (savedData) {
-    const data = JSON.parse(savedData);
-
-    console.log("bookingInfo (parsed):", data);
-
-    setBookingInfo({
-      checkIn: data.checkIn,
-      checkOut: data.checkOut,
-      guests: data.guests,
-      rooms: data.rooms,
-      hotel: t("TashkentAirportHotel"),
-    });
-
-    const guestNum = parseInt(data.guests);
-    const lastShownGuestNum = parseInt(localStorage.getItem("noticeShownForGuests") || "0");
-
-    console.log("guestNum:", guestNum);
-    console.log("lastShownGuestNum:", lastShownGuestNum);
-
-    if (guestNum > 3 && guestNum !== lastShownGuestNum) {
-      console.log("✅ NoticePopup sharti BAJARILDI");
-      setNoticeMessage(t("tooManyGuestsMessage"));
-      setShowNotice(true);
-    } else {
-      console.log("❌ NoticePopup sharti bajarilmadi");
+  useEffect(() => {
+    const savedData = localStorage.getItem("bookingInfo");
+    if (savedData) {
+      try {
+        const data = JSON.parse(savedData);
+        console.log("Loaded from localStorage:", data);
+        
+        setBookingInfo({
+          checkIn: data.checkIn || null,
+          checkOut: data.checkOut || null,
+          checkOutTime: data.checkOutTime || null,
+          duration: data.duration || null,
+          rooms: data.rooms || null,
+          hotel: data.hotel || t("TashkentAirportHotel"),
+        });
+      } catch (error) {
+        console.error("Error parsing localStorage data:", error);
+      }
     }
-  }
-}, [t]);
+  }, [t]);
 
-
-  const handleCloseNotice = () => {
-    setShowNotice(false);
-    const guestNum = parseInt(bookingInfo.guests, 10);
-    if (guestNum > 3) {
-      localStorage.setItem("noticeShownForGuests", guestNum.toString());
+  // Sana va vaqtni formatlash funksiyasi
+  const formatDate = (dateString) => {
+    if (!dateString) return t("selectDate");
+    
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return dateString;
     }
   };
 
-  const guestKeyMap = {
-    "1 Guest": "guestCount_1",
-    "2 Guest": "guestCount_2",
-    "3 Guest": "guestCount_3",
-    "4 Guest": "guestCount_4",
-    "5 Guest": "guestCount_5",
-    "6 Guest": "guestCount_6",
-    "2 Guests": "guestCount_2",
-    "3 Guests": "guestCount_3",
-    "4 Guests": "guestCount_4",
-    "5 Guests": "guestCount_5",
-    "6 Guests": "guestCount_6",
+  // Vaqtni formatlash funksiyasi
+  const formatTime = (timeString) => {
+    if (!timeString) return t("selectTime");
+    
+    try {
+      // Agar to'liq ISO string bo'lsa
+      if (timeString.includes('T')) {
+        const date = new Date(timeString);
+        return date.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+      }
+      
+      // Agar faqat vaqt bo'lsa (HH:MM formatida)
+      return timeString;
+    } catch (error) {
+      return timeString;
+    }
   };
 
-  const roomKeyMap = {
-    "Standard Room": "roomType_standard",
-    "Family Room": "roomType_family",
-    "2 Standard Rooms": "roomType_twoStandard",
-    "2 Family Rooms": "roomType_twoFamily",
-    "Standard + 1 Family room": "roomType_mixed",
+  // Check-out ni to'liq ko'rsatish
+  const getCheckOutDisplay = () => {
+    if (bookingInfo.checkOut) {
+      const date = formatDate(bookingInfo.checkOut);
+      const time = formatTime(bookingInfo.checkOutTime || bookingInfo.checkOut);
+      return `${date} ${time}`;
+    }
+    return t("selectTime");
   };
 
   return (
     <div className="room-header">
-      <div className="container">
-        <div className="room-header__box">
-          <div className="room-header__item">
-            <IoCalendar className="room-header__icon" />
-            <div>
-              <p className="room-header__label">{t("check-in")}</p>
-              <p className="room-header__value">{bookingInfo.checkIn || t("selectDate")}</p>
-            </div>
-          </div>
-
-          <div className="room-header__item">
-            <IoCalendar className="room-header__icon" />
-            <div>
-              <p className="room-header__label">{t("check-out")}</p>
-              <p className="room-header__value">{bookingInfo.checkOut || t("selectDate")}</p>
-            </div>
-          </div>
-
-          <div className="room-header__item">
-            <FaUser className="room-header__icon" />
-            <div>
-              <p className="room-header__label">{t("guests")}</p>
-              <p className="room-header__value">
-                {bookingInfo.guests
-                  ? t(guestKeyMap[bookingInfo.guests] || bookingInfo.guests)
-                  : t("guestCount_1")}
-              </p>
-            </div>
-          </div>
-
-          <div className="room-header__item">
-            <FaBed className="room-header__icon" />
-            <div>
-              <p className="room-header__label">{t("rooms")}</p>
-              <p className="room-header__value">
-                {t(roomKeyMap[bookingInfo.rooms] || "roomType_standard")}
-              </p>
-            </div>
-          </div>
-
-          <div className="room-header__item">
-            <FaHotel className="room-header__icon" />
-            <div>
-              <p className="room-header__label">{t("hotel")}</p>
-              <p className="room-header__value">{t("TashkentAirportHotel")}</p>
-            </div>
+      <div className="room-header__box">
+        <div className="room-header__item">
+          <IoCalendar className="room-header__icon" />
+          <div>
+            <p className="room-header__label">{t("check-in")}</p>
+            <p className="room-header__value">
+              {formatDate(bookingInfo.checkIn)}
+            </p>
           </div>
         </div>
 
-        <NavLink to="/" state={{ clearSearch: true }} className="room-header__button">
-          <FaPen className="room-header__button-icon" /> {t("modifysearch")}
-        </NavLink>
-      </div>
+        <div className="room-header__item">
+          <IoCalendar className="room-header__icon" />
+          <div>
+            <p className="room-header__label">{t("check-out")}</p>
+            <p className="room-header__value">
+              {getCheckOutDisplay()}
+            </p>
+          </div>
+        </div>
 
-      {showNotice && (
-        <NoticePopup
-          message={noticeMessage}
-          onBack={handleCloseNotice}
-          onContinue={handleCloseNotice}
-        />
-      )}  
+        <div className="room-header__item">
+          <FaClock className="room-header__icon" />
+          <div>
+            <p className="room-header__label">{t("duration")}</p>
+            <p className="room-header__value">
+              {bookingInfo.duration || t("notSelected")}
+            </p>
+          </div>
+        </div>
+
+        <div className="room-header__item">
+          <FaBed className="room-header__icon" />
+          <div>
+            <p className="room-header__label">{t("rooms")}</p>
+            <p className="room-header__value">
+              {bookingInfo.rooms || t("notSelected")}
+            </p>
+          </div>
+        </div>
+
+        <div className="room-header__item">
+          <FaHotel className="room-header__icon" />
+          <div>
+            <p className="room-header__label">{t("hotel")}</p>
+            <p className="room-header__value">
+              {bookingInfo.hotel || t("notSelected")}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Nav from "./components/nav/Nav";
 import Header from "./components/header/Header";
 import Roomcard from "./components/roomcard/Roomcard";
-import Room from "./pages/rooms/Room";
+import Room from "./pages/rooms/Room"; // Bu sahifada RoomHeader bor deb oylaymiz
 import Services from "./pages/services/Services";
 // import MyBooking from "./pages/mybooking/Mybooking";
 import Bookingform from "./components/bookingform/Bookingform";
@@ -16,20 +17,8 @@ import Login from "./pages/admin/Login/Login";
 import Footer from "./components/footer/Footer";
 import Contact from "./pages/contact/Contact";
 import MyBooking from "./pages/mybooking/Mybooking";
-// import Contact from "./pages/contact/Contact";
 
-function AppWrapper() {
-  // useNavigate ni shu yerda ishlatamiz
-  const navigate = useNavigate();
-
-  const navigateToAddBooking = () => {
-    navigate("/");
-  };
-
-  return <App navigateToAddBooking={navigateToAddBooking} />;
-}
-
-function App({ navigateToAddBooking }) {
+function App() {
   return (
     <>
       <Nav />
@@ -38,7 +27,11 @@ function App({ navigateToAddBooking }) {
           path="/"
           element={
             <>
-              <Header /> <Roomcard /> <Bookingform /> <Gallery /> <Near />
+              <Header />
+              <Roomcard />
+              <Bookingform />
+              <Gallery />
+              <Near />
             </>
           }
         />
@@ -46,13 +39,10 @@ function App({ navigateToAddBooking }) {
         <Route path="/services" element={<Services />} />
         <Route path="/offer" element={<Offer />} />
         <Route path="/contact" element={<Contact />} />
-        <Route
-          path="/mybooking"
-          element={<MyBooking navigateToAddBooking={navigateToAddBooking} />}
-        />
+        <Route path="/mybooking" element={<MyBooking />} />
         <Route path="/admin" element={<Login />} />
       </Routes>
-      <Footer/>
+      <Footer />
       <ToastContainer
         position="top-center"
         autoClose={2500}
@@ -68,10 +58,9 @@ function App({ navigateToAddBooking }) {
 }
 
 export default function Root() {
-  // Bosh komponent sifatida BrowserRouter va AppWrapper ni tashlaymiz
   return (
     <BrowserRouter>
-      <AppWrapper />
+      <App />
     </BrowserRouter>
   );
 }

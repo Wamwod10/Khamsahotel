@@ -8,156 +8,74 @@ import { useTranslation } from "react-i18next";
 import { AiOutlineSafety } from "react-icons/ai";
 import { FaCircleCheck } from "react-icons/fa6";
 import { MdOutlineCancel } from "react-icons/md";
-import { useNavigate } from "react-router-dom";
-import { useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Header = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const roomKeys = {
-    "Standard Room": "standardRoom",
-    "Family Room": "familyRoom",
-    "2 Standard Rooms": "twoStandardRooms",
-    "2 Family Rooms": "twoFamilyRooms",
-    "Standard + 1 Family room": "standardPlusFamilyRoom",
-  };
-
   const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [guests, setGuests] = useState("1 Guest");
+  const [checkOutTime, setCheckOutTime] = useState("");
+  const [duration, setDuration] = useState("Up to 2 hours");
   const [rooms, setRooms] = useState("Standard Room");
-
-  const [showNotice, setShowNotice] = useState(false);
-  const [noticeMessage, setNoticeMessage] = useState("");
 
   useEffect(() => {
     if (location.state?.clearSearch) {
-      sessionStorage.removeItem("bookingInfo");
-      sessionStorage.removeItem("noticeShown");
+      localStorage.removeItem("bookingInfo");
       setCheckIn("");
-      setCheckOut("");
-      setGuests("1 Guest");
+      setCheckOutTime("");
+      setDuration("Up to 2 hours");
       setRooms("Standard Room");
     }
   }, [location.state]);
 
-  const getNextDay = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    date.setDate(date.getDate() + 1);
-    return date.toISOString().split("T")[0];
-  };
-
-  const handleCheckInChange = (e) => {
-    const newCheckIn = e.target.value;
-    setCheckIn(newCheckIn);
-
-    if (checkOut && checkOut <= newCheckIn) {
-      setCheckOut(getNextDay(newCheckIn));
-    }
-  };
-
-  const handleCheckOutChange = (e) => {
-    const newCheckOut = e.target.value;
-    if (checkIn && newCheckOut <= checkIn) {
-      setCheckOut(getNextDay(checkIn));
-    } else {
-      setCheckOut(newCheckOut);
-    }
-  };
-
-  const getGuestCount = (guestStr) => parseInt(guestStr);
-
-  const isRoomSuitableForGuests = (roomOption, guestCount) => {
-    switch (roomOption) {
-      case "Standard Room":
-        return guestCount === 1;
-      case "Family Room":
-        return guestCount >= 1 && guestCount <= 3;
-      case "2 Standard Rooms":
-        return guestCount === 2;
-      case "2 Family Rooms":
-        return guestCount >= 4 && guestCount <= 6;
-      case "Standard + 1 Family room":
-        return guestCount === 3 || guestCount === 4;
-      default:
-        return false;
-    }
-  };
-
-  useEffect(() => {
-    const guestCount = getGuestCount(guests);
-    if (!isRoomSuitableForGuests(rooms, guestCount)) {
-      if (guestCount === 1) setRooms("Standard Room");
-      else if (guestCount === 2) setRooms("Family Room");
-      else if (guestCount === 3 || guestCount === 4)
-        setRooms("Standard + 1 Family room");
-      else if (guestCount >= 5 && guestCount <= 6) setRooms("2 Family Rooms");
-      else setRooms("Standard Room");
-    }
-  }, [guests, rooms]);
-
-  const isDisabled = (option) => {
-    const guestCount = getGuestCount(guests);
-    return !isRoomSuitableForGuests(option, guestCount);
-  };
-
-  // Show notice only on Main Page when guest count > 3
-  useEffect(() => {
-    const guestCount = getGuestCount(guests);
-
-    if (guestCount > 3) {
-      const noticeAlreadyShown = sessionStorage.getItem("noticeShown");
-      if (!noticeAlreadyShown) {
-        setNoticeMessage(t("tooManyGuestsMessage"));
-        setShowNotice(true);
-        sessionStorage.setItem("noticeShown", "true");
-      }
-    } else {
-      setShowNotice(false);
-      sessionStorage.removeItem("noticeShown");
-    }
-  }, [guests, t]);
-
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!checkIn || !checkOut || !guests || !rooms) {
+    if (!checkIn || !checkOutTime || !duration || !rooms) {
       alert(t("fillAllFields") || "Please fill in all fields!");
       return;
     }
 
+    // To'liq check-out sanasini yaratish (check-in sanasi + kiritilgan vaqt)
+    const formattedCheckOut = `${checkIn}T${checkOutTime}`;
+
     const bookingInfo = {
-      checkIn,
-      checkOut,
-      guests,
+      checkIn: checkIn,
+      checkOut: formattedCheckOut,
+      checkOutTime: checkOutTime, // Vaqtni alohida saqlash
+      duration,
       rooms,
       hotel: t("TashkentAirportHotel"),
+      timestamp: new Date().toISOString() // Cache busting uchun
     };
 
-    sessionStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
+    // Booking ma'lumotlarini localStorage ga saqlaymiz
+    localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
+    console.log("Saved to localStorage:", bookingInfo);
 
+    // Query params orqali /rooms sahifasiga yo'naltiramiz
     const queryParams = new URLSearchParams({
       checkIn,
-      checkOut,
-      guests,
+      checkOut: formattedCheckOut,
+      duration,
       rooms,
     });
 
     navigate(`/rooms?${queryParams.toString()}`);
   };
 
-  // handleCloseNotice (if needed)
-  const handleCloseNotice = () => setShowNotice(false);
+  // Bugungi sanani olish
+  const today = new Date().toISOString().split('T')[0];
+
   return (
     <header className="header">
       <div className="container">
         <div className="header__big-box">
           <div className="header__box">
             <h1 className="header__title">
-              {t("headertitle")} <span>Khamsa Hotel</span>
+              {t("headertitle")} <span>{t("khamsahotel")}</span>
             </h1>
             <p className="header__text">{t("headertext")}</p>
             <div className="header__conditions-box">
@@ -187,49 +105,43 @@ const Header = () => {
                   id="checkin"
                   type="date"
                   value={checkIn}
-                  min={new Date().toISOString().split("T")[0]}
-                  onChange={handleCheckInChange}
-                  placeholder="ДД.ММ.ГГГГ"
+                  min={today}
+                  onChange={(e) => setCheckIn(e.target.value)}
                   required
                 />
               </div>
 
               <div className="header__form-group">
-                <label htmlFor="checkout">{t("check-out")}</label>
+                <label htmlFor="checkout">{t("check-out")} (Vaqt)</label>
                 <input
                   id="checkout"
-                  type="date"
-                  value={checkOut}
-                  min={getNextDay(
-                    checkIn || new Date().toISOString().split("T")[0]
-                  )}
-                  onChange={handleCheckOutChange}
-                  placeholder="ДД.ММ.ГГГГ"
+                  type="time"
+                  value={checkOutTime}
+                  onChange={(e) => setCheckOutTime(e.target.value)}
                   required
+                  disabled={!checkIn} // Faqat check-in tanlanganida ishlaydi
                 />
               </div>
             </div>
 
             <div className="header__form-row">
               <div className="header__form-group">
-                <label htmlFor="guests">{t("guests")}</label>
+                <label htmlFor="duration">{t("duration")}</label>
                 <div className="custom-select">
                   <select
-                    id="guests"
-                    value={guests}
-                    onChange={(e) => setGuests(e.target.value)}
+                    id="duration"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
                   >
-                    {[1, 2, 3, 4, 5, 6].map((num) => (
-                      <option key={num}>
-                        {num} {t("guest")}
-                      </option>
-                    ))}
+                    <option>Up to 2 hours</option>
+                    <option>Up to 10 hours</option>
+                    <option>1 day</option>
                   </select>
                   <FaChevronDown className="select-icon" />
                 </div>
               </div>
 
-              <div className="header__form-group select-wrapper">
+              <div className="header__form-group">
                 <label htmlFor="rooms">{t("rooms")}</label>
                 <div className="custom-select">
                   <select
@@ -237,40 +149,24 @@ const Header = () => {
                     value={rooms}
                     onChange={(e) => setRooms(e.target.value)}
                   >
-                    {[
-                      "Standard Room",
-                      "Family Room",
-                      "2 Standard Rooms",
-                      "2 Family Rooms",
-                      "Standard + 1 Family room",
-                    ].map((roomOption) => (
-                      <option
-                        key={roomOption}
-                        value={roomOption}
-                        disabled={isDisabled(roomOption)}
-                        className={
-                          isDisabled(roomOption) ? "disabled-option" : ""
-                        }
-                      >
-                        {t(`roomspart.${roomKeys[roomOption]}`)}
-                      </option>
-                    ))}
+                    <option>Standard Room</option>
+                    <option>Family Room</option>
                   </select>
                   <FaChevronDown className="select-icon" />
                 </div>
               </div>
             </div>
 
-            <div className="header__form-group select-wrapper full-width">
-              <label htmlFor="hotel">{t("TashkentAirportHotel")}</label>
-              <div className="custom-select">
-                <select id="hotel" value={t("TashkentAirportHotel")} disabled>
-                  <option>{t("TashkentAirportHotel")}</option>
-                </select>
-              </div>
+            <div className="header__form-group full-width">
+              <label htmlFor="hotel">{t("hotel")}</label>
+              <input id="hotel" value={t("TashkentAirportHotel")} disabled />
             </div>
 
-            <button type="submit" className="header__form-button">
+            <button 
+              type="submit" 
+              className="header__form-button"
+              disabled={!checkIn || !checkOutTime}
+            >
               {t("checkavailable")}
             </button>
 

@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
 
-// Room turlarini tarjima kalitlariga bog'lash uchun obyekt
+
 const roomKeyMap = {
   "Standard Room": "roomType_standard",
   "Family Room": "roomType_family",

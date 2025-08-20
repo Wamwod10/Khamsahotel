@@ -32,13 +32,12 @@
   "instantconfirm": "Instant Confirmation",
   "freecancel": "Free Cancelation",
   "hotel": "Hotel",
-  "roomspart": {
-    "standardRoom": "Standard Room",
-    "familyRoom": "Family Room",
-    "twoStandardRooms": "2 Standard Rooms",
-    "twoFamilyRooms": "2 Family Rooms",
-    "standardPlusFamilyRoom": "Standard + 1 Family Room"
-  },
+  "duration": "Duration",
+  "upTo2Hours": "Up to 2 hours",
+  "upTo10Hours": "Up to 10 hours",
+  "1day": "1 Day",
+  "fillAllFields": "Please fill in all fields!",
+
   "roomcardtitle": "Featured Rooms",
   "roomcardtext": "Choose from our carefully selected accommodations",
   "roomprice1": "$40 / to 2 hour",
@@ -54,6 +53,16 @@
   "roombath": "Bathrooms",
   "roomoutlets": "Power Outlets",
   "roomcafe": "Optional Cafe",
+  "selectTime": "Select time",
+  "duration_2h": "Up to 2 hours",
+  "duration_10h": "Up to 10 hours",
+  "duration_1d": "1 Day",
+  "roomspart": {
+    "standardRoom": "Standard Room",
+    "familyRoom": "Family Room"
+  },
+  "longerDurationMessage": "You selected a long duration. Please make sure it's needed.",
+
   "more": "More",
   "roomtext2": "Spacious room with one double and one single bed, ideal for small families",
   "roomlockers": "Secure Lockers",
