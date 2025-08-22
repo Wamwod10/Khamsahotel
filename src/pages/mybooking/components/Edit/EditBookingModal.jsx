@@ -3,9 +3,9 @@ import "./editbooking.scss";
 import { useTranslation } from "react-i18next";
 
 const durationOptions = [
-  { value: "up_to_2_hours", label: "Up to 2 hours" },
-  { value: "up_to_10_hours", label: "Up to 10 hours" },
-  { value: "for_a_day", label: "For a Day" },
+  { value: "up_to_2_hours", label: "up_to_2_hours" },
+  { value: "up_to_10_hours", label: "up_to_10_hours" },
+  { value: "for_a_day", label: "for_a_day" },
 ];
 
 const roomOptions = [
@@ -25,13 +25,19 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
     phone: "",
     email: "",
   });
-
+  {
+    durationOptions.map((option) => (
+      <option key={option.value} value={option.value}>
+        {t(option.label)}
+      </option>
+    ))
+  }
   useEffect(() => {
     if (booking) {
       setEditData({
-        checkIn: booking.checkIn || "",
-        checkInTime: booking.checkOutTime || "",
-        duration: booking.duration || "", // bookingdan duration bo'lishi kerak
+        checkIn: booking.checkIn ||  "",
+        checkInTime: booking.checkOutTime ||  "",
+        duration: booking.duration || "",
         rooms: booking.rooms || "",
         firstName: booking.firstName || "",
         lastName: booking.lastName || "",
@@ -101,7 +107,7 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
               <option value="" disabled>{t("select_duration")}</option>
               {durationOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {t(option.label) || option.label}
+                  {t(option.label)}
                 </option>
               ))}
             </select>
@@ -119,7 +125,7 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
               <option value="" disabled>{t("select_room")}</option>
               {roomOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {t(option.label) || option.label}
+                  {t(option.label)}
                 </option>
               ))}
             </select>
@@ -136,7 +142,6 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
               onChange={handleChange}
             />
           </label>
-
           {/* Last Name */}
           <label>
             {t("editmodal_lastname")}

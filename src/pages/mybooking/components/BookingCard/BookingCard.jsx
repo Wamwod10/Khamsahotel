@@ -26,7 +26,7 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
   const formatTime = (timeStr) => {
     if (!timeStr) {
       console.warn("No time provided to formatTime");
-      return "-";
+      return booking.checkInTime;
     }
 
     if (timeStr.includes("T")) {

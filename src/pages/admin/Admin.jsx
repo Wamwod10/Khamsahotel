@@ -3,7 +3,7 @@ import './admin.scss';
 const Admin = () => {
   return (
     <div>
-         
+         sdf
     </div>
   )
 }

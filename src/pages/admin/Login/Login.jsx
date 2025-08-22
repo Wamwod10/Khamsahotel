@@ -1,25 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import Admin from '../Admin';
+import React, { useState } from 'react';
 import './login.scss';
 
 import { RxEyeOpen } from 'react-icons/rx';
 import { LuEyeClosed } from 'react-icons/lu';
-
+import Admin from '../Admin';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-    // 🔥 Sahifa ochilganda localStorage dan tekshirish
-    useEffect(() => {
-        const loggedIn = localStorage.getItem('isLoggedIn');
-        if (loggedIn === 'true') {
-            setIsLoggedIn(true);
-        }
-    }, []);
+    const [isLoggedIn, setIsLoggedIn] = useState(false); // Faqat session uchun ishlatiladi
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -40,14 +31,12 @@ const Login = () => {
         }
 
         if (email === '1234567890@gmail.com' && password === '1234567890') {
-            localStorage.setItem('isLoggedIn', 'true'); // ✅ localStorage ga yozamiz
-            setIsLoggedIn(true);
+            setIsLoggedIn(true); // ✅ Faqat xotirada saqlanadi
         } else {
             setError("Email yoki parol noto‘g‘ri!");
         }
     };
 
-    // 🔥 Agar login qilingan bo‘lsa Admin chiqadi
     if (isLoggedIn) {
         return <Admin />;
     }

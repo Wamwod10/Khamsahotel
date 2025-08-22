@@ -40,12 +40,12 @@
 
   "roomcardtitle": "Featured Rooms",
   "roomcardtext": "Choose from our carefully selected accommodations",
-  "roomprice1": "$40 / to 2 hour",
-  "roomprice2": "$60 / to 10 hour",
-  "roomprice3": "$100 / for a day",
-  "roomprice4": "$70 / to 2 hour",
-  "roomprice5": "$100 / to 10 hour",
-  "roomprice6": "$150 / for a day",
+  "roomprice1": "€40 / to 3 hour",
+  "roomprice2": "€60 / to 10 hour",
+  "roomprice3": "€100 / for a day",
+  "roomprice4": "€70 / to 3 hour",
+  "roomprice5": "€100 / to 10 hour",
+  "roomprice6": "€150 / for a day",
   "roomtext1": "Comfortable single room for solo travelers with Wi-Fi and essential amenities",
   "roomcardft": "Features",
   "roomwifi": "Free Wifi",
@@ -305,7 +305,7 @@
   "faqAccordion.q2": "How many rooms does the hotel have and what types are available?",
   "faqAccordion.a2": "The hotel offers a total of 24 rooms, including 23 standard rooms and 1 luxury suite. Each room is equipped with modern amenities to ensure guest comfort.",
   "faqAccordion.q3": "What are the room rates and is it possible to make a reservation?",
-  "faqAccordion.a3": "Room rates range from $30 to $150 depending on the room type and length of stay. Advance booking is available to guarantee your accommodation.",
+  "faqAccordion.a3": "Room rates range from €40 to €150 depending on the room type and length of stay. Advance booking is available to guarantee your accommodation.",
   "faqAccordion.q4": "What amenities are provided in the hotel rooms?",
   "faqAccordion.a4": "Each room features a full-size bed, Wi-Fi, air conditioning, shower, toiletries, wardrobe space, and daily housekeeping. Additionally, 24-hour room service is available for guest convenience.",
   "faqAccordion.q5": "What are the hotel’s operating hours?",
@@ -380,5 +380,9 @@
   "standardRoomGuestLimit": "You can only book this room for 1 guest.",
   "familyRoomGuestLimit": "Maximum 3 guests are allowed in this room.",
   "check-in-hours": "Check-in Time",
-  "totalPrice": "Total Price"
+  "totalPrice": "Total Price",
+
+  "up_to_2_hours": "Up to 2 hours",
+  "up_to_10_hours": "Up to 10 hours",
+  "for_a_day": "For a Day"
 }
