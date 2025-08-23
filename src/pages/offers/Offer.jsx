@@ -60,10 +60,6 @@ const Offer = () => {
         <p>{t("section3_text")}</p>
       </AccordionItem>
 
-      <AccordionItem title={t("section4_title")}>
-        <p>{t("section4_text")}</p>
-      </AccordionItem>
-
       <AccordionItem title={t("section5_title")}>
         <p>{t("section5_text")}</p>
       </AccordionItem>

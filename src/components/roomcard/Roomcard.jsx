@@ -1,19 +1,19 @@
 import React from "react";
 import "./roomcard.scss";
 import './roomcardMedia.scss'
-import { FaArrowRight, FaRegUser } from "react-icons/fa";
+import { FaArrowRight, FaFan, FaRegUser } from "react-icons/fa";
 import { IoResizeSharp } from "react-icons/io5";
 import { FaWifi } from "react-icons/fa6";
 import { RiCustomerServiceLine } from "react-icons/ri";
-import { TbBath } from "react-icons/tb";
+import { PiHairDryerBold } from "react-icons/pi";
 import { MdOutlinePower } from "react-icons/md";
-import { MdOutlineLocalCafe } from "react-icons/md";
+// import { BsFillUsbPlugFill } from "react-icons/fa";
 import { CiCircleMore } from "react-icons/ci";
 import { IoIosListBox } from "react-icons/io";
 import { FaMapLocationDot } from "react-icons/fa6";
 import { MdCleaningServices } from "react-icons/md";
 import { RiGroupLine } from "react-icons/ri";
-import { PiLockers } from "react-icons/pi";
+import { GiHanger } from "react-icons/gi";
 import { useTranslation } from 'react-i18next';
 
 const Roomcard = () => {
@@ -63,13 +63,13 @@ const Roomcard = () => {
                   <RiCustomerServiceLine /> {t("roomrcp")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <TbBath /> {t("roombath")}
+                  <PiHairDryerBold /> {t("roombath")}
                 </span>
                 <span className="roomcard__ft-span">
                   <MdOutlinePower /> {t("roomoutlets")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <MdOutlineLocalCafe /> {t('roomcafe')}
+                  <FaFan /> {t('roomcafe')}
                 </span>
                 <span className="roomcard__ft-span">
                   <CiCircleMore /> {t("more")}...
@@ -111,16 +111,16 @@ const Roomcard = () => {
                   <FaWifi /> {t("roomwifi")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <PiLockers /> {t("roomlockers")}
+                  <GiHanger /> {t("roomlockers")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <TbBath /> {t("roombath")}
+                  <PiHairDryerBold /> {t("roombath")}
                 </span>
                 <span className="roomcard__ft-span">
                   <MdCleaningServices /> {t("roomcleaning")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <MdOutlineLocalCafe /> {t("roomcafe")}
+                  <FaFan /> {t("roomcafe")}
                 </span>
                 <span className="roomcard__ft-span">
                   <CiCircleMore /> {t("more")}...
@@ -165,13 +165,13 @@ const Roomcard = () => {
                   <RiCustomerServiceLine /> {t("roomrcp")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <TbBath /> {t("roombath")}
+                  <PiHairDryerBold /> {t("roombath")}
                 </span>
                 <span className="roomcard__ft-span">
                   <MdOutlinePower /> {t("roomoutlets")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <MdOutlineLocalCafe /> {t("roomcafe")}
+                  <FaFan /> {t("roomcafe")}
                 </span>
                 <span className="roomcard__ft-span">
                   <CiCircleMore /> {t("more")}...

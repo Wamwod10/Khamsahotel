@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import "./header.scss";
 import "./headerMedia.scss";
 import { FaWifi, FaChevronDown } from "react-icons/fa";
-import { IoCarSport, IoTimeOutline } from "react-icons/io5";
+import { IoTimeOutline } from "react-icons/io5";
 import { GiCoffeeCup } from "react-icons/gi";
 import { useTranslation } from "react-i18next";
 import { AiOutlineSafety } from "react-icons/ai";
 import { FaCircleCheck } from "react-icons/fa6";
 import { MdOutlineCancel } from "react-icons/md";
 import { useNavigate, useLocation } from "react-router-dom";
+import { TbAirConditioning } from "react-icons/tb";
+import { RiDrinks2Fill } from "react-icons/ri";
 
 const Header = () => {
   const { t } = useTranslation();
@@ -66,8 +68,8 @@ const Header = () => {
             <p className="header__text">{t("headertext")}</p>
             <div className="header__conditions-box">
               <p className="header__conditions-text"><FaWifi /> {t("freewifi")}</p>
-              <p className="header__conditions-text"><IoCarSport /> {t("freeparking")}</p>
-              <p className="header__conditions-text"><GiCoffeeCup /> {t("cafe")}</p>
+              <p className="header__conditions-text"><TbAirConditioning /> {t("freeparking")}</p>
+              <p className="header__conditions-text"><RiDrinks2Fill /> {t("cafe")}</p>
               <p className="header__conditions-text"><IoTimeOutline /> {t("service24/7")}</p>
             </div>
           </div>

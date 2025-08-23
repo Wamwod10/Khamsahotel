@@ -2,13 +2,14 @@ import React, { useState, useEffect } from "react";
 import "./RoomCard.scss";
 import "./Rmedia/RCmedia.scss";
 
-import { FaWifi, FaRulerCombined } from "react-icons/fa";
-import { TbBath } from "react-icons/tb";
-import { MdOutlineLocalCafe, MdCleaningServices, MdHeadsetMic } from "react-icons/md";
-import { PiLockers } from "react-icons/pi";
+import { FaWifi, FaRulerCombined, FaFan } from "react-icons/fa";
+import { PiHairDryerBold } from "react-icons/pi";
+import { MdCleaningServices, MdHeadsetMic } from "react-icons/md";
+import { GiHanger } from "react-icons/gi";
 import { FiUser, FiMapPin } from "react-icons/fi";
 import { GiCctvCamera } from "react-icons/gi";
 import { LuCoffee } from "react-icons/lu";
+import { BsFillUsbPlugFill } from "react-icons/bs";
 
 import { useTranslation } from "react-i18next";
 import RoomModal from "./RoomModal";
@@ -44,13 +45,17 @@ const RoomCard = () => {
 
   const openModalWithCheck = (roomData) => {
     if (roomData.type === "Standard Room" && roomData.guests > 1) {
-      setNoticeMessage("Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz");
+      setNoticeMessage(
+        "Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz"
+      );
       setShowNotice(true);
       return;
     }
 
     if (roomData.type === "Family Room" && roomData.guests > 3) {
-      setNoticeMessage("Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz");
+      setNoticeMessage(
+        "Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz"
+      );
       setShowNotice(true);
       return;
     }
@@ -88,14 +93,20 @@ const RoomCard = () => {
                   src={img}
                   alt={`Room view ${idx + 1}`}
                   loading="lazy"
-                  className={`room-card__thumbnail ${mainImage === img ? "active" : ""}`}
+                  className={`room-card__thumbnail ${
+                    mainImage === img ? "active" : ""
+                  }`}
                   onClick={() => setMainImage(img)}
                 />
               ))}
             </div>
 
             <div className="room-card__image-wrapper">
-              <img src={mainImage} alt="Main Room" className="room-card__image" />
+              <img
+                src={mainImage}
+                alt="Main Room"
+                className="room-card__image"
+              />
             </div>
 
             <div className="room-card__body">
@@ -110,7 +121,8 @@ const RoomCard = () => {
 
               <h3 className="room-card__room-title">{t("standard")}</h3>
               <p className="room-card__info">
-                <FiUser /> 1 {t("guest")} &nbsp; | &nbsp; <FaRulerCombined /> 3.6 m²
+                <FiUser /> 1 {t("guest")} &nbsp; | &nbsp; <FaRulerCombined />{" "}
+                3.6 m²
               </p>
               <p className="room-card__location">
                 <FiMapPin /> {t("TashkentAirportHotel")}
@@ -119,13 +131,27 @@ const RoomCard = () => {
 
               <h3 className="room-card__features-title">{t("roomcardft")}:</h3>
               <div className="roomcard__ft-box room-card__ft-box">
-                <span className="roomcard__ft-span"><FaWifi /> {t("roomwifi")}</span>
-                <span className="roomcard__ft-span"><PiLockers /> {t("roomlockers")}</span>
-                <span className="roomcard__ft-span"><TbBath /> {t("roombath")}</span>
-                <span className="roomcard__ft-span"><MdCleaningServices /> {t("roomcleaning")}</span>
-                <span className="roomcard__ft-span"><LuCoffee /> {t("roomcafe")}</span>
-                <span className="roomcard__ft-span"><GiCctvCamera /> {t("securitycameras")}</span>
-                <span className="roomcard__ft-span"><MdHeadsetMic /> {t("service24/7")}</span>
+                <span className="roomcard__ft-span">
+                  <FaWifi /> {t("roomwifi")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <GiHanger /> {t("roomlockers")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <PiHairDryerBold /> {t("roombath")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <MdCleaningServices /> {t("roomcleaning")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <FaFan /> {t("roomcafe")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <GiCctvCamera /> {t("securitycameras")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <MdHeadsetMic /> {t("service24/7")}
+                </span>
               </div>
 
               <button
@@ -160,14 +186,20 @@ const RoomCard = () => {
                   src={img}
                   alt={`Room view ${idx + 1}`}
                   loading="lazy"
-                  className={`room-card__thumbnail ${familyImage === img ? "active" : ""}`}
+                  className={`room-card__thumbnail ${
+                    familyImage === img ? "active" : ""
+                  }`}
                   onClick={() => setFamilyImage(img)}
                 />
               ))}
             </div>
 
             <div className="room-card__image-wrapper">
-              <img src={familyImage} alt="Main Room" className="room-card__image" />
+              <img
+                src={familyImage}
+                alt="Main Room"
+                className="room-card__image"
+              />
             </div>
 
             <div className="room-card__body">
@@ -191,14 +223,30 @@ const RoomCard = () => {
 
               <h3 className="room-card__features-title">{t("roomcardft")}:</h3>
               <div className="roomcard__ft-box room-card__ft-box">
-                <span className="roomcard__ft-span"><FaWifi /> {t("roomwifi")}</span>
-                <span className="roomcard__ft-span"><PiLockers /> {t("roomlockers")}</span>
-                <span className="roomcard__ft-span"><MdOutlineLocalCafe /> {t("usbcharging")}</span>
-                <span className="roomcard__ft-span"><TbBath /> {t("roombath")}</span>
-                <span className="roomcard__ft-span"><MdCleaningServices /> {t("roomcleaning")}</span>
-                <span className="roomcard__ft-span"><LuCoffee /> {t("roomcafe")}</span>
-                <span className="roomcard__ft-span"><GiCctvCamera /> {t("securitycameras")}</span>
-                <span className="roomcard__ft-span"><MdHeadsetMic /> 24/7 {t("reception")}</span>
+                <span className="roomcard__ft-span">
+                  <FaWifi /> {t("roomwifi")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <GiHanger /> {t("roomlockers")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <BsFillUsbPlugFill /> {t("usbcharging")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <PiHairDryerBold /> {t("roombath")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <MdCleaningServices /> {t("roomcleaning")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <FaFan /> {t("roomcafe")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <GiCctvCamera /> {t("securitycameras")}
+                </span>
+                <span className="roomcard__ft-span">
+                  <MdHeadsetMic /> 24/7 {t("reception")}
+                </span>
               </div>
 
               <button

@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import "./RoomCard.scss";
 import "./Rmedia/RCmedia.scss";
 import { FaWifi } from "react-icons/fa6";
-import { TbBath } from "react-icons/tb";
+import { PiHairDryerBold } from "react-icons/pi";
 import { MdOutlineLocalCafe, MdCleaningServices } from "react-icons/md";
-import { PiLockers } from "react-icons/pi";
+import { GiHanger } from "react-icons/gi";
 import { useTranslation } from "react-i18next";
 import { FaRulerCombined } from "react-icons/fa";
 import { FiUser, FiMapPin } from "react-icons/fi";
@@ -118,16 +118,16 @@ const RoomCard = () => {
                   <FaWifi /> {t("roomwifi")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <PiLockers /> {t("roomlockers")}
+                  <GiHanger /> {t("roomlockers")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <TbBath /> {t("roombath")}
+                  <PiHairDryerBold /> {t("roombath")}
                 </span>
                 <span className="roomcard__ft-span">
                   <MdCleaningServices /> {t("roomcleaning")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <LuCoffee /> {t("roomcafe")}
+                  <FaFan /> {t("roomcafe")}
                 </span>
                 <span className="roomcard__ft-span">
                   <GiCctvCamera /> {t("securitycameras")}
@@ -204,19 +204,19 @@ const RoomCard = () => {
                   <FaWifi /> {t("roomwifi")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <PiLockers /> {t("roomlockers")}
+                  <GiHanger /> {t("roomlockers")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <MdOutlineLocalCafe /> {t("usbcharging")}
+                  <BsFillUsbPlugFill /> {t("usbcharging")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <TbBath /> {t("roombath")}
+                  <PiHairDryerBold /> {t("roombath")}
                 </span>
                 <span className="roomcard__ft-span">
                   <MdCleaningServices /> {t("roomcleaning")}
                 </span>
                 <span className="roomcard__ft-span">
-                  <LuCoffee /> {t("roomcafe")}
+                  <FaFan /> {t("roomcafe")}
                 </span>
                 <span className="roomcard__ft-span">
                   <GiCctvCamera /> {t("securitycameras")}
