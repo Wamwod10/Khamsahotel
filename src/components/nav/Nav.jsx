@@ -39,7 +39,7 @@ const Nav = () => {
         i18n.changeLanguage(lang.code);
     };
 
-    // ====== MENU (burger) ======
+    // ====== MENU (burger) ====== to="/"
     const [isActive, setIsActive] = useState(false);
     const menuRef = useRef(null);
     const btnRef = useRef(null);
@@ -78,7 +78,7 @@ const Nav = () => {
                 <div className={`nav__box ${isActive ? "active" : ""}`}>
                     <h2 className="nav__logo">
                         <img className='nav__logo-img' src="/logo.png" alt="Logo" />
-                        <a>Khamsa Hotel</a>
+                        <NavLink to="/">Khamsa Hotel</NavLink>
                     </h2>
 
 

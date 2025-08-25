@@ -3,7 +3,7 @@ import './nearMedia.scss'
 import { FaStar } from "react-icons/fa";
 import { IoTimeOutline } from "react-icons/io5";
 import { TbExternalLink } from "react-icons/tb";
-import { GiBanknote } from "react-icons/gi";
+import { MdLocalCafe } from "react-icons/md";
 import { FaBriefcaseMedical } from "react-icons/fa";
 import { MdMiscellaneousServices } from "react-icons/md";
 import { FaShoppingBag } from "react-icons/fa";
@@ -25,7 +25,7 @@ const Near = () => {
             <img src="/15.jpg" width={"100%"} height={"200px"} alt="" />
             <div className="near__box-absolute">
               <p className="near__absolute-text">
-                <GiBanknote />
+                <MdLocalCafe />
                 {t("transport")} 
               </p>
               <p className="near__absolute-rating">

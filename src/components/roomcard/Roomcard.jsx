@@ -7,7 +7,6 @@ import { FaWifi } from "react-icons/fa6";
 import { RiCustomerServiceLine } from "react-icons/ri";
 import { PiHairDryerBold } from "react-icons/pi";
 import { MdOutlinePower } from "react-icons/md";
-// import { BsFillUsbPlugFill } from "react-icons/fa";
 import { CiCircleMore } from "react-icons/ci";
 import { IoIosListBox } from "react-icons/io";
 import { FaMapLocationDot } from "react-icons/fa6";
@@ -15,6 +14,7 @@ import { MdCleaningServices } from "react-icons/md";
 import { RiGroupLine } from "react-icons/ri";
 import { GiHanger } from "react-icons/gi";
 import { useTranslation } from 'react-i18next';
+import { LuExternalLink } from "react-icons/lu";
 
 const Roomcard = () => {
   
@@ -132,54 +132,41 @@ const Roomcard = () => {
                 </a>
               </div>
             </div>
-            <div className="roomcard__boxes-card">
-              <div className="roomcard__price-badges">
-                <span>{t("roomprice1")}</span>
-                <span>{t("roomprice2")}</span>
-                <span>{t("roomprice3")}</span>
-              </div>
-              <img className="roomcard__boxes-img" src="/3.jpg" alt="" />
+            <div className="roomcard__boxes-card card-color">
+              <img className="roomcard__boxes-img img-radius" src="/35.jpg" alt="" />
               <div className="roomcard__title-box">
-                <h2 className="roomcard__boxes-title">{t("standard1")}</h2>
-                <div className="roomcard__boxes-spans">
-                  <p className="roomcard__span">
-                    <FaRegUser /> 1 {t("guest")}
-                  </p>
-                  <p className="roomcard__span">
-                    <IoResizeSharp /> 3.6 m²
-                  </p>
-                </div>
+                <h2 className="roomcard__boxes-title title-color">Qo'noq Railway Hotel</h2>
               </div>
-              <p className="roomcard__location roomcard__boxes-text">
-                <FaMapLocationDot /> {t("TashkentAirportHotel")}
+              <p className="roomcard__location roomcard__boxes-text txt-color">
+                <FaMapLocationDot /> Qo'noq Hotel Tashkent Railway
               </p>
-              <p className="roomcard__boxes-text">
-                {t("roomtext3")}
+              <p className="roomcard__boxes-text txt-color">
+                Cozy rooms at Qo'noq Railway Hotel with private bathrooms, and air conditioning.
               </p>
-              <h3 className="roomcard__boxes-ft">{t("roomcardft")}:</h3>
+              <h3 className="roomcard__boxes-ft text-color">{t("roomcardft")}:</h3>
               <div className="roomcard__ft-box">
-                <span className="roomcard__ft-span">
+                <span className="roomcard__ft-span span-color">
                   <FaWifi /> {t("roomwifi")}
                 </span>
-                <span className="roomcard__ft-span">
+                <span className="roomcard__ft-span span-color">
                   <RiCustomerServiceLine /> {t("roomrcp")}
                 </span>
-                <span className="roomcard__ft-span">
+                <span className="roomcard__ft-span span-color">
                   <PiHairDryerBold /> {t("roombath")}
                 </span>
-                <span className="roomcard__ft-span">
+                <span className="roomcard__ft-span span-color">
                   <MdOutlinePower /> {t("roomoutlets")}
                 </span>
-                <span className="roomcard__ft-span">
+                <span className="roomcard__ft-span span-color">
                   <FaFan /> {t("roomcafe")}
                 </span>
-                <span className="roomcard__ft-span">
+                <span className="roomcard__ft-span span-color">
                   <CiCircleMore /> {t("more")}...
                 </span>
               </div>
-              <div className="roomcard__box-link">
-                <a href="" className="roomcard__link">
-                  <IoIosListBox /> {t("booknow")}
+              <div className="roomcard__box-link roomcard-color">
+                <a href="https://qonoqhotel.uz/" target="blank" className="roomcard__link">
+                  <LuExternalLink /> {t("oficialsite")}
                 </a>
               </div>
             </div>

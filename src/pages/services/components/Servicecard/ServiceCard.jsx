@@ -56,7 +56,7 @@ const ServiceCard = () => {
       id: 3,
       icon: <FaBroom />,
       title: t("servicehousekeeping"),
-      time: t("servicetime1"),
+      time: t("serviceavailable"),
       rating: "4.9",
       description: t("servicedescription4"),
       details: [
@@ -98,7 +98,7 @@ const ServiceCard = () => {
       id: 6,
       icon: <FaCoffee />,
       title: t("servicecoffee"),
-      time: t("servicetime4"),
+      time: t("serviceavailable"),
       rating: "4.6",
       description: t("servicedescription7"),
       details: [
