@@ -9,9 +9,12 @@ const MyBooking = () => {
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [status, setStatus] = useState(null); // "success" | "error" | null
 
   useEffect(() => {
-    const savedBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
+    const savedBookings =
+      JSON.parse(sessionStorage.getItem("allBookings")) || [];
     const roomModalData = JSON.parse(localStorage.getItem("bookingInfo"));
     let updatedBookings = [];
 
@@ -25,7 +28,9 @@ const MyBooking = () => {
         roomModalData.checkOut = roomModalData.checkOutTime;
       }
 
-      const filteredBookings = savedBookings.filter(b => b.id !== roomModalData.id);
+      const filteredBookings = savedBookings.filter(
+        (b) => b.id !== roomModalData.id
+      );
       updatedBookings = [roomModalData, ...filteredBookings];
 
       localStorage.removeItem("bookingInfo");
@@ -98,6 +103,19 @@ const MyBooking = () => {
             </button>
           </div>
         </>
+      )}
+
+      <PaymentModal
+        isOpen={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        onStatus={(result) => {
+          setPaymentOpen(false);
+          setStatus(result); // 'success' or 'error'
+        }}
+      />
+
+      {status && (
+        <StatusModal status={status} onClose={() => setStatus(null)} />
       )}
 
       <EditBookingModal

@@ -374,9 +374,6 @@
   "editmodal_cancel": "Cancel",
   "room_standard": "Standard Room",
   "room_family": "Family Room",
-  "paymentmodal_title": "Pay Now",
-  "paymentmodal_text": "Payment system is still under development.",
-  "paymentmodal_close": "Close",
   "standardRoomGuestLimit": "You can only book this room for 1 guest.",
   "familyRoomGuestLimit": "Maximum 3 guests are allowed in this room.",
   "check-in-hours": "Check-in Time",
@@ -387,5 +384,12 @@
   "for_a_day": "For a Day",
   "qonoqhotel": "Qo'noq Railway Hotel",
   "qonoqadress": "Qo'noq Hotel Tashkent Railway",
-  "oficialsite": "Official Web Site"
+  "oficialsite": "Official Web Site",
+
+  "paymentmodal_title1": "To‘lovni amalga oshirish",
+  "paymentmodal_title": "Pay Now",
+  "paymentmodal_text": "Please, Enter the Card Info",
+  "paymentmodal_close": "Close",
+  "paymentmodal_pay": "To‘lovni amalga oshirish"
+
 }

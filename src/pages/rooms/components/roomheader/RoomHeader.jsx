@@ -19,7 +19,7 @@ export default function RoomHeader() {
   });
 
   useEffect(() => {
-    const savedData = localStorage.getItem("bookingInfo");
+    const savedData = sessionStorage.getItem("bookingInfo");
     if (savedData) {
       try {
         const data = JSON.parse(savedData);

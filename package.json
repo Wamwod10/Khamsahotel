@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.7",
+    "@stripe/react-stripe-js": "^3.9.1",
+    "@stripe/stripe-js": "^7.8.0",
     "classnames": "^2.5.1",
     "framer-motion": "^12.23.3",
     "i18next": "^25.3.2",
