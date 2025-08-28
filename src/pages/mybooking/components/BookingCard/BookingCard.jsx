@@ -15,31 +15,27 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
 
   if (!booking) return null;
 
-  // Sanalarni formatlash funksiyasi
+  // Sanani formatlash (yyyy-mm-dd -> dd.mm.yyyy)
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const [year, month, day] = dateStr.split("-");
     return `${day}.${month}.${year}`;
   };
 
-  // Vaqtni formatlash funksiyasi
+  // Vaqtni formatlash (ISO yoki oddiy vaqt)
   const formatTime = (timeStr) => {
-    if (!timeStr) {
-      console.warn("No time provided to formatTime");
-      return booking.checkInTime;
-    }
+    if (!timeStr) return "-";
 
     if (timeStr.includes("T")) {
+      // ISO formatda bo'lsa, "YYYY-MM-DDTHH:mm:ss" ko'rinishida, soat va daqiqani olamiz
       return timeStr.split("T")[1].slice(0, 5);
     }
 
+    // Oddiy vaqt stringidan boshidan 5 ta belgini olamiz (HH:mm)
     return timeStr.slice(0, 5);
   };
 
-  console.log("Booking info:", booking);
-  console.log("checkInTime:", booking.checkInTime);
-
-  // Room nomini tarjima qilish
+  // Xona turi nomini tarjima qilish
   const roomLabel = booking.rooms ? t(roomKeyMap[booking.rooms] || booking.rooms) : "-";
 
   return (
@@ -66,6 +62,11 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
           <span>{t("duration")}:</span>
           <span>{t(booking.duration)}</span>
         </div>
+
+        <div className="booking-row">
+          <span>{t("bookingcard_price")}</span>
+          <span>{booking.price ? `${booking.price}$` : "-"}</span>
+        </div>
       </div>
 
       <h3>{t("bookingcard_guestinfo")}</h3>
@@ -87,10 +88,8 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
         </div>
 
         <div className="booking-row">
-          <div className="booking-row_gmail">
-            <span>{t("bookingcard_email")}</span>
-            <span>{booking.email}</span>
-          </div>
+          <span>{t("bookingcard_email")}</span>
+          <span>{booking.email}</span>
         </div>
       </div>
 
@@ -104,7 +103,7 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
 
         <button
           className="btn btn-delete"
-          onClick={() => onDelete(booking)}
+          onClick={() => onDelete(booking.id)}
         >
           {t("bookingcard_delete")}
         </button>

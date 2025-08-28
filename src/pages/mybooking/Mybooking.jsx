@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from "react";
 import "./mybooking.scss";
 import BookingCard from "./components/BookingCard/BookingCard";
-import PaymentModal from "./components/PaymentModal/PaymentModal";
 import EditBookingModal from "./components/Edit/EditBookingModal";
 
 const MyBooking = () => {
   const [bookings, setBookings] = useState([]);
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [status, setStatus] = useState(null); // "success" | "error" | null
+  const [status, setStatus] = useState(null);
 
   useEffect(() => {
     const savedBookings =
@@ -23,7 +20,6 @@ const MyBooking = () => {
         roomModalData.id = Date.now();
       }
 
-      // BookingInfo ichida checkOutTime borligini checkOut deb yozamiz
       if (roomModalData.checkOutTime && !roomModalData.checkOut) {
         roomModalData.checkOut = roomModalData.checkOutTime;
       }
@@ -64,10 +60,39 @@ const MyBooking = () => {
     setIsEditOpen(false);
   };
 
-  const handleDeleteBooking = (booking) => {
-    const filtered = bookings.filter((b) => b.id !== booking.id);
+  const handleDeleteBooking = (id) => {
+    const filtered = bookings.filter((b) => b.id !== id);
     setBookings(filtered);
     saveBookingsToStorage(filtered);
+  };
+
+  const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
+
+  // ✅ Octo bilan to'lovni boshlovchi funksiya
+  const handlePayment = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/create-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: totalAmount,
+          currency: "UZS",
+          description: "Mehmonxona to'lovi",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl; // Octo sahifasiga yo'naltirish
+      } else {
+        alert("To‘lov yaratilmadi: " + (data.error || "Noma’lum xato"));
+      }
+    } catch (error) {
+      alert("Xatolik: " + error.message);
+    }
   };
 
   return (
@@ -90,44 +115,33 @@ const MyBooking = () => {
               key={booking.id}
               booking={booking}
               onEdit={() => handleEditBooking(booking)}
-              onDelete={() => handleDeleteBooking(booking)}
+              onDelete={() => handleDeleteBooking(booking.id)}
             />
           ))}
 
           <div className="my-booking-buttons">
             <button
               className="btn btn-pay"
-              onClick={() => setIsPaymentOpen(true)}
+              onClick={handlePayment}
+              disabled={totalAmount === 0}
             >
-              Pay Now
+              Pay Now (
+              {totalAmount > 0
+                ? totalAmount.toLocaleString() + "$"
+                : "No amount"}
+              )
             </button>
           </div>
         </>
       )}
 
-      <PaymentModal
-        isOpen={paymentOpen}
-        onClose={() => setPaymentOpen(false)}
-        onStatus={(result) => {
-          setPaymentOpen(false);
-          setStatus(result); // 'success' or 'error'
-        }}
-      />
-
-      {status && (
-        <StatusModal status={status} onClose={() => setStatus(null)} />
-      )}
+      {/* Modal va StatusModal olib tashlandi, chunki endi Octo sahifasiga redirect bo'ladi */}
 
       <EditBookingModal
         isOpen={isEditOpen}
         booking={editingBooking}
         onClose={() => setIsEditOpen(false)}
         onSave={handleSaveBooking}
-      />
-
-      <PaymentModal
-        isOpen={isPaymentOpen}
-        onClose={() => setIsPaymentOpen(false)}
       />
     </div>
   );

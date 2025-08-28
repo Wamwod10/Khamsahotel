@@ -386,10 +386,11 @@
   "qonoqadress": "Qo'noq Hotel Tashkent Railway",
   "oficialsite": "Official Web Site",
 
-  "paymentmodal_title1": "To‘lovni amalga oshirish",
+  "paymentmodal_title1": "Make a payment",
   "paymentmodal_title": "Pay Now",
   "paymentmodal_text": "Please, Enter the Card Info",
   "paymentmodal_close": "Close",
-  "paymentmodal_pay": "To‘lovni amalga oshirish"
+  "paymentmodal_pay": "Make a payment",
+  "bookingcard_price": "Price:"
 
 }

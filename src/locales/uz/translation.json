@@ -393,5 +393,6 @@
   "paymentmodal_title": "Hozir to‘lash",
   "paymentmodal_text": "Iltimos, kartangiz ma’lumotlarini kiriting",
   "paymentmodal_close": "Yopish",
-  "paymentmodal_pay": "To‘lovni amalga oshirish"
+  "paymentmodal_pay": "To‘lovni amalga oshirish",
+  "bookingcard_price": "Narxi:"
 }

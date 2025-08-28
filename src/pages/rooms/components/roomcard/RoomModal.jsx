@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MdWidthFull } from "react-icons/md";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
@@ -22,7 +21,6 @@ const guestCountByRoomType = {
   "Standard + 1 Family room": 4,
 };
 
-// Narxlar jadvali
 const priceTable = {
   "Standard Room": {
     "Up to 2 hours": 40,
@@ -119,6 +117,10 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       return;
     }
 
+    // Narxni hisoblash
+    const price =
+      priceTable[bookingInfo.rooms]?.[bookingInfo.duration] || 0;
+
     const fullBookingInfo = {
       ...bookingInfo,
       firstName,
@@ -126,6 +128,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       phone,
       email,
       id: Date.now(),
+      price,  // narxni qo'shamiz
     };
 
     const existingBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
@@ -139,7 +142,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     toast.success(t("Sizning xonangiz bron qilindi, Mening Bronlarim sahifasida ko'rishingiz mumkin"), {
       position: "top-center",
       width: "500px",
-      autoClose: 4000, 
+      autoClose: 4000,
     });
   };
 
@@ -246,7 +249,6 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
             </div>
           </div>
 
-          {/* Yangi joyga narx ko'rsatish */}
           <div className="total-price-display">
             <label>{t("totalPrice")}:</label>
             <p style={{ fontWeight: "600", color: "#f7931e", marginTop: "0.2rem" }}>

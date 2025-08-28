@@ -1,20 +1,15 @@
 {
-  "name": "backend",
+  "name": "octo-backend",
   "version": "1.0.0",
-  "main": "index.cjs",
+  "description": "Octo bilan to'lov integratsiyasi (Express)",
+  "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.0.0",
-    "express": "^4.21.2",
-    "stripe": "^12.0.0"
-  },
-  "description": "",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.12"
+  }
 }

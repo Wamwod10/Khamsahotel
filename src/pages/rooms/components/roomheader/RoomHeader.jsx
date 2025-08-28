@@ -10,12 +10,12 @@ export default function RoomHeader() {
   const location = useLocation();
 
   const [bookingInfo, setBookingInfo] = useState({
-    checkIn: null,
-    checkOut: null,
-    checkOutTime: null,
-    duration: null,
-    rooms: null,
-    hotel: null,
+    checkIn: "",
+    checkOut: "",
+    checkOutTime: "",
+    duration: "",
+    rooms: "",
+    hotel: "",
   });
 
   useEffect(() => {

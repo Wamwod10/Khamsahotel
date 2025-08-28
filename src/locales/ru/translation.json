@@ -393,5 +393,6 @@
   "paymentmodal_title": "Оплатить сейчас",
   "paymentmodal_text": "Пожалуйста, введите данные карты",
   "paymentmodal_close": "Закрыть",
-  "paymentmodal_pay": "Осуществить оплату"
+  "paymentmodal_pay": "Осуществить оплату",
+  "bookingcard_price": "Цена:"
 }
