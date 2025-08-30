@@ -7,11 +7,9 @@ const MyBooking = () => {
   const [bookings, setBookings] = useState([]);
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [status, setStatus] = useState(null);
 
   useEffect(() => {
-    const savedBookings =
-      JSON.parse(sessionStorage.getItem("allBookings")) || [];
+    const savedBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
     const roomModalData = JSON.parse(localStorage.getItem("bookingInfo"));
     let updatedBookings = [];
 
@@ -24,9 +22,7 @@ const MyBooking = () => {
         roomModalData.checkOut = roomModalData.checkOutTime;
       }
 
-      const filteredBookings = savedBookings.filter(
-        (b) => b.id !== roomModalData.id
-      );
+      const filteredBookings = savedBookings.filter(b => b.id !== roomModalData.id);
       updatedBookings = [roomModalData, ...filteredBookings];
 
       localStorage.removeItem("bookingInfo");
@@ -52,7 +48,7 @@ const MyBooking = () => {
   };
 
   const handleSaveBooking = (updatedBooking) => {
-    const updatedList = bookings.map((b) =>
+    const updatedList = bookings.map(b => 
       b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
     );
     setBookings(updatedList);
@@ -61,14 +57,15 @@ const MyBooking = () => {
   };
 
   const handleDeleteBooking = (id) => {
-    const filtered = bookings.filter((b) => b.id !== id);
+    const filtered = bookings.filter(b => b.id !== id);
     setBookings(filtered);
     saveBookingsToStorage(filtered);
   };
 
+  // Umumiy summa (EUR da hisoblanadi)
   const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
-  // ✅ Octo bilan to'lovni boshlovchi funksiya
+  // To'lovni boshlash
   const handlePayment = async () => {
     try {
       const response = await fetch("http://localhost:5000/create-payment", {
@@ -77,16 +74,15 @@ const MyBooking = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          amount: totalAmount,
-          currency: "UZS",
-          description: "Mehmonxona to'lovi",
+          amount: totalAmount, // EURO qiymati
+          description: "Payment of Hotel",
         }),
       });
 
       const data = await response.json();
 
       if (data.paymentUrl) {
-        window.location.href = data.paymentUrl; // Octo sahifasiga yo'naltirish
+        window.location.href = data.paymentUrl; // Octo to'lov sahifasiga yo'naltirish
       } else {
         alert("To‘lov yaratilmadi: " + (data.error || "Noma’lum xato"));
       }
@@ -110,7 +106,7 @@ const MyBooking = () => {
         </div>
       ) : (
         <>
-          {bookings.map((booking) => (
+          {bookings.map(booking => (
             <BookingCard
               key={booking.id}
               booking={booking}
@@ -125,17 +121,11 @@ const MyBooking = () => {
               onClick={handlePayment}
               disabled={totalAmount === 0}
             >
-              Pay Now (
-              {totalAmount > 0
-                ? totalAmount.toLocaleString() + "$"
-                : "No amount"}
-              )
+              Pay Now ({totalAmount > 0 ? totalAmount.toLocaleString() + "€" : "No amount"})
             </button>
           </div>
         </>
       )}
-
-      {/* Modal va StatusModal olib tashlandi, chunki endi Octo sahifasiga redirect bo'ladi */}
 
       <EditBookingModal
         isOpen={isEditOpen}

@@ -10,12 +10,12 @@ export default function RoomHeader() {
   const location = useLocation();
 
   const [bookingInfo, setBookingInfo] = useState({
-    checkIn: "",
-    checkOut: "",
-    checkOutTime: "",
-    duration: "",
-    rooms: "",
-    hotel: "",
+    checkIn: null,
+    checkOut: null,
+    checkOutTime: null,
+    duration: null,
+    rooms: null,
+    hotel: null,
   });
 
   useEffect(() => {
@@ -55,12 +55,10 @@ export default function RoomHeader() {
     if (!timeString) return t("selectTime");
 
     try {
-      // ISO formatda bo'lsa (masalan: "2025-08-22T03:31")
       if (timeString.includes("T")) {
-        return timeString.split("T")[1]?.slice(0, 5); // faqat "03:31"
+        return timeString.split("T")[1]?.slice(0, 5);
       }
 
-      // Faqat vaqt bo'lsa (masalan: "03:31")
       return timeString.slice(0, 5);
     } catch (error) {
       return timeString;

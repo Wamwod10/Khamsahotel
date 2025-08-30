@@ -65,7 +65,7 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
 
         <div className="booking-row">
           <span>{t("bookingcard_price")}</span>
-          <span>{booking.price ? `${booking.price}$` : "-"}</span>
+          <span>{booking.price ? `${booking.price}€` : "-"}</span>
         </div>
       </div>
 

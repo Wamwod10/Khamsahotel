@@ -252,7 +252,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
           <div className="total-price-display">
             <label>{t("totalPrice")}:</label>
             <p style={{ fontWeight: "600", color: "#f7931e", marginTop: "0.2rem" }}>
-              {price !== "-" ? `${price}$` : "-"}
+              {price !== "-" ? `${price}€` : "-"}
             </p>
           </div>
 
