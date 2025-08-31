@@ -3,7 +3,7 @@ import './admin.scss';
 const Admin = () => {
   return (
     <div>
-         sdf
+         <h2 className="admin__title">Salomat</h2>
     </div>
   )
 }
