@@ -23,9 +23,7 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
 
   const formatTime = (timeStr) => {
     if (!timeStr) return "-";
-    if (timeStr.includes("T")) {
-      return timeStr.split("T")[1].slice(0, 5);
-    }
+    if (timeStr.includes("T")) return timeStr.split("T")[1].slice(0, 5);
     return timeStr.slice(0, 5);
   };
 

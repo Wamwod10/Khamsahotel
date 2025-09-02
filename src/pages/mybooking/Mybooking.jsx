@@ -14,10 +14,7 @@ const MyBooking = () => {
     let updatedBookings = [];
 
     if (roomModalData && roomModalData.firstName) {
-      if (!roomModalData.id) {
-        roomModalData.id = Date.now();
-      }
-
+      if (!roomModalData.id) roomModalData.id = Date.now();
       if (roomModalData.checkOutTime && !roomModalData.checkOut) {
         roomModalData.checkOut = roomModalData.checkOutTime;
       }
@@ -34,8 +31,8 @@ const MyBooking = () => {
     setBookings(updatedBookings);
   }, []);
 
-  const saveBookingsToStorage = (bookingsArray) => {
-    sessionStorage.setItem("allBookings", JSON.stringify(bookingsArray));
+  const saveBookingsToStorage = (arr) => {
+    sessionStorage.setItem("allBookings", JSON.stringify(arr));
   };
 
   const addNewBooking = () => {
@@ -65,15 +62,26 @@ const MyBooking = () => {
   const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
   const handlePayment = async () => {
+    if (totalAmount === 0) {
+      alert("To‘lov uchun summa mavjud emas");
+      return;
+    }
+
+    // Oxirgi booking emailini olish (yoki boshqa lojiq tanlov qilishingiz mumkin)
+    const email = bookings[0]?.email;
+    if (!email) {
+      alert("Iltimos, email manzilingizni kiriting");
+      return;
+    }
+
     try {
       const response = await fetch("http://localhost:5000/create-payment", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: totalAmount,
-          description: "Payment of Hotel",
+          description: "Hotel to'lovi",
+          email,  // email backendga yuboriladi
         }),
       });
 
@@ -93,15 +101,11 @@ const MyBooking = () => {
     <div className="my-booking-container">
       <div className="booking-header">
         <h1>My Bookings</h1>
-        <button className="btn btn-add" onClick={addNewBooking}>
-          + New Booking
-        </button>
+        <button className="btn btn-add" onClick={addNewBooking}>+ New Booking</button>
       </div>
 
       {bookings.length === 0 ? (
-        <div className="my-booking-empty">
-          <p>No Bookings yet</p>
-        </div>
+        <div className="my-booking-empty"><p>No Bookings yet</p></div>
       ) : (
         <>
           {bookings.map(booking => (
