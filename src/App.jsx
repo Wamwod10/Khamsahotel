@@ -17,6 +17,7 @@ import Login from "./pages/admin/Login/Login";
 import Footer from "./components/footer/Footer";
 import Contact from "./pages/contact/Contact";
 import MyBooking from "./pages/mybooking/Mybooking";
+import PaymentSuccess from "./pages/mybooking/components/Succes/PaymentSuccess";
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/mybooking" element={<MyBooking />} />
         <Route path="/admin" element={<Login />} />
+        <Route path="/success" element={<PaymentSuccess />} />
       </Routes>
       <Footer />
       <ToastContainer

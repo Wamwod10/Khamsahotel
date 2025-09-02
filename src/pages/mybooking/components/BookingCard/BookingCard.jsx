@@ -15,27 +15,20 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
 
   if (!booking) return null;
 
-  // Sanani formatlash (yyyy-mm-dd -> dd.mm.yyyy)
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const [year, month, day] = dateStr.split("-");
     return `${day}.${month}.${year}`;
   };
 
-  // Vaqtni formatlash (ISO yoki oddiy vaqt)
   const formatTime = (timeStr) => {
     if (!timeStr) return "-";
-
     if (timeStr.includes("T")) {
-      // ISO formatda bo'lsa, "YYYY-MM-DDTHH:mm:ss" ko'rinishida, soat va daqiqani olamiz
       return timeStr.split("T")[1].slice(0, 5);
     }
-
-    // Oddiy vaqt stringidan boshidan 5 ta belgini olamiz (HH:mm)
     return timeStr.slice(0, 5);
   };
 
-  // Xona turi nomini tarjima qilish
   const roomLabel = booking.rooms ? t(roomKeyMap[booking.rooms] || booking.rooms) : "-";
 
   return (
@@ -94,17 +87,10 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
       </div>
 
       <div className="booking-actions">
-        <button
-          className="btn btn-edit"
-          onClick={() => onEdit(booking)}
-        >
+        <button className="btn btn-edit" onClick={() => onEdit(booking)}>
           {t("bookingcard_edit")}
         </button>
-
-        <button
-          className="btn btn-delete"
-          onClick={() => onDelete(booking.id)}
-        >
+        <button className="btn btn-delete" onClick={() => onDelete(booking.id)}>
           {t("bookingcard_delete")}
         </button>
       </div>

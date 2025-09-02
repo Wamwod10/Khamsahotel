@@ -48,7 +48,7 @@ const MyBooking = () => {
   };
 
   const handleSaveBooking = (updatedBooking) => {
-    const updatedList = bookings.map(b => 
+    const updatedList = bookings.map(b =>
       b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
     );
     setBookings(updatedList);
@@ -62,10 +62,8 @@ const MyBooking = () => {
     saveBookingsToStorage(filtered);
   };
 
-  // Umumiy summa (EUR da hisoblanadi)
   const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
-  // To'lovni boshlash
   const handlePayment = async () => {
     try {
       const response = await fetch("http://localhost:5000/create-payment", {
@@ -74,7 +72,7 @@ const MyBooking = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          amount: totalAmount, // EURO qiymati
+          amount: totalAmount,
           description: "Payment of Hotel",
         }),
       });
@@ -82,7 +80,7 @@ const MyBooking = () => {
       const data = await response.json();
 
       if (data.paymentUrl) {
-        window.location.href = data.paymentUrl; // Octo to'lov sahifasiga yo'naltirish
+        window.location.href = data.paymentUrl;
       } else {
         alert("To‘lov yaratilmadi: " + (data.error || "Noma’lum xato"));
       }
