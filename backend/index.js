@@ -14,11 +14,10 @@ const SHOP_ID = process.env.OCTO_SHOP_ID;
 const SECRET_KEY = process.env.OCTO_SECRET;
 const EUR_TO_UZS = 14000;
 
-// ✅ CORS sozlamasi
+// ✅ faqat domenlarga ruxsat
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
       "https://khamsahotel.uz",
       "https://www.khamsahotel.uz",
     ],
@@ -48,16 +47,13 @@ app.post("/create-payment", async (req, res) => {
       octo_secret: SECRET_KEY,
       shop_transaction_id: Date.now().toString(),
       auto_capture: true,
-      test: process.env.NODE_ENV !== "production", // ✅ devda test rejimi
+      test: false, // 🔴 productionda TEST=FALSE
       init_time: new Date().toISOString().replace("T", " ").substring(0, 19),
       total_sum: amountUZS,
       currency: "UZS",
       description: `${description} (${amount} EUR)`,
-      return_url:
-        process.env.NODE_ENV === "production"
-          ? "https://khamsahotel.uz/success"
-          : "http://localhost:5173/success",
-      notify_url: `${process.env.BASE_URL}/payment-callback`,
+      return_url: "https://khamsahotel.uz/success", // 🔴 doim domen orqali
+      notify_url: `https://khamsahotel.uz/payment-callback`,
       language: "uz",
       custom_data: { email },
     };
@@ -73,8 +69,8 @@ app.post("/create-payment", async (req, res) => {
     try {
       data = JSON.parse(text);
     } catch {
-      console.error("❌ Octo noto‘g‘ri javob qaytardi:", text);
-      return res.status(500).json({ error: "Octo noto‘g‘ri javob qaytardi" });
+      console.error("❌ Octo noto‘g‘ri javob:", text);
+      return res.status(500).json({ error: "Octo noto‘g‘ri javob" });
     }
 
     if (data.error === 0 && data.data?.octo_pay_url) {
@@ -83,7 +79,7 @@ app.post("/create-payment", async (req, res) => {
       return res.status(400).json({ error: data.errMessage || "Octo xatosi" });
     }
   } catch (error) {
-    console.error("❌ To'lov yaratishda xatolik:", error);
+    console.error("❌ To'lov yaratishda xato:", error);
     res.status(500).json({ error: error.message || "Server xatosi" });
   }
 });
@@ -96,14 +92,14 @@ app.post("/payment-callback", async (req, res) => {
     if (custom_data?.email) {
       const amount = Math.round(total_sum / EUR_TO_UZS);
 
-      // ✅ mijozga email yuborish
+      // mijozga email
       await sendEmail(
         custom_data.email,
         "To'lov tasdiqlandi - Khamsa Hotel",
         `Hurmatli mijoz, siz "${description}" uchun ${amount} EUR miqdorida to'lov amalga oshirdingiz. Rahmat!`
       );
 
-      // ✅ admin'ga ham email yuborish
+      // admin'ga email
       await sendEmail(
         process.env.EMAIL_USER,
         "Yangi to'lov - Khamsa Hotel",
@@ -111,7 +107,7 @@ app.post("/payment-callback", async (req, res) => {
       );
     }
 
-    res.json({ status: "ok" }); // Octo 200 javob kutadi
+    res.json({ status: "ok" });
   } catch (error) {
     console.error("❌ Callback xatosi:", error);
     res.status(500).json({ error: "Callback ishlamadi" });
