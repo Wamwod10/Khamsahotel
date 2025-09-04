@@ -32,7 +32,7 @@ async function sendPaymentEmail(toEmail, amount, description) {
     from: process.env.EMAIL_USER,
     to: toEmail,
     subject: "To'lov tasdiqlandi - Khamsa Hotel",
-    text: `Hurmatli mijoz, siz ${description} uchun ${amount} EUR miqdorida to'lov amalga oshirdingiz. Rahmat!`,
+    text: `Hurmatli mijoz, siz Khamsa ${description} uchun ${amount} EUR miqdorida to'lov amalga oshirdingiz. Rahmat!`,
   };
 
   try {
