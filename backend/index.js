@@ -17,12 +17,12 @@ const EUR_TO_UZS = 14000;
 app.use(cors());
 app.use(express.json());
 
-// Nodemailer transporter yaratamiz
+// Nodemailer transporter
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER, // Gmail manzilingiz
-    pass: process.env.EMAIL_PASS, // App parolingiz
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
@@ -37,12 +37,13 @@ async function sendPaymentEmail(toEmail, amount, description) {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log("To'lov tasdiq emaili yuborildi:", toEmail);
+    console.log("✅ Email yuborildi:", toEmail);
   } catch (error) {
-    console.error("Email yuborishda xatolik:", error);
+    console.error("❌ Email yuborishda xatolik:", error);
   }
 }
 
+// To‘lov yaratish
 app.post("/create-payment", async (req, res) => {
   try {
     const { amount, description = "Mehmonxona to'lovi", email } = req.body;
@@ -66,9 +67,10 @@ app.post("/create-payment", async (req, res) => {
       total_sum: amountUZS,
       currency: "UZS",
       description: `${description} (${amount} EUR)`,
-      return_url: "https://khamsahotel.uz/success",
-      // notify_url: "https://yourbackend.com/payment-callback",
+      return_url: "https://khamsahotel.uz/success", // foydalanuvchini qaytarish sahifasi
+      notify_url: `${process.env.BASE_URL}/payment-callback`, // BACKEND URL bo‘lishi kerak!
       language: "uz",
+      custom_data: { email }, // emailni callback orqali olish uchun
     };
 
     const response = await fetch(OCTO_API_URL, {
@@ -80,16 +82,30 @@ app.post("/create-payment", async (req, res) => {
     const data = await response.json();
 
     if (data.error === 0 && data.data?.octo_pay_url) {
-      // To'lov URLini jo'natishdan oldin email yuborish
-      await sendPaymentEmail(email, amount, description);
-
       return res.json({ paymentUrl: data.data.octo_pay_url });
     } else {
       return res.status(400).json({ error: data.errMessage || "Octo xatosi" });
     }
-
   } catch (error) {
+    console.error("❌ To'lov yaratishda xatolik:", error);
     res.status(500).json({ error: error.message || "Server xatosi" });
+  }
+});
+
+// OctoBank callback (to‘lov muvaffaqiyatli bo‘lganda chaqiriladi)
+app.post("/payment-callback", async (req, res) => {
+  try {
+    const { total_sum, description, custom_data } = req.body;
+
+    if (custom_data?.email) {
+      const amount = Math.round(total_sum / EUR_TO_UZS);
+      await sendPaymentEmail(custom_data.email, amount, description);
+    }
+
+    res.json({ status: "ok" });
+  } catch (error) {
+    console.error("Callback xatosi:", error);
+    res.status(500).json({ error: "Callback ishlamadi" });
   }
 });
 

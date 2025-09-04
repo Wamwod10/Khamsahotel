@@ -67,7 +67,6 @@ const MyBooking = () => {
       return;
     }
 
-    // Oxirgi booking emailini olish (yoki boshqa lojiq tanlov qilishingiz mumkin)
     const email = bookings[0]?.email;
     if (!email) {
       alert("Iltimos, email manzilingizni kiriting");
@@ -75,13 +74,13 @@ const MyBooking = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/create-payment", {
+      const response = await fetch("https://khamsahotel.uz/create-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: totalAmount,
           description: "Hotel to'lovi",
-          email,  // email backendga yuboriladi
+          email,
         }),
       });
 
