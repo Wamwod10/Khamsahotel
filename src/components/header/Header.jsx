@@ -53,6 +53,7 @@ const Header = () => {
       timestamp: new Date().toISOString(),
     };
 
+    // ✅ faqat localStorage ishlatiladi
     localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
     navigate("/rooms");
   };

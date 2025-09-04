@@ -19,7 +19,8 @@ export default function RoomHeader() {
   });
 
   useEffect(() => {
-    const savedData = sessionStorage.getItem("bookingInfo");
+    // ✅ localStorage dan o‘qiydi
+    const savedData = localStorage.getItem("bookingInfo");
     if (savedData) {
       try {
         const data = JSON.parse(savedData);
@@ -45,7 +46,7 @@ export default function RoomHeader() {
       const day = String(date.getDate()).padStart(2, "0");
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const year = date.getFullYear();
-      return `${day}.${month}.${year}`; // 👉 22.08.2025
+      return `${day}.${month}.${year}`;
     } catch (error) {
       return dateString;
     }
@@ -58,22 +59,11 @@ export default function RoomHeader() {
       if (timeString.includes("T")) {
         return timeString.split("T")[1]?.slice(0, 5);
       }
-
       return timeString.slice(0, 5);
     } catch (error) {
       return timeString;
     }
   };
-
-
-  const getCheckOutDate = () => {
-    return bookingInfo.checkOut ? formatDate(bookingInfo.checkOut) : t("selectDate");
-  };
-
-  const getCheckOutTime = () => {
-    return bookingInfo.checkOutTime ? formatTime(bookingInfo.checkOutTime) : t("selectTime");
-  };
-
 
   return (
     <div className="room-header">
@@ -83,7 +73,7 @@ export default function RoomHeader() {
           <div>
             <p className="room-header__label">{t("check-in")}</p>
             <p className="room-header__value">
-              {getCheckOutDate()}
+              {bookingInfo.checkIn ? formatDate(bookingInfo.checkIn) : t("selectDate")}
             </p>
           </div>
         </div>
@@ -93,7 +83,7 @@ export default function RoomHeader() {
           <div>
             <p className="room-header__label">{t("check-in-hours")}</p>
             <p className="room-header__value">
-              {getCheckOutTime()}  
+              {bookingInfo.checkOutTime ? formatTime(bookingInfo.checkOutTime) : t("selectTime")}
             </p>
           </div>
         </div>
@@ -127,9 +117,12 @@ export default function RoomHeader() {
             </p>
           </div>
         </div>
-
       </div>
-      <NavLink to="/" className="room-header__button"><IoSearch className="room-header-icon" />{t("modifysearch")}</NavLink>
+
+      <NavLink to="/" className="room-header__button">
+        <IoSearch className="room-header-icon" />
+        {t("modifysearch")}
+      </NavLink>
     </div>
   );
-};
+}

@@ -8,8 +8,11 @@ const MyBooking = () => {
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
+  const API_BASE = import.meta.env.VITE_API_BASE_URL; // ✅ frontend .env dan olinadi
+
   useEffect(() => {
-    const savedBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
+    const savedBookings =
+      JSON.parse(sessionStorage.getItem("allBookings")) || [];
     const roomModalData = JSON.parse(localStorage.getItem("bookingInfo"));
     let updatedBookings = [];
 
@@ -19,7 +22,9 @@ const MyBooking = () => {
         roomModalData.checkOut = roomModalData.checkOutTime;
       }
 
-      const filteredBookings = savedBookings.filter(b => b.id !== roomModalData.id);
+      const filteredBookings = savedBookings.filter(
+        (b) => b.id !== roomModalData.id
+      );
       updatedBookings = [roomModalData, ...filteredBookings];
 
       localStorage.removeItem("bookingInfo");
@@ -45,7 +50,7 @@ const MyBooking = () => {
   };
 
   const handleSaveBooking = (updatedBooking) => {
-    const updatedList = bookings.map(b =>
+    const updatedList = bookings.map((b) =>
       b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
     );
     setBookings(updatedList);
@@ -54,7 +59,7 @@ const MyBooking = () => {
   };
 
   const handleDeleteBooking = (id) => {
-    const filtered = bookings.filter(b => b.id !== id);
+    const filtered = bookings.filter((b) => b.id !== id);
     setBookings(filtered);
     saveBookingsToStorage(filtered);
   };
@@ -74,7 +79,7 @@ const MyBooking = () => {
     }
 
     try {
-      const response = await fetch("https://khamsahotel.uz/create-payment", {
+      const response = await fetch(`${API_BASE}/create-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -83,6 +88,10 @@ const MyBooking = () => {
           email,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Server xatosi: ${response.status}`);
+      }
 
       const data = await response.json();
 
@@ -100,14 +109,18 @@ const MyBooking = () => {
     <div className="my-booking-container">
       <div className="booking-header">
         <h1>My Bookings</h1>
-        <button className="btn btn-add" onClick={addNewBooking}>+ New Booking</button>
+        <button className="btn btn-add" onClick={addNewBooking}>
+          + New Booking
+        </button>
       </div>
 
       {bookings.length === 0 ? (
-        <div className="my-booking-empty"><p>No Bookings yet</p></div>
+        <div className="my-booking-empty">
+          <p>No Bookings yet</p>
+        </div>
       ) : (
         <>
-          {bookings.map(booking => (
+          {bookings.map((booking) => (
             <BookingCard
               key={booking.id}
               booking={booking}
@@ -122,7 +135,11 @@ const MyBooking = () => {
               onClick={handlePayment}
               disabled={totalAmount === 0}
             >
-              Pay Now ({totalAmount > 0 ? totalAmount.toLocaleString() + "€" : "No amount"})
+              Pay Now (
+              {totalAmount > 0
+                ? totalAmount.toLocaleString() + "€"
+                : "No amount"}
+              )
             </button>
           </div>
         </>
