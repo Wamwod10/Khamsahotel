@@ -66,8 +66,8 @@ app.post("/create-payment", async (req, res) => {
       total_sum: amountUZS,
       currency: "UZS",
       description: `${description} (${amount} EUR)`,
-      return_url: "https://khamsahotel.vercel.app/success",
-      notify_url: "https://yourbackend.com/payment-callback",
+      return_url: "https://khamsahotel.uz/success",
+      // notify_url: "https://yourbackend.com/payment-callback",
       language: "uz",
     };
 
