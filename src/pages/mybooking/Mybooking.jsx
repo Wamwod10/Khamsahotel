@@ -8,11 +8,10 @@ const MyBooking = () => {
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL; // ✅ frontend .env dan olinadi
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    const savedBookings =
-      JSON.parse(sessionStorage.getItem("allBookings")) || [];
+    const savedBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
     const roomModalData = JSON.parse(localStorage.getItem("bookingInfo"));
     let updatedBookings = [];
 
@@ -22,9 +21,7 @@ const MyBooking = () => {
         roomModalData.checkOut = roomModalData.checkOutTime;
       }
 
-      const filteredBookings = savedBookings.filter(
-        (b) => b.id !== roomModalData.id
-      );
+      const filteredBookings = savedBookings.filter(b => b.id !== roomModalData.id);
       updatedBookings = [roomModalData, ...filteredBookings];
 
       localStorage.removeItem("bookingInfo");
@@ -50,7 +47,7 @@ const MyBooking = () => {
   };
 
   const handleSaveBooking = (updatedBooking) => {
-    const updatedList = bookings.map((b) =>
+    const updatedList = bookings.map(b =>
       b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
     );
     setBookings(updatedList);
@@ -59,7 +56,7 @@ const MyBooking = () => {
   };
 
   const handleDeleteBooking = (id) => {
-    const filtered = bookings.filter((b) => b.id !== id);
+    const filtered = bookings.filter(b => b.id !== id);
     setBookings(filtered);
     saveBookingsToStorage(filtered);
   };
@@ -120,7 +117,7 @@ const MyBooking = () => {
         </div>
       ) : (
         <>
-          {bookings.map((booking) => (
+          {bookings.map(booking => (
             <BookingCard
               key={booking.id}
               booking={booking}
@@ -136,9 +133,7 @@ const MyBooking = () => {
               disabled={totalAmount === 0}
             >
               Pay Now (
-              {totalAmount > 0
-                ? totalAmount.toLocaleString() + "€"
-                : "No amount"}
+              {totalAmount > 0 ? totalAmount.toLocaleString() + "€" : "No amount"}
               )
             </button>
           </div>
