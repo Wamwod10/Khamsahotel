@@ -30,6 +30,7 @@ const MyBooking = () => {
     } else {
       updatedBookings = savedBookings;
     }
+
     setBookings(updatedBookings);
   }, []);
 
