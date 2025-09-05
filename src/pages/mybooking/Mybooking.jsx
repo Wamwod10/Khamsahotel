@@ -20,20 +20,17 @@ const MyBooking = () => {
       if (roomModalData.checkOutTime && !roomModalData.checkOut) {
         roomModalData.checkOut = roomModalData.checkOutTime;
       }
-
       const filteredBookings = savedBookings.filter(b => b.id !== roomModalData.id);
       updatedBookings = [roomModalData, ...filteredBookings];
-
       localStorage.removeItem("bookingInfo");
       sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
     } else {
       updatedBookings = savedBookings;
     }
-
     setBookings(updatedBookings);
   }, []);
 
-  const saveBookingsToStorage = (arr) => {
+  const saveBookingsToStorage = arr => {
     sessionStorage.setItem("allBookings", JSON.stringify(arr));
   };
 
@@ -41,12 +38,12 @@ const MyBooking = () => {
     window.location.href = "/";
   };
 
-  const handleEditBooking = (booking) => {
+  const handleEditBooking = booking => {
     setEditingBooking(booking);
     setIsEditOpen(true);
   };
 
-  const handleSaveBooking = (updatedBooking) => {
+  const handleSaveBooking = updatedBooking => {
     const updatedList = bookings.map(b =>
       b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
     );
@@ -55,7 +52,7 @@ const MyBooking = () => {
     setIsEditOpen(false);
   };
 
-  const handleDeleteBooking = (id) => {
+  const handleDeleteBooking = id => {
     const filtered = bookings.filter(b => b.id !== id);
     setBookings(filtered);
     saveBookingsToStorage(filtered);
@@ -125,16 +122,13 @@ const MyBooking = () => {
               onDelete={() => handleDeleteBooking(booking.id)}
             />
           ))}
-
           <div className="my-booking-buttons">
             <button
               className="btn btn-pay"
               onClick={handlePayment}
               disabled={totalAmount === 0}
             >
-              Pay Now (
-              {totalAmount > 0 ? totalAmount.toLocaleString() + "€" : "No amount"}
-              )
+              Pay Now ({totalAmount > 0 ? totalAmount.toLocaleString() + "€" : "No amount"})
             </button>
           </div>
         </>

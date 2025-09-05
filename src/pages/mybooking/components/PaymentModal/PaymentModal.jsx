@@ -22,7 +22,7 @@ const PaymentModal = ({ isOpen, onClose, amount }) => {
     const fetchClientSecret = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:5000/create-payment", {
+        const res = await fetch("http://localhost:5002/create-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ amount }),

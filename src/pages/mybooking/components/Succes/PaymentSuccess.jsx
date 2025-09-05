@@ -16,7 +16,7 @@ const PaymentSuccess = () => {
         extra: `Xona turi: ${latest.rooms}, Sana: ${latest.checkIn} - ${latest.checkOut}`,
       };
 
-      fetch("http://localhost:5000/send-to-telegram", {
+      fetch("http://localhost:5002/send-to-telegram", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
