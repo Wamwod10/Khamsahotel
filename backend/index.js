@@ -3,6 +3,8 @@ import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
+import mongoose from "mongoose";
+import TelegramBot from "node-telegram-bot-api";
 
 dotenv.config();
 
@@ -11,13 +13,44 @@ const PORT = process.env.PORT || 5002;
 const BASE_URL = process.env.BASE_URL || "https://khamsahotel.uz";
 const EUR_TO_UZS = 14000;
 
-// ✅ .env dan muhim qiymatlarni olish
-const { OCTO_SHOP_ID, OCTO_SECRET, EMAIL_USER, EMAIL_PASS } = process.env;
+// ✅ .env dagi muhim qiymatlar
+const { 
+  OCTO_SHOP_ID, 
+  OCTO_SECRET, 
+  EMAIL_USER, 
+  EMAIL_PASS, 
+  MONGO_URL, 
+  TELEGRAM_BOT_TOKEN, 
+  TELEGRAM_CHAT_ID 
+} = process.env;
 
-if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS) {
+if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS || !MONGO_URL) {
   console.error("❌ .env fayldagi muhim qiymatlar yo‘q!");
   process.exit(1);
 }
+
+// ✅ MongoDB ulanish
+mongoose.connect(MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("✅ MongoDB ulandi"))
+  .catch((err) => {
+    console.error("❌ MongoDB ulanish xatosi:", err);
+    process.exit(1);
+  });
+
+// ✅ Booking schema
+const bookingSchema = new mongoose.Schema({
+  firstName: String,
+  lastName: String,
+  email: String,
+  phone: String,
+  price: Number,
+  rooms: String,
+  checkIn: String,
+  checkOut: String,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Booking = mongoose.model("Booking", bookingSchema);
 
 // ✅ Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -26,11 +59,11 @@ const transporter = nodemailer.createTransport({
   secure: true,
   auth: {
     user: EMAIL_USER,
-    pass: EMAIL_PASS, // ❗️ App password bo'lishi kerak
+    pass: EMAIL_PASS, // App password
   },
 });
 
-// ✅ Email yuboruvchi funksiya
+// ✅ Email yuborish
 async function sendEmail(to, subject, text) {
   if (!to || !subject || !text) {
     console.warn("⚠️ sendEmail: to, subject yoki text yo‘q");
@@ -51,6 +84,13 @@ async function sendEmail(to, subject, text) {
   } catch (err) {
     console.error("❌ Email yuborishda xatolik:", err);
   }
+}
+
+// ✅ Telegram bot
+let bot;
+if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+  bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: false });
+  console.log("✅ Telegram bot tayyor");
 }
 
 // ✅ Middleware
@@ -112,7 +152,6 @@ app.post("/create-payment", async (req, res) => {
       console.error("❌ Octo noto‘g‘ri javob:", text);
       return res.status(500).json({ error: "Octo noto‘g‘ri javob" });
     }
-
     if (data.error === 0 && data.data?.octo_pay_url) {
       return res.json({ paymentUrl: data.data.octo_pay_url });
     } else {
@@ -124,6 +163,40 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
+// ✅ Bookingni saqlash va Telegram + Email yuborish
+app.post("/send-to-telegram", async (req, res) => {
+  try {
+    const bookingData = req.body;
+
+    // MongoDB ga saqlash
+    const newBooking = new Booking(bookingData);
+    await newBooking.save();
+    console.log("✅ MongoDB ga saqlandi:", newBooking._id);
+
+    // Telegramga yuborish
+    if (bot) {
+      const message = `
+📌 Yangi Buyurtma:
+👤 ${bookingData.firstName} ${bookingData.lastName}
+📧 ${bookingData.email}
+📞 ${bookingData.phone}
+💰 ${bookingData.price} EUR
+🏨 Xona: ${bookingData.rooms}
+📅 Check-in: ${bookingData.checkIn}
+📅 Check-out: ${bookingData.checkOut}
+      `;
+      await bot.sendMessage(TELEGRAM_CHAT_ID, message);
+      console.log("✅ Telegramga yuborildi");
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("❌ send-to-telegram xatolik:", err);
+    res.status(500).json({ success: false, error: "Xatolik" });
+  }
+});
+
+// ✅ Oddiy email yuborish
 app.post("/send-email", async (req, res) => {
   const { to, subject, text } = req.body;
 
@@ -136,7 +209,7 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
-// ✅ Payment success (email shu yerda yuboriladi)
+// ✅ Payment success (mijoz + admin email)
 app.post("/success", async (req, res) => {
   console.log("➡️ /success ga kelgan body:", req.body);
 
@@ -146,15 +219,14 @@ app.post("/success", async (req, res) => {
     if (custom_data?.email) {
       const amount = Math.round(total_sum / EUR_TO_UZS);
 
+      // mijozga
       await sendEmail(
         custom_data.email,
         "Information For Invoice",
-        `Thank you for choosing to stay with us via Khamsahotel.uz!  Please be informed that we are a SLEEP LOUNGE located inside the airport within the transit area. In order to stay with us you must be in possession of a valid boarding pass departing from airport Tashkent. If your flight commences from Tashkent, kindly verify with your airline first if you can check-in early for your flight as you'll need to go through passport control and security before you may access our lounge. IMPORTANT NOTE:  We will never ask you for your credit card details, or share any messages with links with you via Khamsahotel.uz for online payments or reconfirmation of your reservation with sleep ’n fly. In case of any doubt about your booking status with us please check via the Khamsahotel.uz website or app only, call Khamsahotel.uz, or contact us directly on  998 95 877 24 24 tel.whatshapp.telegram , qonoqhotel@mail.ru for Tashkent International Airport reservations.  Your Reservations Team`,
-        "Информация Для Счета",
-        `Спасибо, что решили остановиться у нас через Khamsahotel.uz! Обратите внимание, что мы являемся SLEEP LOUNGE, расположенным в транзитной зоне аэропорта. Чтобы остановиться у нас, у вас должен быть действительный посадочный талон на вылет из аэропорта Ташкента. Если ваш рейс начинается в Ташкенте, пожалуйста, сначала уточните у своей авиакомпании, можете ли вы зарегистрироваться на рейс заранее, так как вам нужно будет пройти паспортный контроль и проверку безопасности, прежде чем вы сможете попасть в наш зал ожидания.
-         ВАЖНОЕ ПРИМЕЧАНИЕ: Мы никогда не попросим вас предоставить данные вашей кредитной карты или передать вам какие-либо сообщения со ссылками через Khamsahotel.uz для онлайн-платежей или повторного подтверждения вашего бронирования с sleep ’n fly. В случае возникновения сомнений относительно статуса вашего бронирования у нас, пожалуйста, проверьте его только через веб-сайт или приложение Khamsahotel.uz, позвоните в Khamsahotel.uz или свяжитесь с нами напрямую по телефону 998 95 877 24 24 tel.whatshapp.telegram, qonoqhotel@mail.ru для бронирования в          международном аэропорту Ташкента. Ваша команда по бронированию`
+        "✅ Sizning to‘lovingiz muvaffaqiyatli amalga oshirildi."
       );
 
+      // admin ga
       await sendEmail(
         EMAIL_USER,
         "Yangi to‘lov - Khamsa Hotel",
@@ -169,7 +241,7 @@ app.post("/success", async (req, res) => {
   }
 });
 
-// ✅ Callback fallback uchun qolgan
+// ✅ Callback fallback
 app.post("/payment-callback", async (req, res) => {
   console.log("🔁 Callback body:", req.body);
   res.json({ status: "callback received" });
