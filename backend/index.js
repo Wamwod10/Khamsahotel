@@ -59,17 +59,13 @@ const transporter = nodemailer.createTransport({
   secure: true,
   auth: {
     user: EMAIL_USER,
-    pass: EMAIL_PASS, // App password
+    pass: EMAIL_PASS, // Gmail app password
   },
 });
 
 // ✅ Email yuborish
 async function sendEmail(to, subject, text) {
-  if (!to || !subject || !text) {
-    console.warn("⚠️ sendEmail: to, subject yoki text yo‘q");
-    return;
-  }
-
+  if (!to || !subject || !text) return;
   try {
     const mailOptions = {
       from: `"Khamsa Hotel" <${EMAIL_USER}>`,
@@ -77,7 +73,6 @@ async function sendEmail(to, subject, text) {
       subject,
       text,
     };
-
     const info = await transporter.sendMail(mailOptions);
     console.log("✅ Email yuborildi:", info.messageId);
     return info;
@@ -114,7 +109,6 @@ app.post("/create-payment", async (req, res) => {
     if (!amount || typeof amount !== "number") {
       return res.status(400).json({ error: "Noto‘g‘ri amount qiymati" });
     }
-
     if (!email || typeof email !== "string") {
       return res.status(400).json({ error: "Email kiritilishi shart" });
     }
@@ -145,13 +139,13 @@ app.post("/create-payment", async (req, res) => {
 
     const text = await response.text();
     let data;
-
     try {
       data = JSON.parse(text);
-    } catch (e) {
+    } catch {
       console.error("❌ Octo noto‘g‘ri javob:", text);
       return res.status(500).json({ error: "Octo noto‘g‘ri javob" });
     }
+
     if (data.error === 0 && data.data?.octo_pay_url) {
       return res.json({ paymentUrl: data.data.octo_pay_url });
     } else {
@@ -163,81 +157,63 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// ✅ Bookingni saqlash va Telegram + Email yuborish
-app.post("/send-to-telegram", async (req, res) => {
+// ✅ Bookingni saqlash (faqat MongoDB)
+app.post("/save-booking", async (req, res) => {
   try {
     const bookingData = req.body;
-
-    // MongoDB ga saqlash
     const newBooking = new Booking(bookingData);
     await newBooking.save();
     console.log("✅ MongoDB ga saqlandi:", newBooking._id);
-
-    // Telegramga yuborish
-    if (bot) {
-      const message = `
-📌 Yangi Buyurtma:
-👤 ${bookingData.firstName} ${bookingData.lastName}
-📧 ${bookingData.email}
-📞 ${bookingData.phone}
-💰 ${bookingData.price} EUR
-🏨 Xona: ${bookingData.rooms}
-📅 Check-in: ${bookingData.checkIn}
-📅 Check-out: ${bookingData.checkOut}
-      `;
-      await bot.sendMessage(TELEGRAM_CHAT_ID, message);
-      console.log("✅ Telegramga yuborildi");
-    }
-
-    res.json({ success: true });
+    res.json({ success: true, bookingId: newBooking._id });
   } catch (err) {
-    console.error("❌ send-to-telegram xatolik:", err);
+    console.error("❌ save-booking xatolik:", err);
     res.status(500).json({ success: false, error: "Xatolik" });
   }
 });
 
-// ✅ Oddiy email yuborish
-app.post("/send-email", async (req, res) => {
-  const { to, subject, text } = req.body;
-
-  try {
-    await sendEmail(to, subject, text);
-    res.json({ success: true });
-  } catch (err) {
-    console.error("❌ Email yuborilmadi:", err);
-    res.status(500).json({ success: false, error: "Email yuborilmadi" });
-  }
-});
-
-// ✅ Payment success (mijoz + admin email)
+// ✅ Payment success (Email + Telegram + MongoDB)
 app.post("/success", async (req, res) => {
   console.log("➡️ /success ga kelgan body:", req.body);
-
   try {
     const { total_sum, description, custom_data } = req.body || {};
-
     if (custom_data?.email) {
       const amount = Math.round(total_sum / EUR_TO_UZS);
 
-      // mijozga
+      // mijozga email
       await sendEmail(
         custom_data.email,
         "Information For Invoice",
         "✅ Sizning to‘lovingiz muvaffaqiyatli amalga oshirildi."
       );
 
-      // admin ga
+      // admin ga email
       await sendEmail(
         EMAIL_USER,
         "Yangi to‘lov - Khamsa Hotel",
         `Mijoz ${custom_data.email} ${description} uchun ${amount} EUR to‘lov qildi.`
       );
-    }
 
-    res.json({ status: "success", message: "Email yuborildi" });
+      // MongoDB dan oxirgi bookingni olib Telegramga yuborish
+      const lastBooking = await Booking.findOne({ email: custom_data.email }).sort({ createdAt: -1 });
+      if (bot && lastBooking) {
+        const message = `
+📌 Yangi Buyurtma:
+👤 ${lastBooking.firstName} ${lastBooking.lastName}
+📧 ${lastBooking.email}
+📞 ${lastBooking.phone}
+💰 ${lastBooking.price} EUR
+🏨 Xona: ${lastBooking.rooms}
+📅 Check-in: ${lastBooking.checkIn}
+📅 Check-out: ${lastBooking.checkOut}
+        `;
+        await bot.sendMessage(TELEGRAM_CHAT_ID, message);
+        console.log("✅ Telegramga yuborildi");
+      }
+    }
+    res.json({ status: "success", message: "Email va Telegram yuborildi" });
   } catch (error) {
     console.error("❌ /success xatolik:", error);
-    res.status(500).json({ error: "Email yuborilmadi" });
+    res.status(500).json({ error: "Email yoki Telegram yuborilmadi" });
   }
 });
 
