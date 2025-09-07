@@ -219,11 +219,11 @@ app.post("/send-to-telegram", async (req, res) => {
     const message = `
 *Yangi buyurtma!*
 
-👤 Ism: ${firstName} ${lastName}
-📞 Tel: ${phone}
-📧 Email: ${email}
-💰 Narx: ${amount}
-📋 Qo‘shimcha: ${extra}
+👤 Ism: ${firstName || "-"} ${lastName || "-"}
+📧 Email: ${email || "-"}
+📞 Tel: ${phone || "-"}
+💰 Narx: ${amount || "-"} UZS
+📋 Qo‘shimcha: ${extra || "-"}
     `;
 
     await sendTelegramMessage(message);
@@ -233,7 +233,6 @@ app.post("/send-to-telegram", async (req, res) => {
     res.status(500).json({ success: false, error: "Telegramga yuborilmadi" });
   }
 });
-
 
 app.post("/payment-callback", (req, res) => {
   console.log("🔁 Callback body:", req.body);
