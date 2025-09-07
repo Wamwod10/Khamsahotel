@@ -24,7 +24,14 @@ const PaymentSuccess = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-        .then((res) => res.json())
+        .then(async (res) => {
+          if (!res.ok) {
+            const text = await res.text();
+            console.error("❌ Fetch HTTP xato, status:", res.status, "----Text:", text);
+            throw new Error("Server JSON bermadi");
+          }
+          return res.json();
+        })
         .then((data) => {
           if (data.success) {
             console.log("✅ Telegramga yuborildi");
@@ -33,8 +40,9 @@ const PaymentSuccess = () => {
           }
         })
         .catch((err) => {
-          console.error("🔴 Telegram xatolik:", err);
+          console.error("🔴 Telegram fetch xatolik:", err);
         });
+      
 
       // Email yuborish (mijoz va admin uchun)
       fetch(`${API_BASE}/send-email`, {

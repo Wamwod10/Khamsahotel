@@ -214,26 +214,26 @@ app.post("/success", async (req, res) => {
 // ✅ YANGI: Telegramga xabar yuborish endpoint (success page uchun)
 app.post("/send-to-telegram", async (req, res) => {
   try {
-    const { firstName, lastName, phone, email, amount, extra } = req.body;
+    const { firstName, lastName, email, phone, amount, extra } = req.body;
 
     const message = `
-*Yangi to‘lov qabul qilindi!*
+*Yangi buyurtma!*
 
-👤 Ism: ${firstName}
-👤 Familiya: ${lastName}
+👤 Ism: ${firstName} ${lastName}
+📞 Tel: ${phone}
 📧 Email: ${email}
-📱 Telefon: ${phone}
-💰 Narxi: ${amount} UZS
-ℹ️ Qo‘shimcha: ${extra}
-`;
+💰 Narx: ${amount}
+📋 Qo‘shimcha: ${extra}
+    `;
 
     await sendTelegramMessage(message);
     res.json({ success: true });
   } catch (err) {
-    console.error("❌ /send-to-telegram xatolik:", err);
+    console.error("❌ Telegramga yuborishda xato:", err);
     res.status(500).json({ success: false, error: "Telegramga yuborilmadi" });
   }
 });
+
 
 app.post("/payment-callback", (req, res) => {
   console.log("🔁 Callback body:", req.body);
