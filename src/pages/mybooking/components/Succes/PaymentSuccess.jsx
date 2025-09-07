@@ -18,7 +18,7 @@ const PaymentSuccess = () => {
         extra: `Xona turi: ${latest.rooms}, Sana: ${latest.checkIn} - ${latest.checkOut}`,
       };
 
-      // 1. Telegramga yuborish
+      // Telegramga yuborish
       fetch(`${API_BASE}/send-to-telegram`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -36,7 +36,7 @@ const PaymentSuccess = () => {
           console.error("🔴 Telegram xatolik:", err);
         });
 
-      // 2. Email yuborish (mijoz va admin uchun)
+      // Email yuborish (mijoz va admin uchun)
       fetch(`${API_BASE}/send-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,9 +65,27 @@ const PaymentSuccess = () => {
 
   return (
     <div className="payment-success-container">
-      <div className="success-icon">✅</div>
+      <div className="success-icon" role="img" aria-label="Success checkmark">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="72"
+          height="72"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#27ae60"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="feather feather-check-circle"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9 12l2 2 4-4" />
+        </svg>
+      </div>
       <h1>To‘lov muvaffaqiyatli bajarildi!</h1>
-      <p>Rahmat! Buyurtmangiz qabul qilindi va sizga email ham yuborildi.</p>
+      <p className="message">
+        Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi. Sizga tasdiqnoma email orqali yuborildi.
+      </p>
       <a className="back-home" href="/">
         Bosh sahifaga qaytish
       </a>
