@@ -19,23 +19,24 @@ const {
   OCTO_SECRET, 
   EMAIL_USER, 
   EMAIL_PASS, 
-  MONGO_URL, 
-  TELEGRAM_BOT_TOKEN, 
-  TELEGRAM_CHAT_ID 
+  MONGO_URL,
+  TELEGRAM_BOT_TOKEN,
+  TELEGRAM_CHAT_ID
 } = process.env;
 
-if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS || !MONGO_URL) {
+if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS || !MONGO_URL || !TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
   console.error("❌ .env fayldagi muhim qiymatlar yo‘q!");
   process.exit(1);
 }
 
 // ✅ MongoDB ulanish
-mongoose.connect(MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(MONGO_URL)
   .then(() => console.log("✅ MongoDB ulandi"))
   .catch((err) => {
     console.error("❌ MongoDB ulanish xatosi:", err);
     process.exit(1);
   });
+
 
 // ✅ Booking schema
 const bookingSchema = new mongoose.Schema({
@@ -81,11 +82,17 @@ async function sendEmail(to, subject, text) {
   }
 }
 
-// ✅ Telegram bot
-let bot;
-if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-  bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: false });
-  console.log("✅ Telegram bot tayyor");
+// ✅ Telegram botini yaratamiz
+const telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: false });
+
+// ✅ Telegramga xabar yuborish funksiyasi
+async function sendTelegramMessage(text) {
+  try {
+    await telegramBot.sendMessage(TELEGRAM_CHAT_ID, text, { parse_mode: "Markdown" });
+    console.log("✅ Telegramga xabar yuborildi");
+  } catch (err) {
+    console.error("❌ Telegramga xabar yuborishda xatolik:", err);
+  }
 }
 
 // ✅ Middleware
@@ -164,6 +171,25 @@ app.post("/save-booking", async (req, res) => {
     const newBooking = new Booking(bookingData);
     await newBooking.save();
     console.log("✅ MongoDB ga saqlandi:", newBooking._id);
+
+    // Telegramga xabar matni
+    const message = `
+*Yangi buyurtma qabul qilindi!*
+
+Ism: ${bookingData.firstName}
+Familiya: ${bookingData.lastName}
+Telefon: ${bookingData.phone}
+Email: ${bookingData.email}
+Narxi: ${bookingData.price} UZS
+Xonalar: ${bookingData.rooms}
+Check-in: ${bookingData.checkIn}
+Check-out: ${bookingData.checkOut}
+Booking ID: ${newBooking._id}
+    `;
+
+    // Telegramga xabar yuborish
+    await sendTelegramMessage(message);
+
     res.json({ success: true, bookingId: newBooking._id });
   } catch (err) {
     console.error("❌ save-booking xatolik:", err);
@@ -171,7 +197,7 @@ app.post("/save-booking", async (req, res) => {
   }
 });
 
-// ✅ Payment success (Email + Telegram + MongoDB)
+// ✅ Payment success (Email + MongoDB)
 app.post("/success", async (req, res) => {
   console.log("➡️ /success ga kelgan body:", req.body);
   try {
@@ -192,28 +218,11 @@ app.post("/success", async (req, res) => {
         "Yangi to‘lov - Khamsa Hotel",
         `Mijoz ${custom_data.email} ${description} uchun ${amount} EUR to‘lov qildi.`
       );
-
-      // MongoDB dan oxirgi bookingni olib Telegramga yuborish
-      const lastBooking = await Booking.findOne({ email: custom_data.email }).sort({ createdAt: -1 });
-      if (bot && lastBooking) {
-        const message = `
-📌 Yangi Buyurtma:
-👤 ${lastBooking.firstName} ${lastBooking.lastName}
-📧 ${lastBooking.email}
-📞 ${lastBooking.phone}
-💰 ${lastBooking.price} EUR
-🏨 Xona: ${lastBooking.rooms}
-📅 Check-in: ${lastBooking.checkIn}
-📅 Check-out: ${lastBooking.checkOut}
-        `;
-        await bot.sendMessage(TELEGRAM_CHAT_ID, message);
-        console.log("✅ Telegramga yuborildi");
-      }
     }
-    res.json({ status: "success", message: "Email va Telegram yuborildi" });
+    res.json({ status: "success", message: "Email yuborildi" });
   } catch (error) {
     console.error("❌ /success xatolik:", error);
-    res.status(500).json({ error: "Email yoki Telegram yuborilmadi" });
+    res.status(500).json({ error: "Email yuborilmadi" });
   }
 });
 
