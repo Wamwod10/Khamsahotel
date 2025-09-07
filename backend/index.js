@@ -6,7 +6,7 @@ import nodemailer from "nodemailer";
 import mongoose from "mongoose";
 import TelegramBot from "node-telegram-bot-api";
 
-// Load environment variables
+// 🔹 Load environment variables
 dotenv.config();
 
 const app = express();
@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 5002;
 const BASE_URL = process.env.BASE_URL || "https://khamsahotel.uz";
 const EUR_TO_UZS = 14000;
 
-// ✅ Env variables
+// 🔹 Extract .env variables
 const {
   OCTO_SHOP_ID,
   OCTO_SECRET,
@@ -25,7 +25,7 @@ const {
   TELEGRAM_CHAT_ID,
 } = process.env;
 
-// ✅ Check env variables
+// 🔹 Check required env values
 [
   "OCTO_SHOP_ID",
   "OCTO_SECRET",
@@ -41,7 +41,7 @@ const {
   }
 });
 
-// ✅ MongoDB connection
+// 🔹 MongoDB connection
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("✅ MongoDB ulandi"))
@@ -50,7 +50,7 @@ mongoose
     process.exit(1);
   });
 
-// ✅ Booking Schema
+// 🔹 Booking schema
 const bookingSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
@@ -65,7 +65,7 @@ const bookingSchema = new mongoose.Schema({
 
 const Booking = mongoose.model("Booking", bookingSchema);
 
-// ✅ Nodemailer
+// 🔹 Nodemailer transport
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -76,9 +76,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// 🔹 Email function
 async function sendEmail(to, subject, text) {
-  if (!to || !subject || !text) return;
   try {
+    if (!to || !subject || !text) return;
     const info = await transporter.sendMail({
       from: `"Khamsa Hotel" <${EMAIL_USER}>`,
       to,
@@ -86,26 +87,36 @@ async function sendEmail(to, subject, text) {
       text,
     });
     console.log("✅ Email yuborildi:", info.messageId);
-    return info;
   } catch (err) {
-    console.error("❌ Email yuborishda xatolik:", err);
+    console.error("❌ Email yuborishda xatolik:", err.message || err);
   }
 }
 
-// ✅ Telegram Bot
+// 🔹 Telegram bot instance
 const telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: false });
 
-async function sendTelegramMessage(text) {
-  if (!text) return;
+// 🔹 Telegram message sender with better error logging
+async function sendTelegramMessage(messageText) {
+  if (!messageText) return;
   try {
-    await telegramBot.sendMessage(TELEGRAM_CHAT_ID, text, { parse_mode: "Markdown" });
-    console.log("✅ Telegramga xabar yuborildi");
+    const result = await telegramBot.sendMessage(TELEGRAM_CHAT_ID, messageText, {
+      parse_mode: "Markdown",
+    });
+    console.log("✅ Telegramga xabar yuborildi:", result.message_id);
   } catch (err) {
-    console.error("❌ Telegramga xabar yuborishda xatolik:", err);
+    console.error("❌ Telegramga xabar yuborishda xatolik:", err.message || err);
+    if (err.response && err.response.body) {
+      try {
+        const body = await err.response.json();
+        console.error("❌ Telegram javobi:", body);
+      } catch (parseErr) {
+        console.error("❌ Telegram xatolik javobi JSON formatida emas.");
+      }
+    }
   }
 }
 
-// ✅ Middleware
+// 🔹 Middleware
 app.use(cors({
   origin: [
     "https://khamsahotel.uz",
@@ -116,7 +127,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// ✅ Payment yaratish
+// 🔹 Create Payment Endpoint
 app.post("/create-payment", async (req, res) => {
   try {
     const { amount, description = "Mehmonxona to'lovi", email } = req.body;
@@ -129,12 +140,10 @@ app.post("/create-payment", async (req, res) => {
     }
 
     const amountUZS = Math.round(amount * EUR_TO_UZS);
-    const shop_transaction_id = Date.now().toString();
-
     const paymentData = {
       octo_shop_id: Number(OCTO_SHOP_ID),
       octo_secret: OCTO_SECRET,
-      shop_transaction_id,
+      shop_transaction_id: Date.now().toString(),
       auto_capture: true,
       test: false,
       init_time: new Date().toISOString().replace("T", " ").substring(0, 19),
@@ -158,8 +167,8 @@ app.post("/create-payment", async (req, res) => {
     try {
       data = JSON.parse(responseText);
     } catch {
-      console.error("❌ Octo noto‘g‘ri javob:", responseText);
-      return res.status(500).json({ error: "Octo noto‘g‘ri javob" });
+      console.error("❌ Octo noto‘g‘ri JSON javobi:", responseText);
+      return res.status(500).json({ error: "Octo noto‘g‘ri javob qaytardi" });
     }
 
     if (data.error === 0 && data.data?.octo_pay_url) {
@@ -173,12 +182,13 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// ✅ Booking saqlash
+// 🔹 Save Booking Endpoint
 app.post("/save-booking", async (req, res) => {
   try {
     const bookingData = req.body;
     const newBooking = new Booking(bookingData);
     await newBooking.save();
+
     console.log("✅ Booking saqlandi:", newBooking._id);
 
     const message = `
@@ -203,7 +213,7 @@ Booking ID: ${newBooking._id}
   }
 });
 
-// ✅ To‘lov muvaffaqiyatli bo‘lsa
+// 🔹 Payment Success Endpoint
 app.post("/success", async (req, res) => {
   console.log("➡️ /success body:", req.body);
   try {
@@ -228,13 +238,13 @@ app.post("/success", async (req, res) => {
   }
 });
 
-// ✅ Octo callback uchun fallback
+// 🔹 Octo Callback Endpoint
 app.post("/payment-callback", (req, res) => {
   console.log("🔁 Callback body:", req.body);
   res.json({ status: "callback received" });
 });
 
-// ✅ Serverni ishga tushurish
+// 🔹 Start Server
 app.listen(PORT, () => {
   console.log(`✅ Server ishga tushdi: ${BASE_URL} (port: ${PORT})`);
 });
