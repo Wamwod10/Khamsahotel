@@ -1,4 +1,3 @@
-// index.js
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
@@ -100,14 +99,13 @@ async function sendTelegramMessage(messageText) {
   }
 }
 
-app.use(cors({
-  origin: [
-    "https://khamsahotel.uz",
-    "https://www.khamsahotel.uz",
-  ],
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"],
-}));
+app.use(
+  cors({
+    origin: ["https://khamsahotel.uz", "https://www.khamsahotel.uz"],
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 app.use(express.json());
 
 app.post("/create-payment", async (req, res) => {
@@ -195,6 +193,8 @@ app.post("/success", async (req, res) => {
   try {
     const { total_sum, description, custom_data } = req.body || {};
     const email = custom_data?.email;
+
+    // Email yuborish
     if (email) {
       const amount = Math.round(total_sum / EUR_TO_UZS);
       await sendEmail(email, "To‘lov muvaffaqiyatli", "✅ Sizning to‘lovingiz amalga oshirildi.");
@@ -204,33 +204,24 @@ app.post("/success", async (req, res) => {
         `Mijoz ${email} ${description} uchun ${amount} EUR to‘lov qildi.`
       );
     }
-    res.json({ status: "success", message: "Email yuborildi" });
-  } catch (err) {
-    console.error("❌ /success xatolik:", err);
-    res.status(500).json({ error: "Email yuborilmadi" });
-  }
-});
 
-// ✅ YANGI: Telegramga xabar yuborish endpoint (success page uchun)
-app.post("/send-to-telegram", async (req, res) => {
-  try {
-    const { firstName, lastName, email, phone, amount, extra } = req.body;
+    // Telegramga xabar yuborish
+    const telegramMessage = `
+*Yangi to‘lov muvaffaqiyatli!*
 
-    const message = `
-*Yangi buyurtma!*
-
-👤 Ism: ${firstName || "-"} ${lastName || "-"}
 📧 Email: ${email || "-"}
-📞 Tel: ${phone || "-"}
-💰 Narx: ${amount || "-"} UZS
-📋 Qo‘shimcha: ${extra || "-"}
+💰 Miqdor: ${Math.round(total_sum / EUR_TO_UZS)} EUR
+📄 Ta'rif: ${description || "-"}
+
+⏰ Vaqt: ${new Date().toLocaleString()}
     `;
 
-    await sendTelegramMessage(message);
-    res.json({ success: true });
+    await sendTelegramMessage(telegramMessage);
+
+    res.json({ status: "success", message: "Email va Telegram xabar yuborildi" });
   } catch (err) {
-    console.error("❌ Telegramga yuborishda xato:", err);
-    res.status(500).json({ success: false, error: "Telegramga yuborilmadi" });
+    console.error("❌ /success xatolik:", err);
+    res.status(500).json({ error: "Email yoki Telegram yuborilmadi" });
   }
 });
 
@@ -238,6 +229,8 @@ app.post("/payment-callback", (req, res) => {
   console.log("🔁 Callback body:", req.body);
   res.json({ status: "callback received" });
 });
+
+// /send-to-telegram endpointi olib tashlandi — endi kerak emas
 
 app.listen(PORT, () => {
   console.log(`✅ Server ishga tushdi: ${BASE_URL} (port: ${PORT})`);
