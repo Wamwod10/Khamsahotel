@@ -6,16 +6,18 @@ dotenv.config();
 
 const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } = process.env;
 
+// Token va Chat ID mavjudligini tekshirish
 if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
   console.error("❌ Telegram token yoki chat ID .env faylda yo‘q!");
-  process.exit(1);
+  process.exit(1); // Botni ishga tushmasdan to‘xtatish
 }
 
+// Botni yaratish, polling o‘chirilgan, faqat yuborish uchun
 const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: false });
 
 /**
- * Telegramga booking haqidagi ma'lumotlarni yuborish
- * @param {Object} data - booking ma'lumotlari
+ * Telegramga xabar yuborish funksiyasi
+ * @param {Object} data - buyurtma haqida ma'lumot
  * @returns {Promise<boolean>} - muvaffaqiyat holati
  */
 export async function sendTelegramMessage(data) {
@@ -26,15 +28,14 @@ export async function sendTelegramMessage(data) {
     lastName = "-",
     email = "-",
     phone = "-",
-    price = "-",
-    rooms = "-",
+    amount = "-",
     checkIn = "-",
-    checkOut = "-",
-    createdAt = "-",
-    _id = "-"
+    checkInTime = "-",
+    duration = "-",
+    rooms = "-"
   } = data;
 
-  // Telegram xabar matni Markdown formatida
+  // Telegram xabar matni (Markdown formatda)
   const message = `
 📢 *Yangi Buyurtma (Khamsa Hotel)*
 
@@ -42,13 +43,12 @@ export async function sendTelegramMessage(data) {
 👤 *Familiya:* ${lastName}
 📧 *Email:* ${email}
 📞 *Telefon:* ${phone}
-💶 *Narxi:* ${price} UZS
+💶 *To'lov:* ${amount} EUR
 
 🛏 *Xona turi:* ${rooms}
-📅 *Check-in:* ${checkIn}
-📅 *Check-out:* ${checkOut}
-🆔 *Booking ID:* ${_id}
-🕒 *Buyurtma vaqti:* ${new Date(createdAt).toLocaleString()}
+📅 *Check-in sana:* ${checkIn}
+⏰ *Check-in vaqti:* ${checkInTime}
+📆 *Qolish muddati:* ${duration}
   `.trim();
 
   try {

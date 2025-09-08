@@ -15,21 +15,18 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
 
   if (!booking) return null;
 
-  // Sana formatlash (YYYY-MM-DD → DD.MM.YYYY)
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const [year, month, day] = dateStr.split("-");
     return `${day}.${month}.${year}`;
   };
 
-  // Vaqt formatlash (agar ISO string bo‘lsa)
   const formatTime = (timeStr) => {
     if (!timeStr) return "-";
     if (timeStr.includes("T")) return timeStr.split("T")[1].slice(0, 5);
     return timeStr.slice(0, 5);
   };
 
-  // Xona turining tarjimasi
   const roomLabel = booking.rooms ? t(roomKeyMap[booking.rooms] || booking.rooms) : "-";
 
   return (
@@ -88,16 +85,12 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
       </div>
 
       <div className="booking-actions">
-        {onEdit && (
-          <button className="btn btn-edit" onClick={() => onEdit(booking)}>
-            {t("bookingcard_edit")}
-          </button>
-        )}
-        {onDelete && (
-          <button className="btn btn-delete" onClick={() => onDelete(booking.id)}>
-            {t("bookingcard_delete")}
-          </button>
-        )}
+        <button className="btn btn-edit" onClick={() => onEdit(booking)}>
+          {t("bookingcard_edit")}
+        </button>
+        <button className="btn btn-delete" onClick={() => onDelete(booking.id)}>
+          {t("bookingcard_delete")}
+        </button>
       </div>
     </div>
   );
