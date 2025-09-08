@@ -1,11 +1,10 @@
 import "./near.scss";
 import './nearMedia.scss'
-import { FaStar } from "react-icons/fa";
+import { FaBookOpen, FaStar } from "react-icons/fa";
 import { IoTimeOutline } from "react-icons/io5";
 import { TbExternalLink } from "react-icons/tb";
 import { MdLocalCafe } from "react-icons/md";
 import { FaBriefcaseMedical } from "react-icons/fa";
-import { MdMiscellaneousServices } from "react-icons/md";
 import { FaShoppingBag } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import { FaMapPin } from "react-icons/fa6";
@@ -90,7 +89,7 @@ const Near = () => {
             <img src="/17.jpg" width={"100%"} height={"200px"} alt="" />
             <div className="near__box-absolute">
               <p className="near__absolute-text">
-                <MdMiscellaneousServices />
+                <FaBookOpen />
                 {t("religious")}
               </p>
               <p className="near__absolute-rating">

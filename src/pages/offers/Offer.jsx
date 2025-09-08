@@ -77,7 +77,7 @@ const Offer = () => {
         <ul>
           <li>{t("section8_phone")}</li>
           <li>
-            <a href="mailto:gomoqhotel@mail.ru" target="_blank" rel="noopener noreferrer">
+            <a href="mailto:qonoqhotel@mail.ru" target="_blank" rel="noopener noreferrer">
               {t("section8_email")}
             </a>
           </li>

@@ -24,7 +24,16 @@ const OperatingHours = () => {
       className: "checkin",
     },
     {
-      title: t("operatingHours.luggage"),
+      title: (
+        <a
+          href="https://baggageroom.uz"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hours__link"
+        >
+          {t("operatingHours.luggage")}
+        </a>
+      ),
       time: t("operatingHours.luggageTime"),
       icon: <MdOutlineLuggage className="hours__icon" />,
       className: "luggage",

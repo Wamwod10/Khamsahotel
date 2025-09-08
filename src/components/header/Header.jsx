@@ -114,9 +114,9 @@ const Header = () => {
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
                   >
-                    <option>Up to 2 hours</option>
-                    <option>Up to 10 hours</option>
-                    <option>1 day</option>
+                    <option>{t("upTo2Hours")}</option>
+                    <option>{t("upTo10Hours")}</option>
+                    <option>{t("1day")}</option>
                   </select>
                   <FaChevronDown className="select-icon" />
                 </div>
@@ -130,8 +130,8 @@ const Header = () => {
                     value={rooms}
                     onChange={(e) => setRooms(e.target.value)}
                   >
-                    <option>Standard Room</option>
-                    <option>Family Room</option>
+                    <option>{t("standard")}</option>
+                    <option>{t("family")}</option>
                   </select>
                   <FaChevronDown className="select-icon" />
                 </div>

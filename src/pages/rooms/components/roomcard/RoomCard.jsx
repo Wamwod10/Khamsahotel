@@ -122,7 +122,7 @@ const RoomCard = () => {
               <h3 className="room-card__room-title">{t("standard")}</h3>
               <p className="room-card__info">
                 <FiUser /> 1 {t("guest")} &nbsp; | &nbsp; <FaRulerCombined />{" "}
-                3.6 m²
+                3.2 m²
               </p>
               <p className="room-card__location">
                 <FiMapPin /> {t("TashkentAirportHotel")}
@@ -160,7 +160,7 @@ const RoomCard = () => {
                   openModalWithCheck({
                     type: "Standard Room",
                     guests: 1,
-                    size: "3.6 m²",
+                    size: "3.2 m²",
                     hotel: "Tashkent Airport Khamsa Hotel",
                   })
                 }
@@ -214,7 +214,7 @@ const RoomCard = () => {
 
               <h3 className="room-card__room-title">Family Room</h3>
               <p className="room-card__info">
-                <FiUser /> 3 Guests &nbsp; | &nbsp; <FaRulerCombined /> 9.5 m²
+                <FiUser /> 3 Guests &nbsp; | &nbsp; <FaRulerCombined />  7.5 m²
               </p>
               <p className="room-card__location">
                 <FiMapPin /> {t("TashkentAirportHotel")}
@@ -255,7 +255,7 @@ const RoomCard = () => {
                   openModalWithCheck({
                     type: "Family Room",
                     guests: 3,
-                    size: "9.5 m²",
+                    size: "7.5 m²",
                     hotel: "Tashkent Airport Khamsa Hotel",
                   })
                 }

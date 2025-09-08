@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FaStar } from "react-icons/fa";
+import { FaShower, FaStar } from "react-icons/fa";
 import {
   FaWifi,
   FaClock,
@@ -120,6 +120,20 @@ const ServiceCard = () => {
         t("servicedetail26"),
         t("servicedetail27"),
         t("servicedetail28"),
+      ],
+    },
+    {
+      id: 8,
+      icon: <FaShower />,
+      title: t("serviceshower"),
+      time: t("servicetime6"),
+      rating: "4.7",
+      description: t("servicedescription9"),
+      details: [
+        t("servicedetail25"),
+        t("servicedetail29"),
+        t("servicedetail30"),
+        t("servicedetail31"),
       ],
     },
   ];
