@@ -212,10 +212,6 @@ Familiya: ${bookingData.lastName}
 Telefon: ${bookingData.phone}
 Email: ${bookingData.email}
 Narxi: ${bookingData.price} UZS
-Xonalar: ${bookingData.rooms}
-Check-in: ${bookingData.checkIn}
-Check-out: ${bookingData.checkOut}
-Booking ID: ${newBooking._id}
 `;
 
     await sendTelegramMessage(message);
