@@ -3,35 +3,105 @@ import "./mybooking.scss";
 import BookingCard from "./components/BookingCard/BookingCard";
 import EditBookingModal from "./components/Edit/EditBookingModal";
 
+// 🔹 Backend API bilan ishlash helper funksiyalar
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5002";
+
+async function fetchBookings() {
+  try {
+    const res = await fetch(`${API_BASE}/bookings`);
+    if (!res.ok) throw new Error("❌ Bookinglarni olishda xatolik");
+    return await res.json();
+  } catch (err) {
+    console.error("❌ fetchBookings error:", err.message);
+    return [];
+  }
+}
+
+async function addBookingToServer(newBooking) {
+  try {
+    const res = await fetch(`${API_BASE}/bookings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newBooking),
+    });
+    if (!res.ok) throw new Error("❌ Yangi booking yaratilmadi");
+    return await res.json();
+  } catch (err) {
+    console.error("❌ addBookingToServer error:", err.message);
+    return null;
+  }
+}
+
+async function updateBookingOnServer(id, updatedBooking) {
+  try {
+    const res = await fetch(`${API_BASE}/bookings/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedBooking),
+    });
+    if (!res.ok) throw new Error("❌ Booking yangilanmadi");
+    return await res.json();
+  } catch (err) {
+    console.error("❌ updateBookingOnServer error:", err.message);
+    return null;
+  }
+}
+
+async function deleteBookingFromServer(id) {
+  try {
+    const res = await fetch(`${API_BASE}/bookings/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("❌ Booking o‘chirilmadi");
+    return await res.json();
+  } catch (err) {
+    console.error("❌ deleteBookingFromServer error:", err.message);
+    return null;
+  }
+}
+
 const MyBooking = () => {
   const [bookings, setBookings] = useState([]);
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
-
+  // 🔹 Session va LocalStorage bilan ishlash + backenddan olish
   useEffect(() => {
-    const savedBookings =
-      JSON.parse(sessionStorage.getItem("allBookings")) || [];
-    const roomModalData = JSON.parse(localStorage.getItem("bookingInfo"));
-    let updatedBookings = [];
+    const initData = async () => {
+      const savedBookings =
+        JSON.parse(sessionStorage.getItem("allBookings")) || [];
+      const roomModalData = JSON.parse(localStorage.getItem("bookingInfo"));
+      let updatedBookings = [];
 
-    if (roomModalData && roomModalData.firstName) {
-      if (!roomModalData.id) roomModalData.id = Date.now();
-      if (roomModalData.checkOutTime && !roomModalData.checkOut) {
-        roomModalData.checkOut = roomModalData.checkOutTime;
+      if (roomModalData && roomModalData.firstName) {
+        if (!roomModalData.id) roomModalData.id = Date.now();
+        if (roomModalData.checkOutTime && !roomModalData.checkOut) {
+          roomModalData.checkOut = roomModalData.checkOutTime;
+        }
+        const filteredBookings = savedBookings.filter(
+          (b) => b.id !== roomModalData.id
+        );
+        updatedBookings = [roomModalData, ...filteredBookings];
+        localStorage.removeItem("bookingInfo");
+        sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
+
+        // 🔹 Backendga ham saqlash
+        await addBookingToServer(roomModalData);
+      } else {
+        updatedBookings = savedBookings;
       }
-      const filteredBookings = savedBookings.filter(
-        (b) => b.id !== roomModalData.id
-      );
-      updatedBookings = [roomModalData, ...filteredBookings];
-      localStorage.removeItem("bookingInfo");
-      sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
-    } else {
-      updatedBookings = savedBookings;
-    }
 
-    setBookings(updatedBookings);
+      // 🔹 Backenddan bookinglarni olish
+      const serverBookings = await fetchBookings();
+      if (serverBookings.length > 0) {
+        setBookings(serverBookings);
+        sessionStorage.setItem("allBookings", JSON.stringify(serverBookings));
+      } else {
+        setBookings(updatedBookings);
+      }
+    };
+
+    initData();
   }, []);
 
   const saveBookingsToStorage = (arr) => {
@@ -47,19 +117,25 @@ const MyBooking = () => {
     setIsEditOpen(true);
   };
 
-  const handleSaveBooking = (updatedBooking) => {
+  const handleSaveBooking = async (updatedBooking) => {
     const updatedList = bookings.map((b) =>
       b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
     );
     setBookings(updatedList);
     saveBookingsToStorage(updatedList);
     setIsEditOpen(false);
+
+    // 🔹 Backendda yangilash
+    await updateBookingOnServer(editingBooking.id, updatedBooking);
   };
 
-  const handleDeleteBooking = (id) => {
+  const handleDeleteBooking = async (id) => {
     const filtered = bookings.filter((b) => b.id !== id);
     setBookings(filtered);
     saveBookingsToStorage(filtered);
+
+    // 🔹 Backenddan o‘chirish
+    await deleteBookingFromServer(id);
   };
 
   const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);

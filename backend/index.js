@@ -3,8 +3,6 @@ import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
-import mongoose from "mongoose";
-import TelegramBot from "node-telegram-bot-api";
 import { getRooms, getRoomPrice, createBooking } from "./bnovo.js";
 
 dotenv.config();
@@ -19,9 +17,6 @@ const {
   OCTO_SECRET,
   EMAIL_USER,
   EMAIL_PASS,
-  MONGO_URL,
-  TELEGRAM_BOT_TOKEN,
-  TELEGRAM_CHAT_ID,
 } = process.env;
 
 // ✅ Muhim env tekshirish
@@ -30,9 +25,6 @@ const {
   "OCTO_SECRET",
   "EMAIL_USER",
   "EMAIL_PASS",
-  "MONGO_URL",
-  "TELEGRAM_BOT_TOKEN",
-  "TELEGRAM_CHAT_ID",
   "BNOVO_API_KEY",
 ].forEach((key) => {
   if (!process.env[key]) {
@@ -40,35 +32,6 @@ const {
     process.exit(1);
   }
 });
-
-// ✅ MongoDB ulanish
-mongoose
-  .connect(MONGO_URL, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("✅ MongoDB ulandi"))
-  .catch((err) => {
-    console.error("❌ MongoDB ulanish xatosi:", err);
-    process.exit(1);
-  });
-
-// ✅ Booking schema
-const bookingSchema = new mongoose.Schema({
-  firstName: String,
-  lastName: String,
-  email: String,
-  phone: String,
-  price: Number,
-  rooms: String,
-  checkIn: String,
-  checkOut: String,
-  duration: String,
-  guests: Number,
-  createdAt: { type: Date, default: Date.now },
-});
-
-const Booking = mongoose.model("Booking", bookingSchema);
 
 // ✅ Nodemailer sozlamalari
 const transporter = nodemailer.createTransport({
@@ -94,21 +57,6 @@ async function sendEmail(to, subject, text) {
     console.log("✅ Email yuborildi:", info.messageId);
   } catch (err) {
     console.error("❌ Email yuborishda xatolik:", err.message || err);
-  }
-}
-
-// ✅ Telegram sozlamalari
-const telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: false });
-
-async function sendTelegramMessage(messageText) {
-  if (!messageText) return;
-  try {
-    const result = await telegramBot.sendMessage(TELEGRAM_CHAT_ID, messageText, {
-      parse_mode: "Markdown",
-    });
-    console.log("✅ Telegramga xabar yuborildi:", result.message_id);
-  } catch (err) {
-    console.error("❌ Telegram xatolik:", err.message || err);
   }
 }
 
@@ -155,25 +103,6 @@ app.post("/confirm-booking", async (req, res) => {
   try {
     const bookingData = req.body;
     const bookingResponse = await createBooking(bookingData);
-
-    // MongoDB ga saqlash
-    const newBooking = new Booking(bookingData);
-    await newBooking.save();
-
-    // Telegram xabari
-    await sendTelegramMessage(`
-*Yangi bron qabul qilindi!*
-
-👤 ${bookingData.firstName} ${bookingData.lastName}
-📞 ${bookingData.phone}
-📧 ${bookingData.email}
-🏨 Xona: ${bookingData.rooms}
-📅 Check-in: ${bookingData.checkIn}
-⏱ Davomiylik: ${bookingData.duration}
-👥 Mehmonlar: ${bookingData.guests || 1}
-💰 Narx: ${bookingData.price} EUR
-    `);
-
     res.json({ success: true, booking: bookingResponse });
   } catch (err) {
     console.error("❌ confirm-booking xatolik:", err);
@@ -257,25 +186,13 @@ app.post("/success", async (req, res) => {
       );
     }
 
-    const telegramMessage = `
-*Yangi to‘lov muvaffaqiyatli!*
-
-📧 Email: ${email || "-"}
-💰 Miqdor: ${Math.round(total_sum / EUR_TO_UZS)} EUR
-📄 Ta'rif: ${description || "-"}
-
-⏰ Vaqt: ${new Date().toLocaleString()}
-    `;
-
-    await sendTelegramMessage(telegramMessage);
-
     res.json({
       status: "success",
-      message: "Email va Telegram xabar yuborildi",
+      message: "Email yuborildi",
     });
   } catch (err) {
     console.error("❌ /success xatolik:", err);
-    res.status(500).json({ error: "Email yoki Telegram yuborilmadi" });
+    res.status(500).json({ error: "Email yuborilmadi" });
   }
 });
 

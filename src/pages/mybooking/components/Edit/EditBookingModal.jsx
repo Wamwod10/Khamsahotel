@@ -25,18 +25,20 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
     phone: "",
     email: "",
   });
+
   {
     durationOptions.map((option) => (
       <option key={option.value} value={option.value}>
         {t(option.label)}
       </option>
-    ))
+    ));
   }
+
   useEffect(() => {
     if (booking) {
       setEditData({
-        checkIn: booking.checkIn ||  "",
-        checkInTime: booking.checkOutTime ||  "",
+        checkIn: booking.checkIn || "",
+        checkOutTime: booking.checkOutTime || "",
         duration: booking.duration || "",
         rooms: booking.rooms || "",
         firstName: booking.firstName || "",
@@ -51,12 +53,38 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditData(prev => ({ ...prev, [name]: value }));
+    setEditData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  // 🔥 Backend PUT so‘rovi qo‘shildi
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(editData);
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/bookings/${booking.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(editData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update booking");
+      }
+
+      const updatedBooking = await response.json();
+
+      // 🔥 Backenddan kelgan yangi ma’lumotni onSave ga beramiz
+      onSave(updatedBooking);
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      alert("Booking update failed. Please try again.");
+    }
+
     onClose();
   };
 
@@ -88,7 +116,7 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
             {t("check-in-hours")}
             <input
               type="time"
-              name="checkInTime"
+              name="checkOutTime"
               required
               value={editData.checkOutTime}
               onChange={handleChange}
@@ -104,7 +132,9 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
               value={editData.duration}
               onChange={handleChange}
             >
-              <option value="" disabled>{t("select_duration")}</option>
+              <option value="" disabled>
+                {t("select_duration")}
+              </option>
               {durationOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {t(option.label)}
@@ -122,7 +152,9 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
               value={editData.rooms}
               onChange={handleChange}
             >
-              <option value="" disabled>{t("select_room")}</option>
+              <option value="" disabled>
+                {t("select_room")}
+              </option>
               {roomOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {t(option.label)}

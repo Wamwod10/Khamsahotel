@@ -36,6 +36,7 @@ const priceTable = {
 
 const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   const { t } = useTranslation();
+  const API_BASE = import.meta.env.VITE_API_BASE_URL; // 🔥 Backend API manzili
 
   const [bookingInfo, setBookingInfo] = useState({
     checkIn: "",
@@ -94,13 +95,12 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     }));
   };
 
-  const handleConfirm = (e) => {
+  const handleConfirm = async (e) => {
     e.preventDefault();
 
     if (!bookingInfo.checkIn || !bookingInfo.checkOutTime) {
       toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz!"), {
         position: "top-center",
-        width: "500px",
         autoClose: 3000,
       });
       return;
@@ -111,15 +111,13 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim()) {
       toast.error(t("Iltimos, barcha maydonlarni to'ldiring"), {
         position: "top-center",
-        width: "500px",
         autoClose: 3000,
       });
       return;
     }
 
-    // Narxni hisoblash
-    const price =
-      priceTable[bookingInfo.rooms]?.[bookingInfo.duration] || 0;
+    // 🔥 Narxni hisoblash
+    const price = priceTable[bookingInfo.rooms]?.[bookingInfo.duration] || 0;
 
     const fullBookingInfo = {
       ...bookingInfo,
@@ -128,34 +126,65 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       phone,
       email,
       id: Date.now(),
-      price,  // narxni qo'shamiz
+      price,
     };
 
+    // 🔥 1. Local/session storage’da saqlash
     const existingBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
     const updatedBookings = [...existingBookings, fullBookingInfo];
 
     sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
     sessionStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
 
+    // 🔥 2. Backendga POST yuborish
+    try {
+      const response = await fetch(`${API_BASE}/bookings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fullBookingInfo),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server xatosi: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("✅ Booking saved to backend:", data);
+
+      toast.success(t("Sizning xonangiz backendga ham saqlandi!"), {
+        position: "top-center",
+        autoClose: 4000,
+      });
+    } catch (err) {
+      console.error("❌ Backend error:", err.message);
+      toast.warn(t("Internet yo‘q yoki server ishlamayapti. Faqat localda saqlandi"), {
+        position: "top-center",
+        autoClose: 4000,
+      });
+    }
+
     onClose();
 
-    toast.success(t("Sizning xonangiz bron qilindi, Mening Bronlarim sahifasida ko'rishingiz mumkin"), {
-      position: "top-center",
-      width: "500px",
-      autoClose: 4000,
-    });
+    toast.success(
+      t("Sizning xonangiz bron qilindi, Mening Bronlarim sahifasida ko'rishingiz mumkin"),
+      {
+        position: "top-center",
+        autoClose: 4000,
+      }
+    );
   };
 
   if (!isOpen) return null;
 
-  const price =
-    priceTable[bookingInfo.rooms]?.[bookingInfo.duration] || "-";
+  const price = priceTable[bookingInfo.rooms]?.[bookingInfo.duration] || "-";
 
   return (
     <div className="modal-main">
       <div className="modal-overlay" onClick={onClose} />
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <h2 className="modal__title" id="modal-title">{t("bookyourstay")}</h2>
+        <h2 className="modal__title" id="modal-title">
+          {t("bookyourstay")}
+        </h2>
 
         <div className="modal_all__section">
           <div className="modal__section">
@@ -251,13 +280,21 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
 
           <div className="total-price-display">
             <label>{t("totalPrice")}:</label>
-            <p style={{ fontWeight: "600", color: "#f7931e", marginTop: "0.2rem" }}>
+            <p
+              style={{
+                fontWeight: "600",
+                color: "#f7931e",
+                marginTop: "0.2rem",
+              }}
+            >
               {price !== "-" ? `${price}€` : "-"}
             </p>
           </div>
 
           <div className="modal__buttons">
-            <button type="submit" className="modal__confirm">{t("confirm")}</button>
+            <button type="submit" className="modal__confirm">
+              {t("confirm")}
+            </button>
             <button type="button" className="modal__cancel" onClick={onClose}>
               {t("cancel")}
             </button>
