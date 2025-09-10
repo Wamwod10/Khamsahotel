@@ -57,15 +57,6 @@ const Bookingform = () => {
           </div>
           <div className="booking__box-offers">
             <div className="booking__icon-div">
-              <MdOutlineFreeBreakfast />
-            </div>
-            <h2 className="booking__box-title">{t("bookingbf")}</h2>
-            <p className="booking__box-text">
-              {t("bookingtext5")}
-            </p>
-          </div>
-          <div className="booking__box-offers">
-            <div className="booking__icon-div">
               <HiOutlineUserGroup />
             </div>
             <h2 className="booking__box-title">{t("bookingservice")}</h2>

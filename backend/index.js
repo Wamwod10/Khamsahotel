@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import mongoose from "mongoose";
 import TelegramBot from "node-telegram-bot-api";
+import { getRooms, getRoomPrice, createBooking } from "./bnovo.js";
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ const {
   TELEGRAM_CHAT_ID,
 } = process.env;
 
+// ✅ Muhim env tekshirish
 [
   "OCTO_SHOP_ID",
   "OCTO_SECRET",
@@ -31,6 +33,7 @@ const {
   "MONGO_URL",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",
+  "BNOVO_API_KEY",
 ].forEach((key) => {
   if (!process.env[key]) {
     console.error(`❌ ${key} .env faylida yo‘q!`);
@@ -38,14 +41,19 @@ const {
   }
 });
 
+// ✅ MongoDB ulanish
 mongoose
-  .connect(MONGO_URL)
+  .connect(MONGO_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log("✅ MongoDB ulandi"))
   .catch((err) => {
     console.error("❌ MongoDB ulanish xatosi:", err);
     process.exit(1);
   });
 
+// ✅ Booking schema
 const bookingSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
@@ -55,11 +63,14 @@ const bookingSchema = new mongoose.Schema({
   rooms: String,
   checkIn: String,
   checkOut: String,
+  duration: String,
+  guests: Number,
   createdAt: { type: Date, default: Date.now },
 });
 
 const Booking = mongoose.model("Booking", bookingSchema);
 
+// ✅ Nodemailer sozlamalari
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -70,6 +81,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// ✅ Email yuborish funksiyasi
 async function sendEmail(to, subject, text) {
   try {
     if (!to || !subject || !text) return;
@@ -85,6 +97,7 @@ async function sendEmail(to, subject, text) {
   }
 }
 
+// ✅ Telegram sozlamalari
 const telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: false });
 
 async function sendTelegramMessage(messageText) {
@@ -99,6 +112,7 @@ async function sendTelegramMessage(messageText) {
   }
 }
 
+// ✅ Middleware
 app.use(
   cors({
     origin: ["https://khamsahotel.uz", "https://www.khamsahotel.uz"],
@@ -108,6 +122,68 @@ app.use(
 );
 app.use(express.json());
 
+/* ----------------- 🔹 Bnovo Endpointlari ----------------- */
+
+// Xonalar ro‘yxatini olish
+app.get("/get-rooms", async (req, res) => {
+  try {
+    const rooms = await getRooms();
+    res.json(rooms);
+  } catch (err) {
+    console.error("❌ get-rooms xatolik:", err);
+    res.status(500).json({ error: "Xonalarni olishda xatolik" });
+  }
+});
+
+// Narx hisoblash
+app.post("/calculate-price", async (req, res) => {
+  try {
+    const { roomId, checkIn, duration } = req.body;
+    if (!roomId || !checkIn || !duration) {
+      return res.status(400).json({ error: "Malumot to‘liq emas" });
+    }
+    const price = await getRoomPrice(roomId, checkIn, duration);
+    res.json(price);
+  } catch (err) {
+    console.error("❌ calculate-price xatolik:", err);
+    res.status(500).json({ error: "Narx hisoblashda xatolik" });
+  }
+});
+
+// Bron qilish
+app.post("/confirm-booking", async (req, res) => {
+  try {
+    const bookingData = req.body;
+    const bookingResponse = await createBooking(bookingData);
+
+    // MongoDB ga saqlash
+    const newBooking = new Booking(bookingData);
+    await newBooking.save();
+
+    // Telegram xabari
+    await sendTelegramMessage(`
+*Yangi bron qabul qilindi!*
+
+👤 ${bookingData.firstName} ${bookingData.lastName}
+📞 ${bookingData.phone}
+📧 ${bookingData.email}
+🏨 Xona: ${bookingData.rooms}
+📅 Check-in: ${bookingData.checkIn}
+⏱ Davomiylik: ${bookingData.duration}
+👥 Mehmonlar: ${bookingData.guests || 1}
+💰 Narx: ${bookingData.price} EUR
+    `);
+
+    res.json({ success: true, booking: bookingResponse });
+  } catch (err) {
+    console.error("❌ confirm-booking xatolik:", err);
+    res.status(500).json({ error: "Bron qilishda xatolik" });
+  }
+});
+
+/* ----------------- 🔹 Octo To‘lov Endpointlari ----------------- */
+
+// To‘lov yaratish
 app.post("/create-payment", async (req, res) => {
   try {
     const { amount, description = "Mehmonxona to'lovi", email } = req.body;
@@ -161,43 +237,19 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-app.post("/save-booking", async (req, res) => {
-  try {
-    const bookingData = req.body;
-    const newBooking = new Booking(bookingData);
-    await newBooking.save();
-
-    const message = `
-*Yangi buyurtma qabul qilindi!*
-
-Ism: ${bookingData.firstName}
-Familiya: ${bookingData.lastName}
-Telefon: ${bookingData.phone}
-Email: ${bookingData.email}
-Narxi: ${bookingData.price} UZS
-Xonalar: ${bookingData.rooms}
-Check-in: ${bookingData.checkIn}
-Check-out: ${bookingData.checkOut}
-Booking ID: ${newBooking._id}
-`;
-
-    await sendTelegramMessage(message);
-    res.json({ success: true, bookingId: newBooking._id });
-  } catch (err) {
-    console.error("❌ save-booking xatolik:", err);
-    res.status(500).json({ success: false, error: "Xatolik yuz berdi" });
-  }
-});
-
+// To‘lov muvaffaqiyatli endpointi
 app.post("/success", async (req, res) => {
   try {
     const { total_sum, description, custom_data } = req.body || {};
     const email = custom_data?.email;
 
-    // Email yuborish
     if (email) {
       const amount = Math.round(total_sum / EUR_TO_UZS);
-      await sendEmail(email, "To‘lov muvaffaqiyatli", "✅ Sizning to‘lovingiz amalga oshirildi.");
+      await sendEmail(
+        email,
+        "To‘lov muvaffaqiyatli",
+        "✅ Sizning to‘lovingiz amalga oshirildi."
+      );
       await sendEmail(
         EMAIL_USER,
         "Yangi to‘lov - Khamsa Hotel",
@@ -205,7 +257,6 @@ app.post("/success", async (req, res) => {
       );
     }
 
-    // Telegramga xabar yuborish
     const telegramMessage = `
 *Yangi to‘lov muvaffaqiyatli!*
 
@@ -218,20 +269,23 @@ app.post("/success", async (req, res) => {
 
     await sendTelegramMessage(telegramMessage);
 
-    res.json({ status: "success", message: "Email va Telegram xabar yuborildi" });
+    res.json({
+      status: "success",
+      message: "Email va Telegram xabar yuborildi",
+    });
   } catch (err) {
     console.error("❌ /success xatolik:", err);
     res.status(500).json({ error: "Email yoki Telegram yuborilmadi" });
   }
 });
 
+// To‘lov callback
 app.post("/payment-callback", (req, res) => {
   console.log("🔁 Callback body:", req.body);
   res.json({ status: "callback received" });
 });
 
-// /send-to-telegram endpointi olib tashlandi — endi kerak emas
-
+// ✅ Serverni ishga tushirish
 app.listen(PORT, () => {
   console.log(`✅ Server ishga tushdi: ${BASE_URL} (port: ${PORT})`);
 });
