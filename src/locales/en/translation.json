@@ -33,9 +33,9 @@
   "freecancel": "Free Cancelation",
   "hotel": "Hotel",
   "duration": "Duration",
-  "upTo2Hours": "Up to 3 hours",
+  "upTo3Hours": "Up to 3 hours",
   "upTo10Hours": "Up to 10 hours",
-  "1day": "1 Day",
+  "oneDay": "1 Day",
   "fillAllFields": "Please fill in all fields!",
 
   "roomcardtitle": "Featured Rooms",
@@ -54,7 +54,7 @@
   "roomoutlets": "Power Outlets",
   "roomcafe": "Optional Fan",
   "selectTime": "Select time",
-  "duration_2h": "Up to 2 hours",
+  "duration_2h": "Up to 3 hours",
   "duration_10h": "Up to 10 hours",
   "duration_1d": "1 Day",
   "roomspart": {
@@ -385,7 +385,7 @@
   "check-in-hours": "Check-in Time",
   "totalPrice": "Total Price",
 
-  "up_to_2_hours": "Up to 2 hours",
+  "up_to_2_hours": "Up to 3 hours",
   "up_to_10_hours": "Up to 10 hours",
   "for_a_day": "For a Day",
   "qonoqhotel": "Qo'noq Railway Hotel",

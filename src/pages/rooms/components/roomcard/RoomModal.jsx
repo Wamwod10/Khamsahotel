@@ -21,22 +21,38 @@ const guestCountByRoomType = {
   "Standard + 1 Family room": 4,
 };
 
+// 🔥 PriceTable – faqat inglizcha kalitlar
 const priceTable = {
   "Standard Room": {
-    "Up to 2 hours": 40,
-    "Up to 10 hours": 60,
-    "1 day": 100,
+    upTo3Hours: 40,
+    upTo10Hours: 60,
+    oneDay: 100,
   },
   "Family Room": {
-    "Up to 2 hours": 70,
-    "Up to 10 hours": 100,
-    "1 day": 150,
+    upTo3Hours: 70,
+    upTo10Hours: 100,
+    oneDay: 150,
   },
+};
+
+// 🔧 Duration normalizatsiya qiluvchi funksiya
+const normalizeDuration = (duration) => {
+  if (!duration) return "";
+
+  const d = duration.toLowerCase();
+
+  if (d.includes("3")) return "upTo3Hours";
+  if (d.includes("10")) return "upTo10Hours";
+  if (d.includes("1") && (d.includes("day") || d.includes("kun") || d.includes("день"))) {
+    return "oneDay";
+  }
+
+  return duration; // fallback
 };
 
 const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   const { t } = useTranslation();
-  const API_BASE = import.meta.env.VITE_API_BASE_URL; // 🔥 Backend API manzili
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   const [bookingInfo, setBookingInfo] = useState({
     checkIn: "",
@@ -116,8 +132,9 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       return;
     }
 
-    // 🔥 Narxni hisoblash
-    const price = priceTable[bookingInfo.rooms]?.[bookingInfo.duration] || 0;
+    // 🔥 Narxni hisoblash uchun normalizeDuration ishlatiladi
+    const durationKey = normalizeDuration(bookingInfo.duration);
+    const price = priceTable[bookingInfo.rooms]?.[durationKey] || 0;
 
     const fullBookingInfo = {
       ...bookingInfo,
@@ -129,14 +146,12 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       price,
     };
 
-    // 🔥 1. Local/session storage’da saqlash
     const existingBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
     const updatedBookings = [...existingBookings, fullBookingInfo];
 
     sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
     sessionStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
 
-    // 🔥 2. Backendga POST yuborish
     try {
       const response = await fetch(`${API_BASE}/bookings`, {
         method: "POST",
@@ -176,7 +191,8 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
 
   if (!isOpen) return null;
 
-  const price = priceTable[bookingInfo.rooms]?.[bookingInfo.duration] || "-";
+  const durationKey = normalizeDuration(bookingInfo.duration);
+  const price = priceTable[bookingInfo.rooms]?.[durationKey] || "-";
 
   return (
     <div className="modal-main">
@@ -197,7 +213,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
           </div>
           <div className="modal__section">
             <label>{t("duration")}:</label>
-            <p>{bookingInfo.duration}</p>
+            <p>{t(durationKey)}</p> {/* ✅ Endi tarjima ishlaydi */}
           </div>
           <div className="modal__section">
             <label>{t("rooms")}:</label>

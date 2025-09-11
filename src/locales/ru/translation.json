@@ -33,9 +33,9 @@
   "freecancel": "Бесплатная отмена",
   "hotel": "Отель",
   "duration": "Время",
-  "upTo2Hours": "До 3 часов",
+  "upTo3Hours": "До 3 часов",
   "upTo10Hours": "До 10 часов",
-  "1day": "1 день",
+  "oneDay": "1 день",
   "fillAllFields": "Пожалуйста, заполните все поля!",
 
   "roomcardtitle": "Рекомендуемые номера",

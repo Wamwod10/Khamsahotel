@@ -33,9 +33,9 @@
   "freecancel": "Bekor qilish bepul",
   "hotel": "Mehmonxona",
   "duration": "Davomiyligi",
-  "upTo2Hours": "3 soatgacha",
+  "upTo3Hours": "3 soatgacha",
   "upTo10Hours": "10 soatgacha",
-  "1day": "1 kun",
+  "oneDay": "1 kun",
   "fillAllFields": "Iltimos, barcha maydonlarni to‘ldiring!",
 
   "roomcardtitle": "Tavsiya etilgan xonalar",

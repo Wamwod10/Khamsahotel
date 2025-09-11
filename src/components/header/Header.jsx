@@ -19,7 +19,7 @@ const Header = () => {
 
   const [checkIn, setCheckIn] = useState("");
   const [checkOutTime, setCheckOutTime] = useState("");
-  const [duration, setDuration] = useState("Up to 2 hours");
+  const [duration, setDuration] = useState("Up to 3 hours");
   const [rooms, setRooms] = useState("Standard Room");
 
   const today = new Date().toISOString().split("T")[0];
@@ -29,7 +29,7 @@ const Header = () => {
       localStorage.removeItem("bookingInfo");
       setCheckIn("");
       setCheckOutTime("");
-      setDuration("Up to 2 hours");
+      setDuration("Up to 3 hours");
       setRooms("Standard Room");
     }
   }, [location.state]);
@@ -114,9 +114,9 @@ const Header = () => {
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
                   >
-                    <option>{t("upTo2Hours")}</option>
+                    <option>{t("upTo3Hours")}</option>
                     <option>{t("upTo10Hours")}</option>
-                    <option>{t("1day")}</option>
+                    <option>{t("oneDay")}</option>
                   </select>
                   <FaChevronDown className="select-icon" />
                 </div>
