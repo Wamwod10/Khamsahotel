@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { FaCheck } from "react-icons/fa";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
@@ -21,7 +22,6 @@ const guestCountByRoomType = {
   "Standard + 1 Family room": 4,
 };
 
-// 🔥 PriceTable – faqat inglizcha kalitlar
 const priceTable = {
   "Standard Room": {
     upTo3Hours: 40,
@@ -35,7 +35,6 @@ const priceTable = {
   },
 };
 
-// 🔧 Duration normalizatsiya qiluvchi funksiya
 const normalizeDuration = (duration) => {
   if (!duration) return "";
 
@@ -50,9 +49,32 @@ const normalizeDuration = (duration) => {
   return duration; // fallback
 };
 
+// Yangi SuccessModal komponenti
+const SuccessModal = ({ onStayHere, onGoToMyBooking }) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="modal-main">
+      <div className="modal-overlay" />
+      <div className="modal success-modal" role="dialog" aria-modal="true" aria-labelledby="success-modal-title">
+        <h2 id="success-modal-title">{t("bookingsucced") || "Bron qabul qilindi"} <FaCheck className="modal-icon" /></h2>
+        <p>{t("bookingsuccess")}</p>
+
+        <div className="success-modal-buttons">
+          <button className="btn-stay" onClick={onStayHere}>
+            {t("stayhere") || "Stay here"}
+          </button>
+          <button className="btn-mybooking" onClick={onGoToMyBooking}>
+            {t("mybooking1") || "My Booking"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
   const { t } = useTranslation();
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   const [bookingInfo, setBookingInfo] = useState({
     checkIn: "",
@@ -69,6 +91,8 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     phone: "",
     email: "",
   });
+
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     const savedBooking = localStorage.getItem("bookingInfo");
@@ -111,7 +135,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
     }));
   };
 
-  const handleConfirm = async (e) => {
+  const handleConfirm = (e) => {
     e.preventDefault();
 
     if (!bookingInfo.checkIn || !bookingInfo.checkOutTime) {
@@ -132,7 +156,6 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       return;
     }
 
-    // 🔥 Narxni hisoblash uchun normalizeDuration ishlatiladi
     const durationKey = normalizeDuration(bookingInfo.duration);
     const price = priceTable[bookingInfo.rooms]?.[durationKey] || 0;
 
@@ -142,54 +165,44 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
       lastName,
       phone,
       email,
-      id: Date.now(),
       price,
     };
 
-    const existingBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-    const updatedBookings = [...existingBookings, fullBookingInfo];
-
-    sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
-    sessionStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
-
     try {
-      const response = await fetch(`${API_BASE}/bookings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(fullBookingInfo),
-      });
+      const existingBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
+      const updatedBookings = [...existingBookings, fullBookingInfo];
 
-      if (!response.ok) {
-        throw new Error(`Server xatosi: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("✅ Booking saved to backend:", data);
-
-      toast.success(t("Sizning xonangiz backendga ham saqlandi!"), {
-        position: "top-center",
-        autoClose: 4000,
-      });
+      sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
+      sessionStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
+      localStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
     } catch (err) {
-      console.error("❌ Backend error:", err.message);
-      toast.warn(t("Internet yo‘q yoki server ishlamayapti. Faqat localda saqlandi"), {
+      console.error("❌ LocalStorage error:", err.message);
+      toast.error(t("Ma'lumotlarni saqlashda xatolik yuz berdi!"), {
         position: "top-center",
         autoClose: 4000,
       });
     }
 
-    onClose();
+    // Modalni yopish va success modalni ochish
+    // onClose() ni chaqirmaymiz, success modal ko'rinadi
+    setShowSuccess(true);
+  };
 
-    toast.success(
-      t("Sizning xonangiz bron qilindi, Mening Bronlarim sahifasida ko'rishingiz mumkin"),
-      {
-        position: "top-center",
-        autoClose: 4000,
-      }
-    );
+  const handleStayHere = () => {
+    setShowSuccess(false);
+    onClose();
+  };
+
+  const handleGoToMyBooking = () => {
+    // Bu yerda My Booking sahifasiga redirect qilasiz, misol uchun:
+    window.location.href = "/mybooking";
   };
 
   if (!isOpen) return null;
+
+  if (showSuccess) {
+    return <SuccessModal onStayHere={handleStayHere} onGoToMyBooking={handleGoToMyBooking} />;
+  }
 
   const durationKey = normalizeDuration(bookingInfo.duration);
   const price = priceTable[bookingInfo.rooms]?.[durationKey] || "-";
@@ -213,7 +226,7 @@ const RoomModal = ({ isOpen, onClose, guests, rooms }) => {
           </div>
           <div className="modal__section">
             <label>{t("duration")}:</label>
-            <p>{t(durationKey)}</p> {/* ✅ Endi tarjima ishlaydi */}
+            <p>{t(durationKey)}</p>
           </div>
           <div className="modal__section">
             <label>{t("rooms")}:</label>

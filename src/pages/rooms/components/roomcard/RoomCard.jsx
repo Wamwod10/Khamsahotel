@@ -5,9 +5,8 @@ import "./Rmedia/RCmedia.scss";
 import { FaWifi, FaRulerCombined, FaFan } from "react-icons/fa";
 import { PiHairDryerBold } from "react-icons/pi";
 import { MdCleaningServices, MdHeadsetMic } from "react-icons/md";
-import { GiHanger } from "react-icons/gi";
+import { GiHanger, GiCctvCamera } from "react-icons/gi";
 import { FiUser, FiMapPin } from "react-icons/fi";
-import { GiCctvCamera } from "react-icons/gi";
 import { LuCoffee } from "react-icons/lu";
 import { BsFillUsbPlugFill } from "react-icons/bs";
 
@@ -30,6 +29,7 @@ const RoomCard = () => {
   const [selectedRoomType, setSelectedRoomType] = useState("Standard Room");
 
   useEffect(() => {
+    // LocalStorage dan booking info ni o'qib selectedRoomType ni yangilash
     const bookingInfo = localStorage.getItem("bookingInfo");
     if (bookingInfo) {
       try {
@@ -43,27 +43,38 @@ const RoomCard = () => {
     }
   }, []);
 
+  // Modalni ochishdan oldin mehmon soni uchun tekshiruvlar
   const openModalWithCheck = (roomData) => {
     if (roomData.type === "Standard Room" && roomData.guests > 1) {
-      setNoticeMessage(
-        "Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz"
-      );
+      setNoticeMessage(t("standardRoomGuestLimit") || "Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz");
       setShowNotice(true);
       return;
     }
 
     if (roomData.type === "Family Room" && roomData.guests > 3) {
-      setNoticeMessage(
-        "Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz"
-      );
+      setNoticeMessage(t("familyRoomGuestLimit") || "Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz");
       setShowNotice(true);
       return;
     }
 
+    // Agar bookingInfo dan sana bor bo'lsa, uni ham uzatish mumkin
+    const bookingInfo = localStorage.getItem("bookingInfo");
+    let checkInDate = new Date().toLocaleDateString();
+    let checkOutDate = new Date(Date.now() + 86400000).toLocaleDateString();
+
+    if (bookingInfo) {
+      try {
+        const parsed = JSON.parse(bookingInfo);
+        if (parsed.checkIn) checkInDate = parsed.checkIn;
+        if (parsed.checkOut) checkOutDate = parsed.checkOut;
+      } catch {}
+
+    }
+
     setSelectedRoom({
       ...roomData,
-      checkIn: new Date().toLocaleDateString(),
-      checkOut: new Date(Date.now() + 86400000).toLocaleDateString(),
+      checkIn: checkInDate,
+      checkOut: checkOutDate,
     });
     setIsModalOpen(true);
   };
@@ -93,20 +104,14 @@ const RoomCard = () => {
                   src={img}
                   alt={`Room view ${idx + 1}`}
                   loading="lazy"
-                  className={`room-card__thumbnail ${
-                    mainImage === img ? "active" : ""
-                  }`}
+                  className={`room-card__thumbnail ${mainImage === img ? "active" : ""}`}
                   onClick={() => setMainImage(img)}
                 />
               ))}
             </div>
 
             <div className="room-card__image-wrapper">
-              <img
-                src={mainImage}
-                alt="Main Room"
-                className="room-card__image"
-              />
+              <img src={mainImage} alt="Main Room" className="room-card__image" />
             </div>
 
             <div className="room-card__body">
@@ -121,8 +126,7 @@ const RoomCard = () => {
 
               <h3 className="room-card__room-title">{t("standard")}</h3>
               <p className="room-card__info">
-                <FiUser /> 1 {t("guest")} &nbsp; | &nbsp; <FaRulerCombined />{" "}
-                3.2 m²
+                <FiUser /> 1 {t("guest")} &nbsp; | &nbsp; <FaRulerCombined /> 3.2 m²
               </p>
               <p className="room-card__location">
                 <FiMapPin /> {t("TashkentAirportHotel")}
@@ -186,20 +190,14 @@ const RoomCard = () => {
                   src={img}
                   alt={`Room view ${idx + 1}`}
                   loading="lazy"
-                  className={`room-card__thumbnail ${
-                    familyImage === img ? "active" : ""
-                  }`}
+                  className={`room-card__thumbnail ${familyImage === img ? "active" : ""}`}
                   onClick={() => setFamilyImage(img)}
                 />
               ))}
             </div>
 
             <div className="room-card__image-wrapper">
-              <img
-                src={familyImage}
-                alt="Main Room"
-                className="room-card__image"
-              />
+              <img src={familyImage} alt="Main Room" className="room-card__image" />
             </div>
 
             <div className="room-card__body">
@@ -212,9 +210,9 @@ const RoomCard = () => {
                 <p className="room-card__number">{t("numberrooms")}: 1</p>
               </div>
 
-              <h3 className="room-card__room-title">Family Room</h3>
+              <h3 className="room-card__room-title">{t("family") || "Family Room"}</h3>
               <p className="room-card__info">
-                <FiUser /> 3 Guests &nbsp; | &nbsp; <FaRulerCombined />  7.5 m²
+                <FiUser /> 3 {t("guests")} &nbsp; | &nbsp; <FaRulerCombined /> 7.5 m²
               </p>
               <p className="room-card__location">
                 <FiMapPin /> {t("TashkentAirportHotel")}
@@ -269,10 +267,7 @@ const RoomCard = () => {
       </div>
 
       {showNotice && (
-        <NoticePopup
-          message={noticeMessage}
-          onOk={() => setShowNotice(false)}
-        />
+        <NoticePopup message={noticeMessage} onOk={() => setShowNotice(false)} />
       )}
 
       {isModalOpen && selectedRoom && (
@@ -281,6 +276,9 @@ const RoomCard = () => {
           onClose={() => setIsModalOpen(false)}
           guests={selectedRoom.guests}
           rooms={selectedRoom.type}
+          checkIn={selectedRoom.checkIn}
+          checkOut={selectedRoom.checkOut}
+          hotel={selectedRoom.hotel}
         />
       )}
     </div>

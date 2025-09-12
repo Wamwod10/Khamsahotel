@@ -3,7 +3,6 @@ import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
-import { getRooms, getRoomPrice, createBooking } from "./bnovo.js";
 
 dotenv.config();
 
@@ -19,13 +18,12 @@ const {
   EMAIL_PASS,
 } = process.env;
 
-// ✅ Muhim env tekshirish
+// ✅ Muhim env tekshirish (BNOVO_API_KEY olib tashlandi)
 [
   "OCTO_SHOP_ID",
   "OCTO_SECRET",
   "EMAIL_USER",
   "EMAIL_PASS",
-  "BNOVO_API_KEY",
 ].forEach((key) => {
   if (!process.env[key]) {
     console.error(`❌ ${key} .env faylida yo‘q!`);
@@ -64,51 +62,13 @@ async function sendEmail(to, subject, text) {
 app.use(
   cors({
     origin: ["https://khamsahotel.uz", "https://www.khamsahotel.uz"],
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
 );
 app.use(express.json());
 
-/* ----------------- 🔹 Bnovo Endpointlari ----------------- */
-
-// Xonalar ro‘yxatini olish
-app.get("/get-rooms", async (req, res) => {
-  try {
-    const rooms = await getRooms();
-    res.json(rooms);
-  } catch (err) {
-    console.error("❌ get-rooms xatolik:", err);
-    res.status(500).json({ error: "Xonalarni olishda xatolik" });
-  }
-});
-
-// Narx hisoblash
-app.post("/calculate-price", async (req, res) => {
-  try {
-    const { roomId, checkIn, duration } = req.body;
-    if (!roomId || !checkIn || !duration) {
-      return res.status(400).json({ error: "Malumot to‘liq emas" });
-    }
-    const price = await getRoomPrice(roomId, checkIn, duration);
-    res.json(price);
-  } catch (err) {
-    console.error("❌ calculate-price xatolik:", err);
-    res.status(500).json({ error: "Narx hisoblashda xatolik" });
-  }
-});
-
-// Bron qilish
-app.post("/confirm-booking", async (req, res) => {
-  try {
-    const bookingData = req.body;
-    const bookingResponse = await createBooking(bookingData);
-    res.json({ success: true, booking: bookingResponse });
-  } catch (err) {
-    console.error("❌ confirm-booking xatolik:", err);
-    res.status(500).json({ error: "Bron qilishda xatolik" });
-  }
-});
+/* ----------------- 🔹 Bnovo bilan bog‘liq endpointlar olib tashlandi ----------------- */
 
 /* ----------------- 🔹 Octo To‘lov Endpointlari ----------------- */
 

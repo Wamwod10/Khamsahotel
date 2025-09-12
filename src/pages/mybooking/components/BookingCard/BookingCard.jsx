@@ -27,7 +27,9 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
     return timeStr.slice(0, 5);
   };
 
-  const roomLabel = booking.rooms ? t(roomKeyMap[booking.rooms] || booking.rooms) : "-";
+  const roomLabel = booking.rooms
+    ? t(roomKeyMap[booking.rooms] || booking.rooms)
+    : "-";
 
   return (
     <div className="booking-card">

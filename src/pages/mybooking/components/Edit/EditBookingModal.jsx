@@ -26,14 +26,6 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
     email: "",
   });
 
-  {
-    durationOptions.map((option) => (
-      <option key={option.value} value={option.value}>
-        {t(option.label)}
-      </option>
-    ));
-  }
-
   useEffect(() => {
     if (booking) {
       setEditData({
@@ -56,35 +48,10 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
     setEditData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 🔥 Backend PUT so‘rovi qo‘shildi
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-
-    try {
-      const response = await fetch(
-        `http://localhost:5000/bookings/${booking.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(editData),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update booking");
-      }
-
-      const updatedBooking = await response.json();
-
-      // 🔥 Backenddan kelgan yangi ma’lumotni onSave ga beramiz
-      onSave(updatedBooking);
-    } catch (error) {
-      console.error("Error updating booking:", error);
-      alert("Booking update failed. Please try again.");
-    }
-
+    // BNOVO API qismi olib tashlandi, shuning uchun faqat onSave chaqiriladi
+    onSave(editData);
     onClose();
   };
 
@@ -174,6 +141,7 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
               onChange={handleChange}
             />
           </label>
+
           {/* Last Name */}
           <label>
             {t("editmodal_lastname")}
