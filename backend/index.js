@@ -18,7 +18,7 @@ const {
   EMAIL_PASS,
 } = process.env;
 
-// ✅ Muhim env tekshirish (BNOVO_API_KEY olib tashlandi)
+// ✅ Muhim env tekshirish
 [
   "OCTO_SHOP_ID",
   "OCTO_SECRET",
@@ -67,8 +67,6 @@ app.use(
   })
 );
 app.use(express.json());
-
-/* ----------------- 🔹 Bnovo bilan bog‘liq endpointlar olib tashlandi ----------------- */
 
 /* ----------------- 🔹 Octo To‘lov Endpointlari ----------------- */
 
@@ -162,7 +160,67 @@ app.post("/payment-callback", (req, res) => {
   res.json({ status: "callback received" });
 });
 
-// ✅ Serverni ishga tushirish
+/* ----------------- 🔹 Admin Email Endpoint qo‘shildi ----------------- */
+
+// ✅ Email yuborish (mijoz va admin uchun) - frontenddan keladi
+app.post("/send-email", async (req, res) => {
+  try {
+    const {
+      to,
+      subject,
+      text,
+      subjectru,
+      textru,
+      adminInfo
+    } = req.body;
+
+    // 1️⃣ Mijozga email yuborish
+    if (to && subject && text) {
+      await sendEmail(to, subject, text);
+    }
+
+    // 2️⃣ Admin email
+    if (adminInfo) {
+      const {
+        checkIn,
+        checkInTime,
+        roomType,
+        duration,
+        price,
+        firstName,
+        lastName,
+        phone,
+        email
+      } = adminInfo;
+
+      const adminText = `
+Yangi to‘lov haqida ma'lumot:
+
+👤 Mijoz: ${firstName} ${lastName}
+📧 Email: ${email}
+📞 Telefon: ${phone}
+
+🏨 Xona turi: ${roomType}
+📅 Check-In: ${checkIn}
+⏰ Check-In vaqti: ${checkInTime}
+🕒 Davomiylik: ${duration}
+💰 Narxi: ${price}
+
+Sayt orqali to‘lov amalga oshirildi.
+      `.trim();
+
+      await sendEmail("shamshodochilov160@gmail.com", "🆕 Yangi buyurtma - Khamsa Hotel", adminText);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("❌ /send-email xatolik:", err.message || err);
+    res.status(500).json({ success: false, error: "Email yuborishda xatolik" });
+  }
+});
+
+/* ----------------- 🔹 Server ishga tushishi ----------------- */
+
 app.listen(PORT, () => {
   console.log(`✅ Server ishga tushdi: ${BASE_URL} (port: ${PORT})`);
 });
