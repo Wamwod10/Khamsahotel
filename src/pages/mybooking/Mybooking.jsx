@@ -9,11 +9,9 @@ const MyBooking = () => {
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  // Load bookings on mount
   useEffect(() => {
     const savedBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
 
-    // Ensure each booking has an id
     const normalizedBookings = savedBookings.map((b) => ({
       ...b,
       id: b.id || uuidv4(),
@@ -48,14 +46,42 @@ const MyBooking = () => {
     saveBookingsToStorage(filtered);
   };
 
+  // Summa, EURda deb hisoblaymiz
   const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (totalAmount === 0) {
       alert("To‘lov uchun summa mavjud emas");
       return;
     }
-    alert("To‘lov funksiyasi mavjud emas");
+
+    const latestBooking = bookings[0];
+    if (!latestBooking || !latestBooking.email) {
+      alert("Email ma'lumotlari mavjud emas");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/create-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: totalAmount,
+          description: `Booking Payment for ${latestBooking.firstName} ${latestBooking.lastName}`,
+          email: latestBooking.email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        alert(`To‘lov yaratishda xatolik: ${data.error || "Noma'lum xatolik"}`);
+      }
+    } catch (error) {
+      alert(`To‘lov yaratishda xatolik yuz berdi: ${error.message || error}`);
+    }
   };
 
   const addNewBooking = () => {

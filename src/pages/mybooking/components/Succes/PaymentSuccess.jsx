@@ -32,7 +32,7 @@ const PaymentSuccess = () => {
             lastName: latest.lastName,
             phone: latest.phone,
             email: latest.email,
-          }
+          },
         }),
       })
         .then((res) => res.json())
@@ -70,7 +70,8 @@ const PaymentSuccess = () => {
       </div>
       <h1>To‘lov muvaffaqiyatli bajarildi!</h1>
       <p className="message">
-        Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi. Sizga tasdiqnoma email orqali yuborildi.
+        Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi. Sizga tasdiqnoma
+        email orqali yuborildi.
       </p>
       <a className="back-home" href="/">
         Bosh sahifaga qaytish
