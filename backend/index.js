@@ -169,8 +169,6 @@ app.post("/send-email", async (req, res) => {
       to,
       subject,
       text,
-      subjectru,
-      textru,
       adminInfo
     } = req.body;
 
