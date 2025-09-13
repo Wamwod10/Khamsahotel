@@ -10,13 +10,12 @@ class BnovoAPI {
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "apikey": this.apiKey, // API kalitni headerga qo'shish
+        "apikey": this.apiKey, 
       },
-      timeout: 10000, // 10 soniya timeout
+      timeout: 10000,
     });
-  }
-
-  // 🏨 1. Xonalarni olish (GET /room)
+  } 
+  
   async getRooms() {
     try {
       const response = await this.client.get("/room");
