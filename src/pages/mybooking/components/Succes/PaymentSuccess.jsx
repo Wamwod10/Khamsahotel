@@ -14,18 +14,13 @@ const PaymentSuccess = () => {
       const emailData = {
         to: latest.email,
         subject: "Information For Invoice",
-        text: `Thank you for choosing to stay with us via Khamsahotel.uz! Please be informed that we are a SLEEP LOUNGE located inside the airport within the transit area. ...`, // to‘liq matnni qo‘shing
-        adminInfo: {
-          checkIn: latest.checkIn,
-          checkInTime: latest.checkInTime,
-          roomType: latest.roomType,
-          duration: latest.duration,
-          price: latest.price,
-          firstName: latest.firstName,
-          lastName: latest.lastName,
-          phone: latest.phone,
-          email: latest.email,
-        },
+        text: `Thank you for choosing to stay with us via Khamsahotel.uz! Please be informed that we are a SLEEP LOUNGE located inside the airport within the transit area. In order to stay with us you must be in possession of a valid boarding pass departing from Tashkent Airport. If your flight commences from Tashkent, kindly verify with your airline first if you can check-in early for your flight as you'll need to go through passport control and security before you may access our lounge.
+
+IMPORTANT NOTE: We will never ask you for your credit card details or share any messages with links with you via Khamsahotel.uz for online payments or reconfirmation of your reservation with sleep ’n fly.
+
+In case of any doubt about your booking status with us please check via the Khamsahotel.uz website or app only, call Khamsahotel.uz, or contact us directly on +998 95 877 24 24 (tel/WhatsApp/Telegram) or qonoqhotel@mail.ru
+
+Your Reservations Team`,
       };
 
       fetch(`${API_BASE}/send-email`, {
@@ -36,7 +31,7 @@ const PaymentSuccess = () => {
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
-            console.log("✅ Email yuborildi: mijoz + admin");
+            console.log("✅ Email mijozga yuborildi");
           } else {
             console.error("❌ Email yuborishda xatolik:", data.error);
           }
