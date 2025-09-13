@@ -49,40 +49,49 @@ const MyBooking = () => {
   // Summa, EURda deb hisoblaymiz
   const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
-  const handlePayment = async () => {
-    if (totalAmount === 0) {
-      alert("To‘lov uchun summa mavjud emas");
-      return;
+const handlePayment = async () => {
+  if (totalAmount === 0) {
+    alert("To‘lov uchun summa mavjud emas");
+    return;
+  }
+
+  const latestBooking = bookings[0];
+  if (!latestBooking || !latestBooking.email) {
+    alert("Email ma'lumotlari mavjud emas");
+    return;
+  }
+
+  try {
+    // 1. Bookingni saqlash
+    await fetch("http://localhost:5005/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(latestBooking),
+    });
+
+    // 2. To‘lov uchun so‘rov
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/create-payment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: totalAmount,
+        description: `Booking Payment for ${latestBooking.firstName} ${latestBooking.lastName}`,
+        email: latestBooking.email,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.paymentUrl) {
+      window.location.href = data.paymentUrl;
+    } else {
+      alert(`To‘lov yaratishda xatolik: ${data.error || "Noma'lum xatolik"}`);
     }
+  } catch (error) {
+    alert(`Xatolik: ${error.message || error}`);
+  }
+};
 
-    const latestBooking = bookings[0];
-    if (!latestBooking || !latestBooking.email) {
-      alert("Email ma'lumotlari mavjud emas");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/create-payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: totalAmount,
-          description: `Booking Payment for ${latestBooking.firstName} ${latestBooking.lastName}`,
-          email: latestBooking.email,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      } else {
-        alert(`To‘lov yaratishda xatolik: ${data.error || "Noma'lum xatolik"}`);
-      }
-    } catch (error) {
-      alert(`To‘lov yaratishda xatolik yuz berdi: ${error.message || error}`);
-    }
-  };
 
   const addNewBooking = () => {
     window.location.href = "/";

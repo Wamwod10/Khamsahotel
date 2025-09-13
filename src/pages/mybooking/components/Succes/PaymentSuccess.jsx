@@ -8,8 +8,9 @@ const PaymentSuccess = () => {
 
   useEffect(() => {
     const allBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-    const latest = allBookings[0];
 
+    // 1. Email jo‘natish (avvalgi kod)
+    const latest = allBookings[0];
     if (latest) {
       const emailData = {
         to: latest.email,
@@ -27,20 +28,24 @@ Your Reservations Team`,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(emailData),
-      })
+      }).then((res) => res.json()).then((data) => {
+        if (data.success) console.log("✅ Email yuborildi");
+      });
+
+      // 2. Telegramga yuborish
+      fetch("http://localhost:5005/api/notify-latest-booking")
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
-            console.log("✅ Email mijozga yuborildi");
+            console.log("📨 Telegramga yuborildi");
           } else {
-            console.error("❌ Email yuborishda xatolik:", data.error);
+            console.warn("❌ Telegram yuborilmadi:", data.error);
           }
         })
-        .catch((err) => {
-          console.error("🔴 Email yuborishda xatolik:", err);
-        });
+        .catch((err) => console.error("🔴 Telegram xatolik:", err));
     }
   }, []);
+
 
   return (
     <div className="payment-success-container">
