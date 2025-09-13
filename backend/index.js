@@ -5,12 +5,14 @@ import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
+import BnovoAPI from "./bnovo.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5002;
-const BASE_URL = process.env.BASE_URL || "https://khamsahotel.uz";
+const BASE_URL = process.env.BASE_URL || "https://hotel-backend-bmlk.onrender.com";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://khamsahotel.uz";
 const EUR_TO_UZS = 14000;
 
 const {
@@ -18,9 +20,12 @@ const {
   OCTO_SECRET,
   EMAIL_USER,
   EMAIL_PASS,
+  BNOVO_API_KEY,
+  BNOVO_API_BASE,
 } = process.env;
 
-if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS) {
+// .env tekshiruv
+if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS || !BNOVO_API_KEY) {
   console.error("❌ .env faylida kerakli ma'lumotlar yo‘q");
   process.exit(1);
 }
@@ -36,7 +41,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Email yuborish funksiyasi (faqat mijozga)
+// Email yuborish funksiyasi
 async function sendEmail(to, subject, text) {
   if (!to || !subject || !text) return;
   try {
@@ -54,17 +59,17 @@ async function sendEmail(to, subject, text) {
 
 // Middleware
 app.use(cors({
-  origin: ["https://khamsahotel.uz", "https://www.khamsahotel.uz"],
+  origin: [FRONTEND_URL, `${FRONTEND_URL}/`],
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type"],
 }));
 app.use(express.json());
 
-// To‘lov yaratish
+// Octobank orqali to‘lov yaratish
 app.post("/create-payment", async (req, res) => {
   try {
     const { amount, description = "Mehmonxona to'lovi", email } = req.body;
-    if (!amount || !email) return res.status(400).json({ error: "Malumot yetarli emas" });
+    if (!amount || !email) return res.status(400).json({ error: "Ma'lumot yetarli emas" });
 
     const amountUZS = Math.round(amount * EUR_TO_UZS);
     const paymentData = {
@@ -77,7 +82,7 @@ app.post("/create-payment", async (req, res) => {
       total_sum: amountUZS,
       currency: "UZS",
       description: `${description} (${amount} EUR)`,
-      return_url: `${BASE_URL}/success`,
+      return_url: `${FRONTEND_URL}/success`,
       notify_url: `${BASE_URL}/payment-callback`,
       language: "uz",
       custom_data: { email },
@@ -95,7 +100,7 @@ app.post("/create-payment", async (req, res) => {
     if (data.error === 0 && data.data?.octo_pay_url) {
       res.json({ paymentUrl: data.data.octo_pay_url });
     } else {
-      res.status(400).json({ error: data.errMessage || "Octo xatosi" });
+      res.status(400).json({ error: data.errMessage || "Octobank xatosi" });
     }
   } catch (err) {
     console.error("❌ create-payment xatolik:", err);
@@ -103,7 +108,7 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// Faqat mijozga email yuborish
+// Email yuborish endpoint
 app.post("/send-email", async (req, res) => {
   try {
     const { to, subject, text } = req.body;
@@ -120,13 +125,90 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
-// Callback (optional)
+// Octobank callback
 app.post("/payment-callback", (req, res) => {
   console.log("🔁 Callback body:", req.body);
   res.json({ status: "callback received" });
 });
 
-// Serverni ishga tushirish
+// Bnovo API client yaratamiz
+const bnovo = new BnovoAPI(BNOVO_API_KEY, BNOVO_API_BASE);
+
+// Booking endpoint — Bnovoga bron yuborish
+app.post("/api/bookings", async (req, res) => {
+  try {
+    const {
+      checkIn,
+      checkOutTime,
+      duration,
+      rooms,
+      guests,
+      hotel,
+      firstName,
+      lastName,
+      phone,
+      email,
+      price,
+    } = req.body;
+
+    if (!checkIn || !checkOutTime || !rooms || !firstName || !email) {
+      return res.status(400).json({ error: "Kerakli ma'lumotlar yetarli emas" });
+    }
+
+    // Checkout hisoblash
+    const getCheckoutDate = (checkIn, duration) => {
+      const date = new Date(checkIn);
+      if (duration.includes("3")) date.setHours(date.getHours() + 3);
+      else if (duration.includes("10")) date.setHours(date.getHours() + 10);
+      else date.setDate(date.getDate() + 1); // 1 kun
+      return date.toISOString().split("T")[0];
+    };
+
+    const checkOut = getCheckoutDate(checkIn, duration);
+
+    // Xonalarni mapping qilish
+    const roomTypeMap = {
+      "Standard Room": 117445,
+      "Family Room": 117446,
+      "2 Standard Rooms": 117445,
+      "2 Family Rooms": 117446,
+      "Standard + 1 Family room": 117447,
+    };
+
+    const room_type_id = roomTypeMap[rooms] || 117445;
+
+    const bookingPayload = {
+      date_from: checkIn,
+      date_to: checkOut,
+      rooms: [
+        {
+          room_type_id: room_type_id,
+          guests: guests,
+        },
+      ],
+      customer: {
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone,
+        email: email,
+      },
+      comment: `Xona: ${rooms} | Narx: ${price} EUR | Sayt: ${FRONTEND_URL}`,
+    };
+
+    const bnovoResponse = await bnovo.createBooking(bookingPayload);
+
+    res.json({
+      success: true,
+      message: "Bron muvaffaqiyatli yuborildi",
+      bnovoData: bnovoResponse,
+    });
+  } catch (error) {
+    console.error("❌ Bnovo booking xatolik:", error.message);
+    res.status(500).json({ error: "Bron qilishda server xatosi" });
+  }
+});
+
+// Serverni ishga tushiramiz
 app.listen(PORT, () => {
   console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
 });
