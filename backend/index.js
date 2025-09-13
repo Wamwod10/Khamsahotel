@@ -36,7 +36,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Email yuborish funksiyasi
+// Email yuborish funksiyasi (faqat mijozga)
 async function sendEmail(to, subject, text) {
   if (!to || !subject || !text) return;
   try {
@@ -103,48 +103,17 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// Email yuborish (mijoz + admin)
+// Faqat mijozga email yuborish
 app.post("/send-email", async (req, res) => {
   try {
-    const { to, subject, text, adminInfo } = req.body;
+    const { to, subject, text } = req.body;
 
     if (to && subject && text) {
       await sendEmail(to, subject, text);
+      return res.json({ success: true });
     }
 
-    if (adminInfo) {
-      const {
-        checkIn,
-        checkInTime,
-        roomType,
-        duration,
-        price,
-        firstName,
-        lastName,
-        phone,
-        email,
-      } = adminInfo;
-
-      const adminText = `
-🆕 Yangi buyurtma:
-
-👤 Mijoz: ${firstName} ${lastName}
-📧 Email: ${email}
-📞 Telefon: ${phone}
-
-🏨 Xona turi: ${roomType}
-📅 Check-In: ${checkIn}
-⏰ Check-In vaqti: ${checkInTime}
-🕒 Davomiylik: ${duration}
-💰 Narxi: ${price}
-
-Sayt orqali to‘lov amalga oshirildi.
-`.trim();
-
-      await sendEmail("shamshodochilov160@gmail.com", "🆕 Yangi buyurtma - Khamsa Hotel", adminText);
-    }
-
-    res.json({ success: true });
+    res.status(400).json({ success: false, error: "To‘liq ma’lumot yuborilmadi" });
   } catch (err) {
     console.error("❌ /send-email xatolik:", err);
     res.status(500).json({ success: false, error: "Email yuborilmadi" });
