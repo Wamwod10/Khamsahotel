@@ -146,7 +146,6 @@ app.post("/send-email", async (req, res) => {
         duration,
         price,
         firstName,
-        lastName,
         phone,
         email,
       } = adminInfo;
