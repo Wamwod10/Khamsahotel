@@ -98,7 +98,7 @@ app.post("/create-payment", async (req, res) => {
       res.status(400).json({ error: data.errMessage || "Octo xatosi" });
     }
   } catch (err) {
-    console.error("❌ create-payment xatolik:", err);
+    console.error("❌ payment xatolik:", err);
     res.status(500).json({ error: "Server xatosi" });
   }
 });
