@@ -5,7 +5,11 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+<<<<<<< HEAD
      "start": "concurrently \"node index.js\" \"node bookingBot.js\""
+=======
+    "start": "concurrently \"node index.js\" \"node bookingBot.js\""
+>>>>>>> 0e765f8 (dda)
   },
   "dependencies": {
     "axios": "^1.11.0",
@@ -21,6 +25,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+<<<<<<< HEAD
     "concurrently": "^9.2.1"
+=======
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.10"
+>>>>>>> 0e765f8 (dda)
   }
 }
