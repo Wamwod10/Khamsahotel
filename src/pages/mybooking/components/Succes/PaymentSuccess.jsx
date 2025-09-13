@@ -1,5 +1,3 @@
-// PaymentSuccess.jsx
-
 import React, { useEffect } from "react";
 import "./PaymentSuccess.scss";
 
