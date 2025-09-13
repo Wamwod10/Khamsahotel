@@ -1,10 +1,11 @@
+// index.js
+
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 
-// 🔧 ENV o‘qish
 dotenv.config();
 
 const app = express();
@@ -19,15 +20,12 @@ const {
   EMAIL_PASS,
 } = process.env;
 
-// 🔐 Muhim env kalitlar mavjudligini tekshirish
-["OCTO_SHOP_ID", "OCTO_SECRET", "EMAIL_USER", "EMAIL_PASS"].forEach((key) => {
-  if (!process.env[key]) {
-    console.error(`❌ .env faylida ${key} yo‘q!`);
-    process.exit(1);
-  }
-});
+if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS) {
+  console.error("❌ .env faylida kerakli ma'lumotlar yo‘q");
+  process.exit(1);
+}
 
-// 📧 Nodemailer sozlamalari
+// Nodemailer sozlamalari
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -38,29 +36,23 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// 📬 Email yuboruvchi funksiya
+// Email yuborish funksiyasi
 async function sendEmail(to, subject, text) {
+  if (!to || !subject || !text) return;
   try {
-    if (!to || !subject || !text) {
-      console.warn("⚠️ sendEmail: parametrlar to‘liq emas");
-      return;
-    }
-
-    console.log(`📤 Email yuborilmoqda: ${to} | ${subject}`);
     const info = await transporter.sendMail({
       from: `"Khamsa Hotel" <${EMAIL_USER}>`,
       to,
       subject,
       text,
     });
-
-    console.log("✅ Email yuborildi:", info.messageId);
+    console.log(`✅ Email yuborildi: ${to}`);
   } catch (err) {
     console.error("❌ Email yuborishda xatolik:", err.message || err);
   }
 }
 
-// 🔧 Middleware
+// Middleware
 app.use(cors({
   origin: ["https://khamsahotel.uz", "https://www.khamsahotel.uz"],
   methods: ["GET", "POST"],
@@ -68,22 +60,13 @@ app.use(cors({
 }));
 app.use(express.json());
 
-/* ----------------------------- 💳 OCTO TO‘LOV ----------------------------- */
-
 // To‘lov yaratish
 app.post("/create-payment", async (req, res) => {
   try {
     const { amount, description = "Mehmonxona to'lovi", email } = req.body;
-
-    if (!amount || typeof amount !== "number" || amount <= 0) {
-      return res.status(400).json({ error: "Noto‘g‘ri amount qiymati" });
-    }
-    if (!email || typeof email !== "string") {
-      return res.status(400).json({ error: "Email kiritilishi shart" });
-    }
+    if (!amount || !email) return res.status(400).json({ error: "Malumot yetarli emas" });
 
     const amountUZS = Math.round(amount * EUR_TO_UZS);
-
     const paymentData = {
       octo_shop_id: Number(OCTO_SHOP_ID),
       octo_secret: OCTO_SECRET,
@@ -107,18 +90,12 @@ app.post("/create-payment", async (req, res) => {
     });
 
     const responseText = await response.text();
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      console.error("❌ Octo noto‘g‘ri JSON:", responseText);
-      return res.status(500).json({ error: "Octo noto‘g‘ri javob" });
-    }
+    const data = JSON.parse(responseText);
 
     if (data.error === 0 && data.data?.octo_pay_url) {
-      return res.json({ paymentUrl: data.data.octo_pay_url });
+      res.json({ paymentUrl: data.data.octo_pay_url });
     } else {
-      return res.status(400).json({ error: data.errMessage || "Octo xatosi" });
+      res.status(400).json({ error: data.errMessage || "Octo xatosi" });
     }
   } catch (err) {
     console.error("❌ create-payment xatolik:", err);
@@ -126,18 +103,15 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-/* ------------------------- 📧 Email yuborish (mijoz + admin) ------------------------- */
-
+// Email yuborish (mijoz + admin)
 app.post("/send-email", async (req, res) => {
   try {
     const { to, subject, text, adminInfo } = req.body;
 
-    // 1️⃣ Mijozga email yuborish
     if (to && subject && text) {
       await sendEmail(to, subject, text);
     }
 
-    // 2️⃣ Admin uchun email yuborish
     if (adminInfo) {
       const {
         checkIn,
@@ -146,6 +120,7 @@ app.post("/send-email", async (req, res) => {
         duration,
         price,
         firstName,
+        lastName,
         phone,
         email,
       } = adminInfo;
@@ -163,7 +138,7 @@ app.post("/send-email", async (req, res) => {
 🕒 Davomiylik: ${duration}
 💰 Narxi: ${price}
 
-To‘lov sayt orqali amalga oshirildi.
+Sayt orqali to‘lov amalga oshirildi.
 `.trim();
 
       await sendEmail("shamshodochilov160@gmail.com", "🆕 Yangi buyurtma - Khamsa Hotel", adminText);
@@ -171,20 +146,18 @@ To‘lov sayt orqali amalga oshirildi.
 
     res.json({ success: true });
   } catch (err) {
-    console.error("❌ /send-email xatolik:", err.message || err);
+    console.error("❌ /send-email xatolik:", err);
     res.status(500).json({ success: false, error: "Email yuborilmadi" });
   }
 });
 
-/* ------------------------- 🔁 Octo Callback (ixtiyoriy) ------------------------- */
-
+// Callback (optional)
 app.post("/payment-callback", (req, res) => {
   console.log("🔁 Callback body:", req.body);
   res.json({ status: "callback received" });
 });
 
-/* ------------------------- 🚀 Serverni ishga tushirish ------------------------- */
-
+// Serverni ishga tushirish
 app.listen(PORT, () => {
-  console.log(`✅ Server ishga tushdi: ${BASE_URL} (port: ${PORT})`);
+  console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
 });
