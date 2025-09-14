@@ -65,9 +65,9 @@ We will never ask you for your credit card details or send links via Khamsahotel
 If you have any doubts about your booking status, please check via the Khamsahotel.uz website or app only, 
 call us at +998 95 877 24 24 (tel/WhatsApp/Telegram), or email us at qonoqhotel@mail.ru
 
----------------------------
+------------------------------
 🔔 YOUR BOOKING DETAILS
----------------------------
+------------------------------
 
 👤 Guest: ${firstName} ${lastName}
 📧 Email: ${email}
@@ -80,8 +80,8 @@ call us at +998 95 877 24 24 (tel/WhatsApp/Telegram), or email us at qonoqhotel@
 📆 Duration: ${duration}
 💶 Price: ${price ? `${price}€` : "-"}
 
----------------------------
-Thank you for your reservation. We look forward to welcoming you!
+-------------------------------------
+Thank you for your reservation. We look forward to welcoming you! 
 
 - Khamsa Sleep Lounge Team
 `;
