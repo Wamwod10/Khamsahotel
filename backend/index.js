@@ -16,22 +16,19 @@ const EUR_TO_UZS = 14000;
 const {
   OCTO_SHOP_ID,
   OCTO_SECRET,
-  EMAIL_USER,        // Masalan: khamsamessagetouser@gmail.com
+  EMAIL_USER,
   EMAIL_PASS,
   BNOVO_API_KEY,
   BNOVO_API_BASE,
 } = process.env;
 
-// Admin emaili — bu yerda aniq admin emailingizni belgilang
 const ADMIN_EMAIL = "shamshodochilov160@gmail.com";
 
-// .env faylida zarur o'zgaruvchilar borligini tekshirish
 if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS || !BNOVO_API_KEY) {
   console.error("❌ .env faylida kerakli ma'lumotlar yetishmayapti");
   process.exit(1);
 }
 
-// Nodemailer sozlamalari
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -42,7 +39,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Email yuborish funksiyasi
 async function sendEmail(to, subject, text) {
   if (!to || !subject || !text) {
     console.warn("Email yuborish uchun yetarli ma'lumot yo'q");
@@ -63,7 +59,6 @@ async function sendEmail(to, subject, text) {
   }
 }
 
-// Middleware sozlamalari
 app.use(cors({
   origin: [FRONTEND_URL, `${FRONTEND_URL}/`],
   methods: ["GET", "POST"],
@@ -71,7 +66,6 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Octobank orqali to‘lov yaratish endpointi
 app.post("/create-payment", async (req, res) => {
   try {
     const { amount, description = "Mehmonxona to'lovi", email } = req.body;
@@ -117,7 +111,6 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// Email yuborish endpointi (frontenddan keladigan)
 app.post("/send-email", async (req, res) => {
   try {
     const { to, subject, text } = req.body;
@@ -134,16 +127,13 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
-// Octobank callback endpoint (to‘lov natijasini qabul qilish uchun)
 app.post("/payment-callback", (req, res) => {
   console.log("🔁 Callback body:", req.body);
   res.json({ status: "callback received" });
 });
 
-// Bnovo API client yaratamiz
 const bnovo = new BnovoAPI(BNOVO_API_KEY, BNOVO_API_BASE);
 
-// Booking endpoint — Bnovoga bron yuborish va adminga email yuborish
 app.post("/api/bookings", async (req, res) => {
   try {
     const {
@@ -164,18 +154,16 @@ app.post("/api/bookings", async (req, res) => {
       return res.status(400).json({ error: "Kerakli ma'lumotlar yetarli emas" });
     }
 
-    // Checkout hisoblash funksiyasi
     const getCheckoutDate = (checkIn, duration) => {
       const date = new Date(checkIn);
       if (duration && duration.includes("3")) date.setHours(date.getHours() + 3);
       else if (duration && duration.includes("10")) date.setHours(date.getHours() + 10);
-      else date.setDate(date.getDate() + 1); // 1 kun
+      else date.setDate(date.getDate() + 1);
       return date.toISOString().split("T")[0];
     };
 
     const checkOut = getCheckoutDate(checkIn, duration);
 
-    // Xona turlarini mapping qilish
     const roomTypeMap = {
       "Standard Room": 117445,
       "Family Room": 117446,
@@ -186,7 +174,8 @@ app.post("/api/bookings", async (req, res) => {
 
     const room_type_id = roomTypeMap[rooms] || 117445;
 
-    // Booking payload
+    const createdAt = new Date().toISOString();
+
     const bookingPayload = {
       date_from: checkIn,
       date_to: checkOut,
@@ -205,22 +194,24 @@ app.post("/api/bookings", async (req, res) => {
       comment: `Xona: ${rooms} | Narx: ${price} EUR | Sayt: ${FRONTEND_URL}`,
     };
 
-    // Bnovo ga booking yaratish
     const bnovoResponse = await bnovo.createBooking(bookingPayload);
 
-    // Adminga email yuborish
     const emailSubject = "Yangi bron qilish haqida xabar";
     const emailText = `
 Yangi bron qabul qilindi:
-Ism: ${firstName} ${lastName}
-Telefon: ${phone || "Noma'lum"}
-Email: ${email}
-Kiruvchi sana: ${checkIn}
-Chiqish sana: ${checkOut}
-Xona turi: ${rooms}
-Mehmonlar soni: ${guests || "Noma'lum"}
-Narx: ${price} EUR
-Sayt: ${FRONTEND_URL}
+
+👤 Ism: ${firstName} ${lastName}
+📞 Telefon: ${phone || "Noma'lum"}
+📧 Email: ${email}
+
+📅 Kirish sana: ${checkIn}
+📆 Chiqish sana: ${checkOut}
+🛏️ Xona turi: ${rooms}
+👥 Mehmonlar soni: ${guests || "Noma'lum"}
+💶 Narx: ${price} EUR
+🕓 Bron qilingan vaqt: ${createdAt}
+
+🌐 Sayt: ${FRONTEND_URL}
     `;
 
     try {
@@ -230,11 +221,11 @@ Sayt: ${FRONTEND_URL}
       console.error("❌ Admin email yuborishda xatolik:", emailErr.message || emailErr);
     }
 
-    // Javobni yuborish
     res.json({
       success: true,
       message: "Bron muvaffaqiyatli yuborildi",
       bnovoData: bnovoResponse,
+      createdAt, // <-- Frontendga yuborilyapti
     });
   } catch (error) {
     console.error("❌ Bnovo booking xatolik:", error.message || error);
@@ -242,7 +233,6 @@ Sayt: ${FRONTEND_URL}
   }
 });
 
-// Serverni ishga tushirish
 app.listen(PORT, () => {
   console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
 });

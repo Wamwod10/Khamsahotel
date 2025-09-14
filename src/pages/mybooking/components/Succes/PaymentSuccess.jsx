@@ -24,6 +24,17 @@ const PaymentSuccess = () => {
     return timeStr.slice(0, 5);
   };
 
+  const formatDateTime = (dateTimeStr) => {
+    if (!dateTimeStr) return "-";
+    const date = new Date(dateTimeStr);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${day}.${month}.${year} ${hours}:${minutes}`;
+  };
+
   useEffect(() => {
     const allBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
     const latest = allBookings[0];
@@ -39,6 +50,7 @@ const PaymentSuccess = () => {
         rooms,
         duration,
         price,
+        createdAt, // ⬅️ bron vaqti
       } = latest;
 
       const emailText = `
@@ -61,6 +73,7 @@ call us at +998 95 877 24 24 (tel/WhatsApp/Telegram), or email us at qonoqhotel@
 📧 Email: ${email}
 📞 Phone: ${phone}
 
+🗓️ Booking Date: ${formatDateTime(createdAt)}
 📅 Check-in Date: ${formatDate(checkIn)}
 ⏰ Check-in Time: ${formatTime(checkOutTime)}
 🛏️ Room Type: ${roomKeyMap[rooms] || rooms}
