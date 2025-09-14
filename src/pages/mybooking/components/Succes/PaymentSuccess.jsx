@@ -4,21 +4,79 @@ import "./PaymentSuccess.scss";
 const PaymentSuccess = () => {
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
+  const roomKeyMap = {
+    "Standard Room": "Standard Room",
+    "Family Room": "Family Room",
+    "2 Standard Rooms": "2 Standard Rooms",
+    "2 Family Rooms": "2 Family Rooms",
+    "Standard + 1 Family room": "Standard + 1 Family room",
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const [year, month, day] = dateStr.split("-");
+    return `${day}.${month}.${year}`;
+  };
+
+  const formatTime = (timeStr) => {
+    if (!timeStr) return "-";
+    if (timeStr.includes("T")) return timeStr.split("T")[1].slice(0, 5);
+    return timeStr.slice(0, 5);
+  };
+
   useEffect(() => {
     const allBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
     const latest = allBookings[0];
 
     if (latest) {
+      const {
+        firstName,
+        lastName,
+        phone,
+        email,
+        checkIn,
+        checkOutTime,
+        rooms,
+        duration,
+        price,
+      } = latest;
+
+      const emailText = `
+Thank you for choosing to stay with us via Khamsahotel.uz!
+
+Please be informed that we are a SLEEP LOUNGE located inside the airport within the transit area. 
+To stay with us, you must have a valid boarding pass departing from Tashkent Airport.
+
+IMPORTANT NOTE:
+We will never ask you for your credit card details or send links via Khamsahotel.uz for online payments or booking confirmation.
+
+If you have any doubts about your booking status, please check via the Khamsahotel.uz website or app only, 
+call us at +998 95 877 24 24 (tel/WhatsApp/Telegram), or email us at qonoqhotel@mail.ru
+
+---------------------------
+🔔 YOUR BOOKING DETAILS
+---------------------------
+
+👤 Guest: ${firstName} ${lastName}
+📧 Email: ${email}
+📞 Phone: ${phone}
+
+📅 Check-in Date: ${formatDate(checkIn)}
+⏰ Check-in Time: ${formatTime(checkOutTime)}
+🛏️ Room Type: ${roomKeyMap[rooms] || rooms}
+📆 Duration: ${duration}
+💶 Price: ${price ? `${price}€` : "-"}
+
+---------------------------
+Thank you for your reservation. We look forward to welcoming you!
+
+- Khamsa Sleep Lounge Team
+`;
+
       const emailData = {
-        to: latest.email,
-        subject: "Information For Invoice",
-        text: `Thank you for choosing to stay with us via Khamsahotel.uz! Please be informed that we are a SLEEP LOUNGE located inside the airport within the transit area. In order to stay with us you must be in possession of a valid boarding pass departing from Tashkent Airport. If your flight commences from Tashkent, kindly verify with your airline first if you can check-in early for your flight as you'll need to go through passport control and security before you may access our lounge.
-
-IMPORTANT NOTE: We will never ask you for your credit card details or share any messages with links with you via Khamsahotel.uz for online payments or reconfirmation of your reservation with sleep ’n fly.
-
-In case of any doubt about your booking status with us please check via the Khamsahotel.uz website or app only, call Khamsahotel.uz, or contact us directly on +998 95 877 24 24 (tel/WhatsApp/Telegram) or qonoqhotel@mail.ru
-
-Your Reservations Team`,
+        to: email,
+        subject: "Your Booking Confirmation – Khamsahotel.uz",
+        text: emailText,
       };
 
       fetch(`${API_BASE}/send-email`, {
