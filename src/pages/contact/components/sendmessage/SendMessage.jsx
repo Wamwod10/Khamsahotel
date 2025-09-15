@@ -37,7 +37,7 @@ const SendMessage = () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: -4888706145,
+        chat_id: -1002944437298,
         text,
       }),
     });
