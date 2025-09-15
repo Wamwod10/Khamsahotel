@@ -17,8 +17,8 @@ const {
   OCTO_SECRET,
   EMAIL_USER,
   EMAIL_PASS,
-  // BNOVO_API_KEY, // <-- olib tashlandi
-  // BNOVO_API_BASE, // <-- olib tashlandi
+  BNOVO_API_KEY, 
+  BNOVO_API_BASE, 
 } = process.env;
 
 const ADMIN_EMAIL = "shamshodochilov160@gmail.com";
