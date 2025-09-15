@@ -142,7 +142,6 @@ app.post("/api/bookings", async (req, res) => {
       duration,
       rooms,
       guests,
-      hotel,
       firstName,
       lastName,
       phone,
