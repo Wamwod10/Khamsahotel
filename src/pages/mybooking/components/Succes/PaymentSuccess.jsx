@@ -50,7 +50,7 @@ const PaymentSuccess = () => {
         rooms,
         duration,
         price,
-        createdAt, // ⬅️ bron vaqti
+        createdAt,
       } = latest;
 
       const emailText = `
@@ -92,6 +92,7 @@ Thank you for your reservation. We look forward to welcoming you!
         text: emailText,
       };
 
+      // 1. EMAIL YUBORISH
       fetch(`${API_BASE}/send-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,6 +102,49 @@ Thank you for your reservation. We look forward to welcoming you!
         .then((data) => {
           if (data.success) {
             console.log("✅ Email mijozga yuborildi");
+
+            // 2. EMAIL YUBORILGANDAN KEYIN TELEGRAMGA YUBORAMIZ
+            const telegramText = `
+📢 Yangi bron qabul qilindi:
+
+👤 Ism: ${firstName} ${lastName}
+📧 Email: ${email}
+📞 Telefon: ${phone}
+
+🗓️ Bron vaqti: ${formatDateTime(createdAt)}
+📅 Kirish sanasi: ${formatDate(checkIn)}
+⏰ Kirish vaqti: ${formatTime(checkOutTime)}
+🛏️ Xona: ${roomKeyMap[rooms] || rooms}
+📆 Davomiylik: ${duration}
+💶 Narx: ${price ? `${price}€` : "-"}
+
+🌐 Sayt: khamsahotel.uz
+`;
+
+            const TELEGRAM_BOT_TOKEN = "8066986640:AAFpZPlyOkbjxWaSQTgBMbf3v8j7lgMg4Pk";
+            const TELEGRAM_CHAT_ID = "-1002991552333";
+
+            fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                text: telegramText,
+              }),
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.ok) {
+                  console.log("✅ Telegramga xabar yuborildi");
+                } else {
+                  console.error("❌ Telegram xabar xatosi:", data);
+                }
+              })
+              .catch((err) => {
+                console.error("🔴 Telegram fetch xatolik:", err);
+              });
           } else {
             console.error("❌ Email yuborishda xatolik:", data.error);
           }
