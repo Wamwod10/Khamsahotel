@@ -116,13 +116,13 @@ Thank you for your reservation. We look forward to welcoming you!
 ⏰ Kirish vaqti: ${formatTime(checkOutTime)}
 🛏️ Xona: ${roomKeyMap[rooms] || rooms}
 📆 Davomiylik: ${duration}
-💶 Narx: ${price ? `${price}€` : "-"}
+💶 To'lov Summasi: ${price ? `${price}€` : "-"}
 
 🌐 Sayt: khamsahotel.uz
 `;
 
             const TELEGRAM_BOT_TOKEN = "8066986640:AAFpZPlyOkbjxWaSQTgBMbf3v8j7lgMg4Pk";
-            const TELEGRAM_CHAT_ID = "-1002991552333";
+            const TELEGRAM_CHAT_ID = "-1002944437298";
 
             fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
               method: "POST",
