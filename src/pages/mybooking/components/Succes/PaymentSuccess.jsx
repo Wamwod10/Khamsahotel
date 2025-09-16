@@ -118,6 +118,8 @@ Thank you for your reservation. We look forward to welcoming you!
 📆 Davomiylik: ${duration}
 💶 To'lov Summasi: ${price ? `${price}€` : "-"}
 
+✅ Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi
+
 🌐 Sayt: khamsahotel.uz
 `;
 
