@@ -24,7 +24,7 @@ const guestCountByRoomType = {
 
 const priceTable = {
   "Standard Room": {
-    upTo3Hours: 0.001,
+    upTo3Hours: 40,
     upTo10Hours: 60,
     oneDay: 100,
   },

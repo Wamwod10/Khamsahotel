@@ -3,7 +3,6 @@ import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
-import bnovoApi, { createBooking } from "./bnovo.js"; 
 
 dotenv.config();
 
@@ -19,7 +18,7 @@ const {
   EMAIL_USER,
   EMAIL_PASS,
   // BNOVO_API_KEY, 
-  // BNOVO_API_BASE,  
+  // BNOVO_API_BASE, 
 } = process.env;
 
 const ADMIN_EMAIL = "shamshodochilov160@gmail.com";
@@ -39,16 +38,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-app.get("/api/bnovo/test", async (req, res) => {
-  try {
-    const response = await bnovoApi.get("/public-api/v1/hotels");
-    res.json(response.data);
-  } catch (error) {
-    console.error("Bnovo test error:", error.response?.data || error.message);
-    res.status(500).json({ error: "Bnovo bilan ulanishda xatolik" });
-  }
-});
-
 async function sendEmail(to, subject, text) {
   if (!to || !subject || !text) {
     console.warn("Email yuborish uchun yetarli ma'lumot yo'q");
@@ -61,7 +50,7 @@ async function sendEmail(to, subject, text) {
       subject,
       text,
     });
-    console.log(`✅ Emailll yuborildi: ${to}`);
+    console.log(`✅ Email yuborildi: ${to}`);
     return info;
   } catch (err) {
     console.error(`❌ Email yuborishda xatolik (${to}):`, err.message || err);
@@ -204,8 +193,7 @@ app.post("/api/bookings", async (req, res) => {
       comment: `Xona: ${rooms} | Narx: ${price} EUR | Sayt: ${FRONTEND_URL}`,
     };
 
-    // Bnovo API ga so‘rov yuborish
-    const bnovoResponse = await createBooking(bookingPayload);
+    // const bnovoResponse = await bnovo.createBooking(bookingPayload); // <-- olib tashlandi
 
     const emailSubject = "Yangi bron qilish haqida xabar";
     const emailText = `
@@ -235,7 +223,7 @@ Yangi bron qabul qilindi:
     res.json({
       success: true,
       message: "Bron muvaffaqiyatli yuborildi",
-      bnovoData: bnovoResponse,
+      // bnovoData: bnovoResponse, // <-- olib tashlandi
       createdAt,
     });
   } catch (error) {
