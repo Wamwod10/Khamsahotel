@@ -21,6 +21,28 @@ const MyBooking = () => {
     sessionStorage.setItem("allBookings", JSON.stringify(normalizedBookings));
   }, []);
 
+  // 🔽 Bnovo skriptini dinamik yuklash
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://ibe.bnovo.ru/online/booking/widget.js";
+    script.async = true;
+    script.setAttribute("data-bnovo-object-id", "b6d5e4b4-cee2-4cf4-a123-af43b2b6daaf");
+
+    script.onload = () => {
+      console.log("✅ Bnovo widget yuklandi");
+    };
+
+    script.onerror = () => {
+      console.error("❌ Bnovo widgetni yuklashda xatolik");
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   const saveBookingsToStorage = (updatedList) => {
     sessionStorage.setItem("allBookings", JSON.stringify(updatedList));
     localStorage.setItem("allBookings", JSON.stringify(updatedList));
@@ -46,41 +68,25 @@ const MyBooking = () => {
     saveBookingsToStorage(filtered);
   };
 
-  // Summa, EURda deb hisoblaymiz
   const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
-  const handlePayment = async () => {
+  // 🔽 To‘lov tugmasi vidjetni ochadi
+  const handlePayment = () => {
     if (totalAmount === 0) {
       alert("To‘lov uchun summa mavjud emas");
       return;
     }
 
-    const latestBooking = bookings[0];
-    if (!latestBooking || !latestBooking.email) {
-      alert("Email ma'lumotlari mavjud emas");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/create-payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: totalAmount,
-          description: `Booking Payment for ${latestBooking.firstName} ${latestBooking.lastName}`,
-          email: latestBooking.email,
-        }),
+    if (
+      typeof window.BnovoBookingWidget !== "undefined" &&
+      typeof window.BnovoBookingWidget.open === "function"
+    ) {
+      window.BnovoBookingWidget.open({
+        objectId: "b6d5e4b4-cee2-4cf4-a123-af43b2b6daaf",
+        lang: "en", // kerak bo‘lsa "ru" yoki "uz" qilib o‘zgartiring
       });
-
-      const data = await response.json();
-
-      if (response.ok && data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      } else {
-        alert(`To‘lov yaratishda xatolik: ${data.error || "Noma'lum xatolik"}`);
-      }
-    } catch (error) {
-      alert(`To‘lov yaratishda xatolik yuz berdi: ${error.message || error}`);
+    } else {
+      alert("Bnovo vidjeti hali yuklanmagan. Iltimos, sahifani biroz kuting yoki qayta yuklang.");
     }
   };
 
