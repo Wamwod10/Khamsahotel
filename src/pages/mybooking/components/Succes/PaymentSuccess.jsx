@@ -2,8 +2,6 @@ import React, { useEffect } from "react";
 import "./PaymentSuccess.scss";
 
 const PaymentSuccess = () => {
-
-
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   const roomKeyMap = {
@@ -38,10 +36,12 @@ const PaymentSuccess = () => {
   };
 
   useEffect(() => {
-    const alreadySent = sessionStorage.getItem("bookingSent");
-    if (alreadySent) return;
+    // localStorage orqali tekshiramiz (refreshdan keyin ham saqlanadi)
+    const alreadySent = localStorage.getItem("bookingSent");
+    if (alreadySent) return; // agar yuborilgan bo‘lsa, qayta yubormaymiz
+
     const allBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-    const latest = allBookings[0];
+    const latest = allBookings[0]; // oxirgi bookingni olamiz
 
     if (latest) {
       const {
@@ -144,6 +144,9 @@ Thank you for your reservation. We look forward to welcoming you!
               .then((data) => {
                 if (data.ok) {
                   console.log("✅ Telegramga xabar yuborildi");
+
+                  // Telegramga yuborilgandan keyin localStorage da belgi qo‘yamiz
+                  localStorage.setItem("bookingSent", "true");
                 } else {
                   console.error("❌ Telegram xabar xatosi:", data);
                 }
@@ -159,8 +162,6 @@ Thank you for your reservation. We look forward to welcoming you!
           console.error("🔴 Email yuborishda xatolik:", err);
         });
     }
-
-    sessionStorage.setItem("bookingSent", "true");
   }, []);
 
   return (
