@@ -8,12 +8,9 @@ const MyBooking = () => {
   const [bookings, setBookings] = useState([]);
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isBnovoOpen, setIsBnovoOpen] = useState(false);
 
-  // Session va LocalStorage dan o‘qish
   useEffect(() => {
-    const savedBookings =
-      JSON.parse(sessionStorage.getItem("allBookings")) || [];
+    const savedBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
 
     const normalizedBookings = savedBookings.map((b) => ({
       ...b,
@@ -49,59 +46,47 @@ const MyBooking = () => {
     saveBookingsToStorage(filtered);
   };
 
+  // Summa, EURda deb hisoblaymiz
   const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
+
+  const handlePayment = async () => {
+    if (totalAmount === 0) {
+      alert("To‘lov uchun summa mavjud emas");
+      return;
+    }
+
+    const latestBooking = bookings[0];
+    if (!latestBooking || !latestBooking.email) {
+      alert("Email ma'lumotlari mavjud emas");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/create-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: totalAmount,
+          description: `Booking Payment for ${latestBooking.firstName} ${latestBooking.lastName}`,
+          email: latestBooking.email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        alert(`To‘lov yaratishda xatolik: ${data.error || "Noma'lum xatolik"}`);
+      }
+    } catch (error) {
+      alert(`To‘lov yaratishda xatolik yuz berdi: ${error.message || error}`);
+    }
+  };
 
   const addNewBooking = () => {
     window.location.href = "/";
   };
-
-  // Bnovo widjetni dinamik ulash
-  useEffect(() => {
-    if (isBnovoOpen) {
-      // eski scriptni tozalash
-      const oldScript = document.querySelector(
-        'script[src="https://widget.bnovo.ru/v2/js/bnovo.js"]'
-      );
-      if (oldScript) oldScript.remove();
-
-      const script = document.createElement("script");
-      script.src = "https://widget.bnovo.ru/v2/js/bnovo.js";
-      script.async = true;
-      script.onload = () => {
-        if (window.Bnovo_Widget) {
-          window.Bnovo_Widget.init(() => {
-            window.Bnovo_Widget.open("_bn_widget_", {
-              type: "vertical",
-              lcode: "b6d5e4b4-cee2-4cf4-a123-af43b2b6daaf", // ✅ sizning ID
-              lang: "ru",
-              width: "100%",
-              background: "#ffffff",
-              bg_alpha: "100",
-              padding: "20",
-              border_radius: "12",
-              font_type: "arial",
-              font_size: "16",
-              title_color: "#222222",
-              title_size: "18",
-              inp_color: "#222222",
-              inp_bordhover: "#3796e5",
-              inp_bordcolor: "#cccccc",
-              inp_alpha: "100",
-              btn_background: "#ff8c40",
-              btn_background_over: "#de5900",
-              btn_textcolor: "#ffffff",
-              btn_textover: "#ffffff",
-              btn_bordcolor: "#eb5e00",
-              btn_bordhover: "#de5900",
-              text_concierge: "Забронируй номер через Khamsa Hotel",
-            });
-          });
-        }
-      };
-
-      document.body.appendChild(script);
-    }
-  }, [isBnovoOpen]);
 
   return (
     <div className="my-booking-container">
@@ -130,41 +115,21 @@ const MyBooking = () => {
           <div className="my-booking-buttons">
             <button
               className="btn btn-pay"
-              onClick={() => setIsBnovoOpen(true)}
+              onClick={handlePayment}
               disabled={totalAmount === 0}
             >
-              Pay Now (
-              {totalAmount > 0
-                ? `${totalAmount.toLocaleString()}€`
-                : "No amount"}
-              )
+              Pay Now ({totalAmount > 0 ? `${totalAmount.toLocaleString()}€` : "No amount"})
             </button>
           </div>
         </>
       )}
 
-      {/* Tahrirlash modali */}
       <EditBookingModal
         isOpen={isEditOpen}
         booking={editingBooking}
         onClose={() => setIsEditOpen(false)}
         onSave={handleSaveBooking}
       />
-
-      {/* Bnovo Modal */}
-      {isBnovoOpen && (
-        <div className="bnovo-overlay">
-          <div className="bnovo-modal">
-            <button
-              className="bnovo-close"
-              onClick={() => setIsBnovoOpen(false)}
-            >
-              ✕
-            </button>
-            <div id="_bn_widget_" />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
