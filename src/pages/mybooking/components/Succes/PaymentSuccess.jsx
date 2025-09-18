@@ -2,6 +2,8 @@ import React, { useEffect } from "react";
 import "./PaymentSuccess.scss";
 
 const PaymentSuccess = () => {
+
+
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   const roomKeyMap = {
@@ -36,6 +38,8 @@ const PaymentSuccess = () => {
   };
 
   useEffect(() => {
+    const alreadySent = sessionStorage.getItem("bookingSent");
+    if (alreadySent) return;
     const allBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
     const latest = allBookings[0];
 
@@ -155,6 +159,8 @@ Thank you for your reservation. We look forward to welcoming you!
           console.error("🔴 Email yuborishda xatolik:", err);
         });
     }
+
+    sessionStorage.setItem("bookingSent", "true");
   }, []);
 
   return (

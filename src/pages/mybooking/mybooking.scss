@@ -55,12 +55,46 @@
     margin: 0 auto;
   }
 }
-@media (max-width:375px) {
-  .my-booking-container{
-    padding: 2rem 1rem;
-  }
-.btn-pay{
-  font-size: 0.9rem !important;
+
+.bnovo-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
 }
 
+.bnovo-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  width: 90%;
+  max-width: 600px;
+  min-height: 500px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.bnovo-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+@media (max-width: 375px) {
+  .my-booking-container {
+    padding: 2rem 1rem;
+  }
+  .btn-pay {
+    font-size: 0.9rem !important;
+  }
 }
