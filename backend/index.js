@@ -61,7 +61,7 @@ async function sendEmail(to, subject, text) {
       subject,
       text,
     });
-    console.log(`✅ Email yuborildi: ${to}`);
+    console.log(`✅ Emailll yuborildi: ${to}`);
     return info;
   } catch (err) {
     console.error(`❌ Email yuborishda xatolik (${to}):`, err.message || err);
