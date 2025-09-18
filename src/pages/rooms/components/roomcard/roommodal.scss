@@ -1,0 +1,302 @@
+.modal-main {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.modal-overlay {
+  position: fixed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.45);
+  z-index: 10000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 570px;
+  width: 100%;
+  padding: 2rem 2.2rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #222;
+  opacity: 0;
+  animation: fadeIn 0.5s ease forwards;
+  z-index: 10000;
+  position: relative;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal__title {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #f7931e;
+  margin-bottom: 1.6rem;
+  user-select: none;
+}
+
+.modal__section {
+  margin-bottom: 1rem;
+
+  label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #333;
+  }
+
+  p {
+    font-size: 1rem;
+    margin: 0;
+    color: #555;
+  }
+}
+
+.modal__form {
+  margin-top: 1.3rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.5rem;
+
+  .modal__field {
+    display: flex;
+    flex-direction: column;
+
+    label {
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      color: #444;
+      font-size: 0.95rem;
+    }
+
+    input,
+    datalist {
+      padding: 0.45rem 0.65rem;
+      font-size: 0.95rem;
+      border: 1.5px solid #ccc;
+      border-radius: 6px;
+      transition: border-color 0.2s ease;
+
+      &:focus {
+        outline: none;
+        border-color: #f7931e;
+        box-shadow: 0 0 6px rgba(247, 147, 30, 0.4);
+      }
+    }
+  }
+
+  input::-webkit-calendar-picker-indicator {
+    display: none !important;
+    -webkit-appearance: none !important;
+  }
+
+  .custom-select {
+    position: relative;
+
+    .input-wrapper {
+      position: relative;
+
+      img.input-icon {
+        position: absolute;
+        left: 10px;
+        top: 51%;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        object-fit: cover;
+        opacity: 0.85;
+        pointer-events: none;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px 12px 10px 42px; // left padding for icon
+        background-color: #1e3254;
+        color: #fff;
+        cursor: pointer;
+        border: none;
+        border-radius: 6px;
+        user-select: none;
+        font-size: 14px;
+        opacity: 1;
+      }
+
+      .dropdown-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        font-size: 1.2rem;
+        color: #999;
+      }
+    }
+  }
+
+  /* Yangi styling totalPrice uchun form ichida */
+  .total-price-display {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+    column-gap: 10px;
+
+    label {
+      font-weight: 600;
+      color: #444;
+      margin-top: 2px;
+      font-size: 1.2rem;
+    }
+
+    p {
+      font-size: 1.8rem;
+      // margin: 0.25rem 0 0;
+      text-align: end;
+      color: #f7931e;
+      font-weight: 600;
+    }
+  }
+
+  .modal__buttons {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+
+    button {
+      padding: 0.55rem 1.4rem;
+      font-weight: 700;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.3s ease;
+
+      &.modal__confirm {
+        background-color: #f7931e;
+        color: #fff;
+
+        &:hover {
+          background-color: #e6820b; // fixed version of darken
+        }
+      }
+
+      &.modal__cancel {
+        background-color: #ddd;
+        color: #555;
+
+        &:hover {
+          background-color: #bbb;
+        }
+      }
+    }
+  }
+}
+
+.success-modal {
+  max-width: 400px;
+  padding: 2rem 2.5rem;
+  border-radius: 10px;
+  background-color: #fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  text-align: center;
+
+  h2 {
+    color: #f7931e; // yashil rang - muvaffaqiyat
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    column-gap: 10px;
+  }
+
+  p {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    // font-weight: 500;
+    color: #555;
+  }
+
+  .success-modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+
+    button {
+      padding: 0.5rem 1.5rem;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-stay {
+      background: transparent;
+      border: 2px solid #f7931e;
+      color: #f7931e;
+
+      &:hover {
+        color: #fff;
+        background: #f7931e;
+      }
+    }
+
+    .btn-mybooking {
+      background-color: #f7931e;
+      color: white;
+
+      &:hover {
+        background-color: #cd7817;
+      }
+    }
+  }
+
+  .modal-icon {
+    color: #f7931e;
+  }
+}
+
+
+@media (max-width: 520px) {
+  .modal {
+    padding: 1.5rem 1.7rem;
+    max-width: 100%;
+  }
+
+  .modal__title {
+    font-size: 1.5rem;
+  }
+
+  .modal__form {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,193 @@
+// serviceheader.scss
+.service-header {
+    padding: 60px 20px;
+    background: url(/public/36.png) no-repeat center center/cover;
+    width: 100%;
+    height: 440px;
+    text-align: center;
+    color: #0d1a2d;
+
+    &__title {
+        font-weight: 700;
+        font-size: 2.8rem;
+        color: rgb(255, 169, 48);
+        margin-bottom: 12px;
+    }
+
+    &__subtitle {
+        font-weight: 500;
+        font-size: 1.2rem;
+        color: #c3c3c3;
+        margin-bottom: 20px;
+    }
+
+    &__description {
+        font-weight: 500;
+        font-size: 1rem;
+        line-height: 1.6;
+        max-width: 700px;
+        margin: 0 auto 40px auto;
+        color: #f2f2f2;
+    }
+
+    &__buttons {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        max-width: 500px;
+        margin: 0 auto;
+
+        .btn {
+            padding: 12px 28px;
+            font-weight: 600;
+            font-size: 1rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+
+            &.btn-primary {
+                background-color: rgb(255, 169, 48);
+                color: white;
+
+                &:hover {
+                    background-color: rgb(255, 149, 00);
+                }
+            }
+
+            &.btn-secondary {
+                background-color: transparent;
+                color: rgb(255, 169, 48);
+                border: 2px solid rgb(255, 169, 48);
+
+                &:hover {
+                    background-color: rgb(255, 169, 48);
+                    color: white;
+                }
+            }
+        }
+    }
+}
+
+/* ===== RESPONSIVE BREAKPOINTS FOR .service-header ===== */
+
+@media (max-width: 1366px) {
+  .service-header {
+    height: 420px;
+    &__title {
+      font-size: 2.6rem;
+    }
+    &__subtitle {
+      font-size: 1.1rem;
+    }
+  }
+}
+
+@media (max-width: 1200px) {
+  .service-header {
+    height: 400px;
+    &__description {
+      max-width: 600px;
+    }
+  }
+}
+
+@media (max-width: 1100px) {
+  .service-header {
+    padding: 50px 18px;
+    &__title {
+      font-size: 2.4rem;
+    }
+  }
+}
+
+@media (max-width: 1000px) {
+  .service-header__buttons {
+    gap: 16px;
+    .btn {
+      padding: 10px 24px;
+      font-size: 0.95rem;
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .service-header__description {
+    font-size: 0.95rem;
+    max-width: 90%;
+  }
+  .service-header__subtitle {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 800px) {
+  .service-header {
+    height: 360px;
+    &__title {
+      font-size: 2.2rem;
+    }
+  }
+}
+
+@media (max-width: 700px) {
+  .service-header__buttons {
+    flex-direction: column;
+    gap: 12px;
+    .btn {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .service-header {
+    height: auto;
+    padding: 40px 16px;
+    &__title {
+      font-size: 2rem;
+    }
+    &__description {
+      font-size: 0.95rem;
+    }
+  }
+}
+
+@media (max-width: 500px) {
+  .service-header {
+    &__title {
+      font-size: 1.8rem;
+    }
+    &__subtitle {
+      font-size: 0.95rem;
+    }
+    &__description {
+      font-size: 0.9rem;
+    }
+  }
+}
+
+@media (max-width: 400px) {
+  .service-header {
+    &__title {
+      font-size: 1.6rem;
+    }
+    &__description {
+      font-size: 0.85rem;
+    }
+  }
+}
+
+@media (max-width: 300px) {
+  .service-header {
+    &__title {
+      font-size: 1.4rem;
+    }
+    &__subtitle {
+      font-size: 0.85rem;
+    }
+    &__description {
+      font-size: 0.8rem;
+    }
+  }
+}

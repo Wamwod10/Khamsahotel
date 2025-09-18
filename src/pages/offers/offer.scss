@@ -1,0 +1,249 @@
+.offer-container {
+  max-width: 1366px;
+  margin: 40px auto;
+  padding: 0 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #222;
+
+  h1 {
+    text-align: center;
+    font-weight: 700;
+    font-size: 40px;
+    margin-bottom: 2.8rem;
+    color: #f4a300; /* to'q sariq */
+    letter-spacing: 0.03em;
+  }
+
+  .accordion-item {
+    border-bottom: 1px solid #f4a300;
+    padding: 12px 0;
+    margin-top: 28px;
+
+    .accordion-title {
+      width: 100%;
+      background: transparent;
+      border: none;
+      padding: 14px 8px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #666666;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s ease, background-color 0.25s ease;
+      border-radius: 4px;
+
+      &:hover,
+      &.open {
+        color: #f4a300;
+        background-color: rgba(244, 163, 0, 0.1);
+      }
+
+      .title-text {
+        flex: 1;
+        text-align: left;
+        letter-spacing: 0.02em;
+      }
+
+      .chevron-icon {
+        font-size: 1.3rem;
+        color: #aaa;
+        transition: transform 0.35s ease, color 0.3s ease;
+      }
+    }
+
+    &.open .accordion-title .chevron-icon {
+      transform: rotate(180deg);
+      color: #f4a300;
+    }
+
+    .accordion-content-wrapper {
+      overflow: hidden;
+      height: 0;
+      transition: height 0.35s ease;
+      padding-left: 12px;
+    }
+
+    &.open .accordion-content-wrapper {
+      /* height is controlled inline from React */
+    }
+
+    .accordion-content {
+      font-size: 1rem;
+      color: #333333;
+      line-height: 1.65;
+      letter-spacing: 0.01em;
+
+      p {
+        margin: 0 0 1.2rem 0;
+        margin-top: 15px;
+      }
+
+      ul {
+        padding-left: 20px;
+        margin: 0 0 1rem 0;
+
+        li {
+          margin-bottom: 0.6rem;
+        }
+      }
+
+      a {
+        color: #f4a300;
+        text-decoration: underline;
+        font-weight: 600;
+        transition: color 0.25s ease;
+
+        &:hover {
+          color: #b37400;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 1200px) {
+  .offer-container {
+    max-width: 1000px;
+    padding: 0 18px;
+
+    h1 {
+      font-size: 2.3rem;
+      margin-bottom: 2.4rem;
+    }
+
+    .accordion-item {
+      margin-top: 24px;
+
+      .accordion-title {
+        font-size: 1.1rem;
+        padding: 12px 8px;
+
+        .chevron-icon {
+          font-size: 1.15rem;
+        }
+      }
+
+      .accordion-content {
+        font-size: 0.95rem;
+      }
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .offer-container {
+    max-width: 720px;
+    padding: 0 16px;
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .accordion-item {
+      margin-top: 20px;
+
+      .accordion-title {
+        font-size: 1rem;
+        padding: 11px 8px;
+
+        .chevron-icon {
+          font-size: 1.1rem;
+        }
+      }
+
+      .accordion-content {
+        font-size: 0.9rem;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .offer-container {
+    max-width: 540px;
+    padding: 0 14px;
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 1.6rem;
+    }
+
+    .accordion-item {
+      margin-top: 18px;
+
+      .accordion-title {
+        font-size: 0.95rem;
+        padding: 10px 6px;
+
+        .chevron-icon {
+          font-size: 1rem;
+        }
+      }
+
+      .accordion-content {
+        font-size: 0.88rem;
+      }
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .offer-container {
+    max-width: 360px;
+    padding: 0 12px;
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 1.4rem;
+    }
+
+    .accordion-item {
+      margin-top: 16px;
+
+      .accordion-title {
+        font-size: 0.9rem;
+        padding: 9px 5px;
+
+        .chevron-icon {
+          font-size: 0.9rem;
+        }
+      }
+
+      .accordion-content {
+        font-size: 0.85rem;
+      }
+    }
+  }
+}
+
+@media (max-width: 400px) {
+  .offer-container {
+    max-width: 320px;
+    padding: 0 10px;
+
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .accordion-item {
+      margin-top: 14px;
+
+      .accordion-title {
+        font-size: 0.85rem;
+        padding: 8px 5px;
+
+        .chevron-icon {
+          font-size: 0.85rem;
+        }
+      }
+
+      .accordion-content {
+        font-size: 0.8rem;
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+/* src/pages/contact/contact.scss */
+
+.contact-page {
+  margin: 0 auto;
+  padding: 20px 15px;
+  margin-top: 10px;
+}
+
+.contact-main {
+  display: flex;
+  gap: 30px;
+  flex-wrap: nowrap;
+  margin-top: 20px;
+}
+
+/* Chap blok uchun */
+.left-side {
+  flex: 1 1 420px;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+}
+
+
+
+/* FaqAccordion va AlternativeContacts uchun margin */
+.faq-accordion, .alternative-contacts {
+  margin-top: 40px;
+}
+
+/* Responsive uchun */
+@media screen and (max-width: 900px) {
+  .contact-main {
+    flex-direction: column;
+  }
+
+  .left-side,
+  .right-side {
+    min-width: 100%;
+  }
+}

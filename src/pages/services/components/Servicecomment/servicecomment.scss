@@ -1,0 +1,425 @@
+.service-comment {
+    padding: 60px 20px;
+    // background-color: #000000;
+    text-align: center;
+
+    &__container {
+        max-width: 1366px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    &__slider {
+        padding-bottom: 80px; // arrowlar va pagination uchun
+    }
+
+    &__card {
+        background: #fff;
+        padding: 30px 25px;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.08); 
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    &__top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    &__user-info {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+
+        div {
+            display: flex;
+            flex-direction: column;
+        }
+    }
+
+    &__avatar {
+        width: 55px;
+        height: 55px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #ddd;
+    }
+
+    &__name {
+        font-weight: 600;
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 3px;
+    }
+
+    &__country {
+        font-size: 13px;
+        color: #777;
+        margin-bottom: 5px;
+    }
+
+    &__verified {
+        font-size: 13px;
+        color: #4caf50;
+        display: flex;
+        align-items: center;
+        font-weight: 500;
+
+        svg {
+            margin-right: 5px;
+        }
+    }
+
+    &__rating {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        svg {
+            font-size: 16px;
+            color: #f7b500;
+            margin-bottom: 0; // yulduzlar gap bilan pastga tushmasligi uchun
+        }
+    }
+
+    &__rating-number {
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+    }
+
+    &__comment {
+        font-size: 14px;
+        color: #333;
+        font-style: italic;
+        line-height: 1.5;
+        margin-bottom: auto;
+    }
+
+    &__bottom-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        color: #777;
+        margin-top: 25px;
+    }
+
+    &__verified-icon {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #4caf50;
+
+        svg {
+            color: #4caf50;
+        }
+    }
+
+    &__date {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        svg {
+            color: #999;
+        }
+    }
+}
+
+.service-comment__slider {
+    position: relative !important;
+}
+
+.swiper-button-prev::after,
+.swiper-button-next::after {
+    display: none !important;
+}
+
+.swiper-button-prev,
+.swiper-button-next {
+    font-size: 18px !important;
+}
+
+.swiper-button-prev,
+.swiper-button-next {
+    width: 40px !important;
+    height: 40px !important;
+}
+
+.swiper-pagination {
+    position: absolute !important;
+    left: 50% !important;
+    bottom: 0 !important;
+    transform: translateX(-50%) !important;
+}
+
+.swiper-button-prev,
+.swiper-button-next {
+    color: #f7b500;
+    background-color: #fff;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    position: absolute;
+    bottom: 15px;
+    z-index: 10;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    // margin-top: 100px;
+
+    &:hover {
+        background-color: #fff2b8;
+    }
+}
+
+.swiper-button-prev {
+    left: 42%;
+    transform: translateX(-100%);
+}
+
+.swiper-button-next {
+    left: 58%;
+    transform: translateX(0);
+}
+
+/* Swiper Pagination */
+.swiper-pagination {
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    width: auto;
+}
+
+.swiper-pagination-bullet {
+    background: #ccc;
+    opacity: 1;
+    width: 12px;
+    height: 12px;
+    margin: 0 6px !important;
+    border-radius: 50%;
+    transition: background-color 0.3s ease;
+}
+
+.swiper-pagination-bullet-active {
+    background: #f7b500;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+    .service-comment__container {
+        max-width: 100%;
+    }
+    .service-comment__slider {
+        padding-bottom: 90px;
+    }
+    .service-comment__card {
+        padding: 25px 20px;
+    }
+    .swiper-button-prev,
+    .swiper-button-next {
+        width: 32px;
+        height: 32px;
+        bottom: 10px;
+    }
+    .swiper-button-prev {
+        left: 40%;
+        transform: translateX(-100%);
+    }
+    .swiper-button-next {
+        left: 60%;
+        transform: translateX(0);
+    }
+}
+
+
+// Media Queries for .service-comment responsive
+
+// Desktop katta ekranlar uchun, 1366px va undan kichiklar
+@media (max-width: 1366px) {
+  .service-comment__container {
+    max-width: 1200px;
+  }
+}
+
+// 1200px
+@media (max-width: 1200px) {
+  .service-comment__container {
+    max-width: 1100px;
+  }
+}
+
+// 1100px
+@media (max-width: 1100px) {
+  .service-comment__container {
+    max-width: 1000px;
+  }
+}
+
+// 1000px
+@media (max-width: 1000px) {
+  .service-comment__container {
+    max-width: 900px;
+  }
+}
+
+// 900px
+@media (max-width: 900px) {
+  .service-comment__container {
+    max-width: 800px;
+  }
+}
+
+// 800px
+@media (max-width: 800px) {
+  .service-comment__container {
+    max-width: 700px;
+  }
+}
+
+// 700px
+@media (max-width: 700px) {
+  .service-comment__container {
+    max-width: 600px;
+  }
+  .service-comment__card {
+    padding: 25px 15px;
+  }
+  .service-comment__rating svg {
+    font-size: 14px;
+  }
+}
+
+// 600px
+@media (max-width: 600px) {
+  .service-comment__container {
+    max-width: 500px;
+  }
+  .service-comment__card {
+    padding: 20px 15px;
+  }
+  .service-comment__avatar {
+    width: 45px;
+    height: 45px;
+  }
+  .service-comment__name {
+    font-size: 14px;
+  }
+  .service-comment__country,
+  .service-comment__verified {
+    font-size: 12px;
+  }
+  .service-comment__rating svg {
+    font-size: 12px;
+  }
+  .swiper-button-prev,
+  .swiper-button-next {
+    width: 32px !important;
+    height: 32px !important;
+    bottom: 10px !important;
+  }
+}
+
+// 500px
+@media (max-width: 500px) {
+  .service-comment__container {
+    max-width: 400px;
+    padding: 0 10px;
+  }
+  .service-comment__card {
+    padding: 15px 10px;
+  }
+  .service-comment__comment {
+    font-size: 13px;
+  }
+  .service-comment__name {
+    font-size: 13px;
+  }
+  .service-comment__country,
+  .service-comment__verified {
+    font-size: 11px;
+  }
+  .service-comment__bottom-row {
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .service-comment__rating svg {
+    font-size: 11px;
+  }
+  .swiper-button-prev,
+  .swiper-button-next {
+    width: 28px !important;
+    height: 28px !important;
+    bottom: 8px !important;
+  }
+}
+
+// 400px
+@media (max-width: 400px) {
+  .service-comment__container {
+    max-width: 350px;
+  }
+  .service-comment__avatar {
+    width: 40px;
+    height: 40px;
+  }
+  .service-comment__name {
+    font-size: 12px;
+  }
+  .service-comment__country,
+  .service-comment__verified {
+    font-size: 10px;
+  }
+  .service-comment__comment {
+    font-size: 12px;
+  }
+  .service-comment__rating svg {
+    font-size: 10px;
+  }
+  .swiper-button-prev,
+  .swiper-button-next {
+    width: 26px !important;
+    height: 26px !important;
+    bottom: 6px !important;
+  }
+}
+
+// 300px
+@media (max-width: 300px) {
+  .service-comment__container {
+    max-width: 280px;
+  }
+  .service-comment__card {
+    padding: 10px 8px;
+  }
+  .service-comment__name {
+    font-size: 11px;
+  }
+  .service-comment__country,
+  .service-comment__verified {
+    font-size: 9px;
+  }
+  .service-comment__comment {
+    font-size: 11px;
+  }
+  .service-comment__rating svg {
+    font-size: 9px;
+  }
+  .swiper-button-prev,
+  .swiper-button-next {
+    width: 24px !important;
+    height: 24px !important;
+    bottom: 5px !important;
+  }
+}

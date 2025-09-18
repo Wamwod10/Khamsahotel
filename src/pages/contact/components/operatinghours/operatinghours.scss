@@ -1,0 +1,176 @@
+// Umumiy stil avvalgi holatda qoladi
+.hours {
+  margin-top: 20px;
+
+  &__box {
+    max-width: 430px;
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 17px;
+    padding-bottom: 32px;
+  }
+
+  &__title {
+    font-size: 20px;
+    color: #2d3748;
+    font-weight: 600;
+    margin-bottom: 25px;
+  }
+
+  .hours__link {
+    color: #805AD5;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    row-gap: 28px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    &.shuttle {
+      .hours__icon,
+      .hours__info-title,
+      .hours__info-time {
+        color: #FFA930;
+      }
+    }
+
+    &.checkin {
+      .hours__icon,
+      .hours__info-title,
+      .hours__info-time {
+        color: #3182CE;
+      }
+    }
+
+    &.luggage {
+      .hours__icon,
+      .hours__info-title,
+      .hours__info-time {
+        color: #805AD5;
+      }
+    }
+
+    &.currency {
+      .hours__icon,
+      .hours__info-title,
+      .hours__info-time {
+        color: #38A169;
+      }
+    }
+  }
+
+  &__icon-box {
+    background: #ffffff;
+    padding: 11px;
+    border-radius: 11px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__icon {
+    font-size: 20px;
+  }
+
+  &__info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex: 1;
+    margin-left: 10px;
+  }
+
+  &__info-title {
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  &__info-time {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .hours {
+    margin-top: 15px;
+
+    &__box {
+      max-width: 100%;
+      padding: 15px 12px 24px;
+      border-radius: 8px;
+    }
+
+    &__title {
+      font-size: 18px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    &__list {
+      padding-left: 0;
+      padding-right: 0;
+      row-gap: 20px;
+    }
+
+    &__item {
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      gap: 8px;
+
+      &.shuttle,
+      &.checkin,
+      &.luggage,
+      &.currency {
+        .hours__icon,
+        .hours__info-title,
+        .hours__info-time {
+          font-size: 18px;
+        }
+      }
+    }
+
+    &__icon-box {
+      width: 36px;
+      height: 36px;
+      padding: 8px;
+    }
+
+    &__icon {
+      font-size: 18px;
+    }
+
+    &__info {
+      width: 100%;
+      margin-left: 0;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    &__info-title {
+      font-size: 15px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    &__info-time {
+      font-size: 15px;
+      font-weight: 400;
+      white-space: nowrap;
+    }
+  }
+}
