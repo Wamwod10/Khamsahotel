@@ -8,13 +8,13 @@ import { useTranslation } from "react-i18next";
 import { AiOutlineSafety } from "react-icons/ai";
 import { FaCircleCheck } from "react-icons/fa6";
 import { MdOutlineCancel } from "react-icons/md";
-import { useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { TbAirConditioning } from "react-icons/tb";
 import { RiDrinks2Fill } from "react-icons/ri";
 
 const Header = () => {
   const { t } = useTranslation();
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
   const location = useLocation();
 
   const [checkIn, setCheckIn] = useState("");
@@ -34,43 +34,29 @@ const Header = () => {
     }
   }, [location.state]);
 
-  // 🔽 Bnovo widget scriptni yuklaymiz
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://ibe.bnovo.ru/online/booking/widget.js";
-    script.async = true;
-    script.setAttribute("data-bnovo-object-id", "b6d5e4b4-cee2-4cf4-a123-af43b2b6daaf");
+  const handleSubmit = (e) => {
+    e.preventDefault();
 
-    script.onload = () => {
-      console.log("✅ Bnovo widget script yuklandi");
+    if (!checkIn || !checkOutTime || !duration || !rooms) {
+      alert(t("fillAllFields") || "Please fill in all fields!");
+      return;
+    }
 
-      // 🔗 Button id="check" orqali ulaymiz
-      const checkBtn = document.getElementById("check");
-      if (checkBtn) {
-        checkBtn.addEventListener("click", (e) => {
-          e.preventDefault();
-
-          if (
-            typeof window.BnovoBookingWidget !== "undefined" &&
-            typeof window.BnovoBookingWidget.open === "function"
-          ) {
-            window.BnovoBookingWidget.open({
-              objectId: "b6d5e4b4-cee2-4cf4-a123-af43b2b6daaf",
-              lang: "en",
-            });
-          } else {
-            alert("Bnovo vidjeti hali yuklanmagan. Iltimos, sahifani yangilang.");
-          }
-        });
-      }
+    const formattedCheckOut = `${checkIn}T${checkOutTime}`;
+    const bookingInfo = {
+      checkIn,
+      checkOut: formattedCheckOut,
+      checkOutTime,
+      duration,
+      rooms,
+      hotel: t("TashkentAirportHotel"),
+      timestamp: new Date().toISOString(),
     };
 
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
+    // ✅ faqat localStorage ishlatiladi
+    localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
+    navigate("/rooms");
+  };
 
   return (
     <header className="header">
@@ -89,7 +75,7 @@ const Header = () => {
             </div>
           </div>
 
-          <form className="header__form">
+          <form className="header__form" onSubmit={handleSubmit}>
             <h2 className="header__form-title">{t("bookyourstay")}</h2>
             <p className="header__form-text">{t("booktext")}</p>
 
@@ -158,8 +144,7 @@ const Header = () => {
             </div>
 
             <button
-              type="button"
-              id="check"
+              type="submit"
               className="header__form-button"
               disabled={!checkIn || !checkOutTime}
             >
