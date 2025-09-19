@@ -6,7 +6,7 @@ const BNOVO_API_KEY = process.env.BNOVO_API_KEY;
 const BNOVO_API_BASE = process.env.BNOVO_API_BASE;
 
 if (!BNOVO_API_KEY || !BNOVO_API_BASE) {
-  console.error("❌ Bnovo API uchun .env faylida ma'lumotlar yo'q");
+  console.error("❌ Bnovo API uchun .env faylida ma'lumotlar yo'q, kelmayapti");
   process.exit(1);
 }
 
