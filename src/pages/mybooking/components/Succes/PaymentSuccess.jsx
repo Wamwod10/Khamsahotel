@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import "./PaymentSuccess.scss";
 
 const PaymentSuccess = () => {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  const API_BASE = import.meta.env.BNOVO_API_BASE;
 
   const roomKeyMap = {
     "Standard Room": "Standard Room",

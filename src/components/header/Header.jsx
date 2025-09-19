@@ -34,11 +34,30 @@ const Header = () => {
     }
   }, [location.state]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!checkIn || !checkOutTime || !duration || !rooms) {
       alert(t("fillAllFields") || "Please fill in all fields!");
+      return;
+    }
+
+    // Backendga availability so'rovi yuborish
+    try {
+      const response = await fetch("https://hotel-backend-bmlk.onrender.com/api/check-availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkIn, rooms }),
+      });
+
+      const data = await response.json();
+
+      if (data.available === false) {
+        alert(data.message || "Tanlangan xona ushbu sanada band.");
+        return;
+      }
+    } catch (error) {
+      alert("Server bilan bog'lanishda muammo yuz berdi.");
       return;
     }
 
@@ -53,7 +72,6 @@ const Header = () => {
       timestamp: new Date().toISOString(),
     };
 
-    // ✅ faqat localStorage ishlatiladi
     localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
     navigate("/rooms");
   };

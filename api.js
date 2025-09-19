@@ -1,4 +1,4 @@
-const baseUrl = import.meta.env.VITE_API_BASE_URL;
+const baseUrl = import.meta.env.BNOVO_API_BASE;
 
 export async function fetchData(endpoint) {
   const response = await fetch(`${baseUrl}/${endpoint}`);
