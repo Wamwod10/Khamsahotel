@@ -17,11 +17,13 @@ const {
   OCTO_SECRET,
   EMAIL_USER,
   EMAIL_PASS,
+  // BNOVO_API_KEY, 
+  // BNOVO_API_BASE, 
 } = process.env;
 
 const ADMIN_EMAIL = "shamshodochilov160@gmail.com";
 
-if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS) {
+if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS /*|| !BNOVO_API_KEY*/) {
   console.error("❌ .env faylida kerakli ma'lumotlar yetishmayapti");
   process.exit(1);
 }
@@ -129,27 +131,8 @@ app.post("/payment-callback", (req, res) => {
   res.json({ status: "callback received" });
 });
 
-app.post("/api/check-availability", async (req, res) => {
-  try {
-    const { checkIn, rooms } = req.body;
-    if (!checkIn || !rooms) {
-      return res.status(400).json({ error: "Ma'lumot yetarli emas" });
-    }
-
-    if (rooms.toLowerCase().includes("family")) {
-      const isFamilyRoomBooked = false; // haqiqiy tekshiruv qo'yilishi kerak
-
-      if (isFamilyRoomBooked) {
-        return res.json({ available: false, message: "Family room ushbu sanada band" });
-      }
-    }
-
-    res.json({ available: true });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server xatosi" });
-  }
-});
+// Bnovo bilan bog'liq import olib tashlandi
+// const bnovo = new BnovoAPI(BNOVO_API_KEY, BNOVO_API_BASE);
 
 app.post("/api/bookings", async (req, res) => {
   try {
@@ -210,6 +193,8 @@ app.post("/api/bookings", async (req, res) => {
       comment: `Xona: ${rooms} | Narx: ${price} EUR | Sayt: ${FRONTEND_URL}`,
     };
 
+    // const bnovoResponse = await bnovo.createBooking(bookingPayload); // <-- olib tashlandi
+
     const emailSubject = "Yangi bron qilish haqida xabar";
     const emailText = `
 Yangi bron qabul qilindi:
@@ -238,6 +223,7 @@ Yangi bron qabul qilindi:
     res.json({
       success: true,
       message: "Bron muvaffaqiyatli yuborildi",
+      // bnovoData: bnovoResponse, // <-- olib tashlandi
       createdAt,
     });
   } catch (error) {
