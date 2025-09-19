@@ -24,7 +24,7 @@ const {
 const ADMIN_EMAIL = "shamshodochilov160@gmail.com";
 
 if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS /*|| !BNOVO_API_KEY*/) {
-  console.error("❌ .env faylida kerakli ma'lumotlar yetishmayapti");
+  console.error("❌ .env faylida kerakli ma'lumotlar yetishmayapti yoki yoq");
   process.exit(1);
 }
 
