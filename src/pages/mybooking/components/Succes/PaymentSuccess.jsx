@@ -35,43 +35,29 @@ const PaymentSuccess = () => {
     return `${day}.${month}.${year} ${hours}:${minutes}`;
   };
 
-useEffect(() => {
-  const allBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-  const latest = allBookings[0]; // oxirgi bookingni olamiz
+  useEffect(() => {
+    // localStorage orqali tekshiramiz (refreshdan keyin ham saqlanadi)
+    const alreadySent = localStorage.getItem("bookingSent");
+    if (alreadySent) return; // agar yuborilgan bo‘lsa, qayta yubormaymiz
 
-  if (!latest) return; // booking bo'lmasa chiqamiz
+    const allBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
+    const latest = allBookings[0]; // oxirgi bookingni olamiz
 
-  // bookingWithSource yaratish (source qo'shish)
-  const bookingWithSource = { ...latest, source: "local" };
+    if (latest) {
+      const {
+        firstName,
+        lastName,
+        phone,
+        email,
+        checkIn,
+        checkOutTime,
+        rooms,
+        duration,
+        price,
+        createdAt,
+      } = latest;
 
-  // LocalStorage dan eski bookinglarni olish
-  const localBookings = JSON.parse(localStorage.getItem("allBookings")) || [];
-
-  // Yangilangan bookinglar ro'yxatini yaratish (oxirgi booking boshda)
-  const updatedLocalBookings = [bookingWithSource, ...localBookings];
-
-  // Yangilangan bookinglarni localStorage ga saqlash
-  localStorage.setItem("allBookings", JSON.stringify(updatedLocalBookings));
-
-  // Email va telegramga yuborish oldin, agar oldin yuborilgan bo'lsa, chiqamiz
-  const alreadySent = localStorage.getItem("bookingSent");
-  if (alreadySent) return;
-
-  // Bookingdan ma'lumotlarni olish
-  const {
-    firstName,
-    lastName,
-    phone,
-    email,
-    checkIn,
-    checkOutTime,
-    rooms,
-    duration,
-    price,
-    createdAt,
-  } = latest;
-
-  const emailText = `
+      const emailText = `
 Thank you for choosing to stay with us via Khamsahotel.uz!
 
 Please be informed that we are a SLEEP LOUNGE located inside the airport within the transit area. 
@@ -104,25 +90,25 @@ Thank you for your reservation. We look forward to welcoming you!
 - Khamsa Sleep Lounge Team
 `;
 
-  const emailData = {
-    to: email,
-    subject: "Your Booking Confirmation – Khamsahotel.uz",
-    text: emailText,
-  };
+      const emailData = {
+        to: email,
+        subject: "Your Booking Confirmation – Khamsahotel.uz",
+        text: emailText,
+      };
 
-  // 1. EMAIL YUBORISH
-  fetch(`${API_BASE}/send-email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(emailData),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.success) {
-        console.log("✅ Email mijozga yuborildi");
+      // 1. EMAIL YUBORISH
+      fetch(`${API_BASE}/send-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(emailData),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            console.log("✅ Email mijozga yuborildi");
 
-        // 2. EMAIL YUBORILGANDAN KEYIN TELEGRAMGA YUBORAMIZ
-        const telegramText = `
+            // 2. EMAIL YUBORILGANDAN KEYIN TELEGRAMGA YUBORAMIZ
+            const telegramText = `
 📢 Yangi bron qabul qilindi:
 
 👤 Ism: ${firstName} ${lastName}
@@ -141,42 +127,42 @@ Thank you for your reservation. We look forward to welcoming you!
 🌐 Sayt: khamsahotel.uz
 `;
 
-        const TELEGRAM_BOT_TOKEN = "8066986640:AAFpZPlyOkbjxWaSQTgBMbf3v8j7lgMg4Pk";
-        // const TELEGRAM_CHAT_ID = "-1002944437298";
+            const TELEGRAM_BOT_TOKEN = "8066986640:AAFpZPlyOkbjxWaSQTgBMbf3v8j7lgMg4Pk";
+            const TELEGRAM_CHAT_ID = "-1002944437298";
 
-        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            // chat_id: TELEGRAM_CHAT_ID,
-            text: telegramText,
-          }),
+            fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                text: telegramText,
+              }),
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.ok) {
+                  console.log("✅ Telegramga xabar yuborildi");
+
+                  // Telegramga yuborilgandan keyin localStorage da belgi qo‘yamiz
+                  localStorage.setItem("bookingSent", "true");
+                } else {
+                  console.error("❌ Telegram xabar xatosi:", data);
+                }
+              })
+              .catch((err) => {
+                console.error("🔴 Telegram fetch xatolik:", err);
+              });
+          } else {
+            console.error("❌ Email yuborishda xatolik:", data.error);
+          }
         })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.ok) {
-              console.log("✅ Telegramga xabar yuborildi");
-
-              // Telegramga yuborilgandan keyin localStorage da belgi qo‘yamiz
-              localStorage.setItem("bookingSent", "true");
-            } else {
-              console.error("❌ Telegram xabar xatosi:", data);
-            }
-          })
-          .catch((err) => {
-            console.error("🔴 Telegram fetch xatolik:", err);
-          });
-      } else {
-        console.error("❌ Email yuborishda xatolik:", data.error);
-      }
-    })
-    .catch((err) => {
-      console.error("🔴 Email yuborishda xatolik:", err);
-    });
-}, []);
-
+        .catch((err) => {
+          console.error("🔴 Email yuborishda xatolik:", err);
+        });
+    }
+  }, []);
 
   return (
     <div className="payment-success-container">
