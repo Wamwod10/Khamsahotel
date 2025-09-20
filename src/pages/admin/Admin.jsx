@@ -2,49 +2,55 @@ import React, { useEffect, useState } from 'react';
 import './admin.scss';
 
 const Admin = () => {
-  const [latestBooking, setLatestBooking] = useState(null);
+  const [bookings, setBookings] = useState([]);
 
   useEffect(() => {
-    const allBookings = JSON.parse(localStorage.getItem("allBookings")) || [];
-    const latest = allBookings[0]; // eng oxirgi bookingni olamiz
-    setLatestBooking(latest);
+    const storedBookings = JSON.parse(localStorage.getItem("allBookings")) || [];
+    setBookings(storedBookings);
   }, []);
 
-  if (!latestBooking) {
-    return <p>Ma'lumotlar yuklanmoqda...</p>;
+  if (bookings.length === 0) {
+    return <p>Ma'lumotlar mavjud emas...</p>;
   }
-
-  const {
-    firstName,
-    lastName,
-    phone,
-    email,
-    checkIn,
-    checkOutTime,
-    rooms,
-    duration,
-    price,
-    createdAt,
-    source,
-  } = latestBooking;
 
   return (
     <div className="admin">
       <h2 className="admin__title">Salom, Admin!</h2>
-      <div className="admin__booking-info">
-        <h3>Oxirgi bron haqida ma’lumot:</h3>
-        <ul>
-          <li><strong>Ism:</strong> {firstName} {lastName}</li>
-          <li><strong>Telefon:</strong> {phone}</li>
-          <li><strong>Email:</strong> {email}</li>
-          <li><strong>Kirish sanasi:</strong> {checkIn}</li>
-          <li><strong>Chiqish vaqti:</strong> {checkOutTime}</li>
-          <li><strong>Xona:</strong> {rooms}</li>
-          <li><strong>Davomiyligi:</strong> {duration}</li>
-          <li><strong>Narxi:</strong> {price ? `${price}€` : "-"}</li>
-          <li><strong>Yaratilgan vaqt:</strong> {createdAt ? new Date(createdAt).toLocaleString() : "-"}</li>
-          <li><strong>Manba:</strong> {source || "Noma'lum"}</li>
-        </ul>
+      <div className="admin__booking-list">
+        <h3>Barcha bronlar ro'yxati:</h3>
+        {bookings.map((booking, index) => {
+          const {
+            firstName,
+            lastName,
+            phone,
+            email,
+            checkIn,
+            checkOutTime,
+            rooms,
+            duration,
+            price,
+            createdAt,
+            source,
+          } = booking;
+
+          return (
+            <div key={index} className="admin__booking-info">
+              <h4>Bron #{index + 1}</h4>
+              <ul>
+                <li><strong>Ism:</strong> {firstName} {lastName}</li>
+                <li><strong>Telefon:</strong> {phone}</li>
+                <li><strong>Email:</strong> {email}</li>
+                <li><strong>Kirish sanasi:</strong> {checkIn}</li>
+                <li><strong>Kirish vaqti:</strong> {checkOutTime}</li>
+                <li><strong>Xona:</strong> {rooms}</li>
+                <li><strong>Davomiyligi:</strong> {duration}</li>
+                <li><strong>Narxi:</strong> {price ? `${price}€` : "-"}</li>
+                <li><strong>Yaratilgan vaqt:</strong> {createdAt ? new Date(createdAt).toLocaleString() : "-"}</li>
+                <li><strong>Manba:</strong> {source || "Noma'lum"}</li>
+              </ul>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
