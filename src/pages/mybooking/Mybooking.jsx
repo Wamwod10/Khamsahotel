@@ -46,7 +46,6 @@ const MyBooking = () => {
     saveBookingsToStorage(filtered);
   };
 
-  // Summa, EURda deb hisoblaymiz
   const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
   const handlePayment = async () => {
@@ -62,7 +61,7 @@ const MyBooking = () => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.BNOVO_API_BASE}/create-payment`, {
+      const response = await fetch(`${import.meta.env.BASE_URL}/create-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -72,7 +71,14 @@ const MyBooking = () => {
         }),
       });
 
-      const data = await response.json();
+      let data = {};
+      try {
+        const text = await response.text();
+        data = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        alert("Serverdan noto'g'ri javob keldi");
+        return;
+      }
 
       if (response.ok && data.paymentUrl) {
         window.location.href = data.paymentUrl;
