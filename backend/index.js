@@ -144,6 +144,7 @@ function healthHandler(_req, res) {
 app.get("/health", healthHandler);
 app.get("/healthz", healthHandler); // Render /healthz bo'lsa ham OK
 app.get("/", (_req, res) => res.status(200).send("OK"));
+app.get("/version", (_req, res) => res.json({ tag: "build-2025-09-21-1" }));
 
 
 /* ========= HELPERS ========= */
