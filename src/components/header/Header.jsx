@@ -12,6 +12,14 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { TbAirConditioning } from "react-icons/tb";
 import { RiDrinks2Fill } from "react-icons/ri";
 
+// 🔗 Backend bazaviy URL (env orqali ham, default ham)
+const API_BASE =
+  (typeof import.meta !== "undefined" && import.meta.env &&
+    (import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_BASE_URL)) ||
+  window.__API_BASE__ ||
+  "https://hotel-backend-bmlk.onrender.com";
+
+
 const Header = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -21,8 +29,24 @@ const Header = () => {
   const [checkOutTime, setCheckOutTime] = useState("");
   const [duration, setDuration] = useState("Up to 3 hours");
   const [rooms, setRooms] = useState("Standard Room");
+  const [submitting, setSubmitting] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
+
+  // i18n label -> kanonik nomga map
+  const normalizeRoom = (val) => {
+    const v = (val || "").toLowerCase();
+    // Tarjima kalitlari yoki ko'rsatilgan matnlarni qo'llab-quvvatlash
+    if (v.includes("family") || v.includes(t("family").toLowerCase())) return "Family Room";
+    return "Standard Room";
+  };
+
+  const normalizeDuration = (val) => {
+    const v = (val || "").toLowerCase();
+    if (v.includes("10") || v.includes(t("upTo10Hours").toLowerCase())) return "Up to 10 hours";
+    if (v.includes("one") || v.includes("1") || v.includes(t("oneDay").toLowerCase())) return "One day";
+    return "Up to 3 hours";
+  };
 
   useEffect(() => {
     if (location.state?.clearSearch) {
@@ -32,9 +56,9 @@ const Header = () => {
       setDuration("Up to 3 hours");
       setRooms("Standard Room");
     }
-  }, [location.state]);
+  }, [location.state, t]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!checkIn || !checkOutTime || !duration || !rooms) {
@@ -42,20 +66,56 @@ const Header = () => {
       return;
     }
 
-    const formattedCheckOut = `${checkIn}T${checkOutTime}`;
-    const bookingInfo = {
-      checkIn,
-      checkOut: formattedCheckOut,
-      checkOutTime,
-      duration,
-      rooms,
-      hotel: t("TashkentAirportHotel"),
-      timestamp: new Date().toISOString(),
-    };
+    setSubmitting(true);
 
-    // ✅ faqat localStorage ishlatiladi
-    localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
-    navigate("/rooms");
+    try {
+      // nights – ichki hisob: 3/10 soat ham, “one day” ham serverda hal bo‘ladi, nights=1 kifoya
+      const params = new URLSearchParams({
+        checkIn,
+        nights: "1",
+      });
+
+      // 🔎 Backenddan availability
+      const resp = await fetch(`${API_BASE}/api/availability?${params.toString()}`);
+      const availData = await resp.json();
+
+      const roomsCanonical = normalizeRoom(rooms);
+      const durationCanonical = normalizeDuration(duration);
+
+      // Family tanlangan bo'lsa tekshiruv
+      if (roomsCanonical === "Family Room") {
+        const famFree = availData?.availability?.family?.free ?? 0;
+        if (Number(famFree) <= 0) {
+          alert(
+            t("familyNotAvailable") ||
+              "Family room is not available for the selected time. Please choose Standard."
+          );
+          setSubmitting(false);
+          return;
+        }
+      }
+      // Standard uchun frontendda cheklov yo'q (backend ham 0 chiqsa 1 qilib beradi)
+
+      const formattedCheckOut = `${checkIn}T${checkOutTime}`;
+      const bookingInfo = {
+        checkIn,
+        checkOut: formattedCheckOut,
+        checkOutTime,
+        duration: durationCanonical, // kanonik
+        rooms: roomsCanonical, // kanonik
+        hotel: t("TashkentAirportHotel"),
+        timestamp: new Date().toISOString(),
+        availability: availData?.availability || null, // 📦 keyingi sahifalar uchun
+      };
+
+      localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
+      navigate("/rooms");
+    } catch (err) {
+      console.error("availability fetch error:", err);
+      alert(t("serverError") || "Server error. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -93,9 +153,9 @@ const Header = () => {
               </div>
 
               <div className="header__form-group">
-                <label htmlFor="checkout">{t("check-in-hours")}</label>
+                <label htmlFor="checkin-hours">{t("check-in-hours")}</label>
                 <input
-                  id="checkout"
+                  id="checkin-hours"
                   type="time"
                   value={checkOutTime}
                   onChange={(e) => setCheckOutTime(e.target.value)}
@@ -146,9 +206,9 @@ const Header = () => {
             <button
               type="submit"
               className="header__form-button"
-              disabled={!checkIn || !checkOutTime}
+              disabled={!checkIn || !checkOutTime || submitting}
             >
-              {t("checkavailable")}
+              {submitting ? (t("loading") || "Loading...") : (t("checkavailable"))}
             </button>
 
             <div className="header__info-row">

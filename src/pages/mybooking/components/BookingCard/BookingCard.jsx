@@ -10,15 +10,14 @@ const roomKeyMap = {
   "Standard + 1 Family room": "roomType_mixed",
 };
 
-const BookingCard = ({ booking, onEdit, onDelete }) => {
+export default function BookingCard({ booking, onEdit, onDelete, isLatest }) {
   const { t } = useTranslation();
-
   if (!booking) return null;
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
-    const [year, month, day] = dateStr.split("-");
-    return `${day}.${month}.${year}`;
+    const [y, m, d] = dateStr.split("-");
+    return `${d}.${m}.${y}`;
   };
 
   const formatTime = (timeStr) => {
@@ -27,13 +26,23 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
     return timeStr.slice(0, 5);
   };
 
-  const roomLabel = booking.rooms
-    ? t(roomKeyMap[booking.rooms] || booking.rooms)
-    : "-";
+  const roomLabel = booking.rooms ? t(roomKeyMap[booking.rooms] || booking.rooms) : "-";
+  const status = booking.status || "pending";
 
   return (
     <div className="booking-card">
-      <h2>{t("bookingcard_hotel")}</h2>
+      <div className="booking-card__header">
+        <h2>{t("bookingcard_hotel")}</h2>
+        <div className="booking-card__badges">
+          {isLatest && <span className="badge badge-primary">{t("latest") || "Latest"}</span>}
+          <span
+            className={`badge ${status === "paid" ? "badge-success" : "badge-warn"}`}
+            title={status === "paid" ? "Paid" : "Pending"}
+          >
+            {status === "paid" ? (t("paid") || "Paid") : (t("pending") || "Pending")}
+          </span>
+        </div>
+      </div>
 
       <div className="booking-section">
         <div className="booking-row">
@@ -96,6 +105,4 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
       </div>
     </div>
   );
-};
-
-export default BookingCard;
+}

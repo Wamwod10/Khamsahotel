@@ -7,7 +7,6 @@ import { PiHairDryerBold } from "react-icons/pi";
 import { MdCleaningServices, MdHeadsetMic } from "react-icons/md";
 import { GiHanger, GiCctvCamera } from "react-icons/gi";
 import { FiUser, FiMapPin } from "react-icons/fi";
-import { LuCoffee } from "react-icons/lu";
 import { BsFillUsbPlugFill } from "react-icons/bs";
 
 import { useTranslation } from "react-i18next";
@@ -17,58 +16,91 @@ import NoticePopup from "./NoticePopup";
 const standardImages = ["/5.jpg", "/24.jpg", "/13.jpg", "/23.jpg"];
 const familyImages = ["/4.jpg", "/25.jpg", "/26.jpg", "/27.jpg"];
 
-const RoomCard = () => {
+// i18n label -> kanonik nom (xavfsizlik uchun)
+const normalizeRoom = (val, t) => {
+  const v = (val || "").toLowerCase();
+  if (v.includes("family") || v.includes((t("family") || "").toLowerCase())) return "Family Room";
+  return "Standard Room";
+};
+
+export default function RoomCard() {
   const { t } = useTranslation();
 
   const [mainImage, setMainImage] = useState(standardImages[0]);
   const [familyImage, setFamilyImage] = useState(familyImages[0]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
+
   const [noticeMessage, setNoticeMessage] = useState("");
   const [showNotice, setShowNotice] = useState(false);
+
   const [selectedRoomType, setSelectedRoomType] = useState("Standard Room");
+  const [availability, setAvailability] = useState(null);
+  const [checkIn, setCheckIn] = useState(null);
+  const [checkOut, setCheckOut] = useState(null);
 
   useEffect(() => {
-    // LocalStorage dan booking info ni o'qib selectedRoomType ni yangilash
+    // LocalStorage dan booking info ni o‘qish
     const bookingInfo = localStorage.getItem("bookingInfo");
     if (bookingInfo) {
       try {
         const parsed = JSON.parse(bookingInfo);
-        if (parsed.rooms) {
-          setSelectedRoomType(parsed.rooms);
-        }
+        if (parsed.rooms) setSelectedRoomType(normalizeRoom(parsed.rooms, t));
+        if (parsed.availability) setAvailability(parsed.availability);
+        if (parsed.checkIn) setCheckIn(parsed.checkIn);
+        if (parsed.checkOut) setCheckOut(parsed.checkOut);
       } catch (e) {
         console.error("Error parsing bookingInfo from localStorage", e);
       }
     }
-  }, []);
+  }, [t]);
+
+  // Family availability
+  const famFree = typeof availability?.family?.free === "number" ? availability.family.free : null;
+  const familyUnavailable = famFree !== null && famFree <= 0;
 
   // Modalni ochishdan oldin mehmon soni uchun tekshiruvlar
   const openModalWithCheck = (roomData) => {
     if (roomData.type === "Standard Room" && roomData.guests > 1) {
-      setNoticeMessage(t("standardRoomGuestLimit") || "Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz");
+      setNoticeMessage(
+        t("standardRoomGuestLimit") ||
+          "Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz"
+      );
       setShowNotice(true);
       return;
     }
 
-    if (roomData.type === "Family Room" && roomData.guests > 3) {
-      setNoticeMessage(t("familyRoomGuestLimit") || "Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz");
-      setShowNotice(true);
-      return;
+    if (roomData.type === "Family Room") {
+      if (familyUnavailable) {
+        setNoticeMessage(
+          t("familyNotAvailable") ||
+            "Family room is not available for the selected time. Please choose Standard."
+        );
+        setShowNotice(true);
+        return;
+      }
+      if (roomData.guests > 3) {
+        setNoticeMessage(
+          t("familyRoomGuestLimit") ||
+            "Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz"
+        );
+        setShowNotice(true);
+        return;
+      }
     }
 
-    // Agar bookingInfo dan sana bor bo'lsa, uni ham uzatish mumkin
+    // Sana/vaqtni uzatish
     const bookingInfo = localStorage.getItem("bookingInfo");
-    let checkInDate = new Date().toLocaleDateString();
-    let checkOutDate = new Date(Date.now() + 86400000).toLocaleDateString();
+    let checkInDate = checkIn || new Date().toISOString().split("T")[0];
+    let checkOutDate = checkOut || new Date(Date.now() + 86400000).toISOString();
 
     if (bookingInfo) {
       try {
         const parsed = JSON.parse(bookingInfo);
         if (parsed.checkIn) checkInDate = parsed.checkIn;
-        if (parsed.checkOut) checkOutDate = parsed.checkOut;
+        if (parsed.checkOut) checkOutDate = parsed.checkOut; // bu datetime bo‘lishi mumkin
       } catch {}
-
     }
 
     setSelectedRoom({
@@ -79,8 +111,10 @@ const RoomCard = () => {
     setIsModalOpen(true);
   };
 
+  // Sizdagi oqim: faqat tanlangan type aktiv
   const isStandardDisabled = selectedRoomType === "Family Room";
-  const isFamilyDisabled = selectedRoomType === "Standard Room";
+  const isFamilyDisabled =
+    selectedRoomType === "Standard Room" || familyUnavailable;
 
   return (
     <div className="room-card">
@@ -179,7 +213,7 @@ const RoomCard = () => {
           <div
             className="room-card__item"
             style={{
-              opacity: isFamilyDisabled ? 0.8 : 1,
+              opacity: isFamilyDisabled ? 0.5 : 1,
               pointerEvents: isFamilyDisabled ? "none" : "auto",
             }}
           >
@@ -210,7 +244,22 @@ const RoomCard = () => {
                 <p className="room-card__number">{t("numberrooms")}: 1</p>
               </div>
 
-              <h3 className="room-card__room-title">{t("family") || "Family Room"}</h3>
+              <h3 className="room-card__room-title">
+                {t("family") || "Family Room"}
+                {familyUnavailable && (
+                  <span className="room-card__badge-unavail" style={{
+                    marginLeft: 8,
+                    fontSize: 12,
+                    padding: "4px 8px",
+                    borderRadius: 999,
+                    background: "#fff3cd",
+                    border: "1px solid #ffe08a"
+                  }}>
+                    {t("unavailable") || "Unavailable"}
+                  </span>
+                )}
+              </h3>
+
               <p className="room-card__info">
                 <FiUser /> 3 {t("guests")} &nbsp; | &nbsp; <FaRulerCombined /> 7.5 m²
               </p>
@@ -258,6 +307,7 @@ const RoomCard = () => {
                   })
                 }
                 disabled={isFamilyDisabled}
+                title={familyUnavailable ? (t("familyNotAvailable") || "Family room is not available") : ""}
               >
                 {t("booknow1")}
               </button>
@@ -275,14 +325,12 @@ const RoomCard = () => {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           guests={selectedRoom.guests}
-          rooms={selectedRoom.type}
+          rooms={selectedRoom.type}        // kanonik: "Standard Room" | "Family Room"
           checkIn={selectedRoom.checkIn}
-          checkOut={selectedRoom.checkOut}
+          checkOut={selectedRoom.checkOut} // datetime bo'lishi mumkin
           hotel={selectedRoom.hotel}
         />
       )}
     </div>
   );
-};
-
-export default RoomCard;
+}

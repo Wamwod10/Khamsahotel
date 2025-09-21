@@ -7,6 +7,9 @@ import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
 import "./roomModalMedia.scss";
 
+// 👉 Bu versiyada CONFIRM -> faqat modal (success) + storage ga yozish.
+//    To'lov keyin MyBooking sahifasidan qilinadi.
+
 const roomKeyMap = {
   "Standard Room": "roomType_standard",
   "Family Room": "roomType_family",
@@ -23,65 +26,26 @@ const guestCountByRoomType = {
   "Standard + 1 Family room": 4,
 };
 
-// Qo'shish: agar kelajakda boshqa room turlari bo'lsa, ular ham shu yerga qo'shilsin
+// Narxlar jadvali (EUR)
 const priceTable = {
-  "Standard Room": {
-    upTo3Hours: 40,
-    upTo10Hours: 60,
-    oneDay: 100,
-  },
-  "Family Room": {
-    upTo3Hours: 70,
-    upTo10Hours: 100,
-    oneDay: 150,
-  },
-  // Fallback uchun bo'sh narxlar (yoki boshqa turlar bo'lsa)
-  "2 Standard Rooms": {
-    upTo3Hours: 80,
-    upTo10Hours: 120,
-    oneDay: 200,
-  },
-  "2 Family Rooms": {
-    upTo3Hours: 140,
-    upTo10Hours: 200,
-    oneDay: 300,
-  },
-  "Standard + 1 Family room": {
-    upTo3Hours: 110,
-    upTo10Hours: 160,
-    oneDay: 250,
-  }
+  "Standard Room": { upTo3Hours: "00.1", upTo10Hours: 60, oneDay: 100 },
+  "Family Room":   { upTo3Hours: 70, upTo10Hours: 100, oneDay: 150 },
+  "2 Standard Rooms":           { upTo3Hours: 80,  upTo10Hours: 120, oneDay: 200 },
+  "2 Family Rooms":             { upTo3Hours: 140, upTo10Hours: 200, oneDay: 300 },
+  "Standard + 1 Family room":   { upTo3Hours: 110, upTo10Hours: 160, oneDay: 250 },
 };
 
-const normalizeDuration = (duration) => {
-  if (!duration || typeof duration !== "string") {
-    console.warn("normalizeDuration: duration invalid:", duration);
-    return "";
-  }
+const normalizeDurationKey = (duration) => {
+  if (!duration || typeof duration !== "string") return "";
   const d = duration.toLowerCase();
-
-  // misollar: "Up to 3 hours", "3 soat", "3 hours", "10 hours", "1 day", "kun", va h.k.
-  if (d.includes("3") && (d.includes("hour") || d.includes("soat") || d.includes("saat"))) {
-    return "upTo3Hours";
-  }
-  if (d.includes("10") && (d.includes("hour") || d.includes("soat") || d.includes("saat"))) {
-    return "upTo10Hours";
-  }
-  if (
-    (d.includes("1") || d.includes("bir")) &&
-    (d.includes("day") || d.includes("kun") || d.includes("день"))
-  ) {
-    return "oneDay";
-  }
-
-  // Agar tushinarsiz duratsiya bo'lsa, fallback
-  console.warn("normalizeDuration: unable to match duration:", duration);
+  if (d.includes("10") && (d.includes("hour") || d.includes("soat") || d.includes("saat"))) return "upTo10Hours";
+  if ((d.includes("one") || d.includes("1") || d.includes("bir")) && (d.includes("day") || d.includes("kun") || d.includes("день"))) return "oneDay";
+  if (d.includes("3") && (d.includes("hour") || d.includes("soat") || d.includes("saat"))) return "upTo3Hours";
   return "";
 };
 
 const SuccessModal = ({ onStayHere, onGoToMyBooking }) => {
   const { t } = useTranslation();
-
   return (
     <div className="modal-main">
       <div className="modal-overlay" />
@@ -104,7 +68,7 @@ const SuccessModal = ({ onStayHere, onGoToMyBooking }) => {
   );
 };
 
-const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) => {
+export default function RoomModal({ isOpen, onClose, guests: propGuests, rooms: propRooms }) {
   const { t } = useTranslation();
 
   const [bookingInfo, setBookingInfo] = useState({
@@ -113,51 +77,38 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     duration: "",
     hotel: t("TashkentAirportHotel") || "Tashkent Airport Hotel",
     guests: propGuests || 1,
-    rooms: propRooms || "",
+    rooms: propRooms || "", // canonical: "Standard Room" | "Family Room"
   });
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    phone: "",
-    email: "",
-  });
-
+  const [formData, setFormData] = useState({ firstName: "", lastName: "", phone: "", email: "" });
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Yüklangan ma'lumotlar localStorage dan
+  // localStorage’dan bookingInfo ni o‘qish
   useEffect(() => {
-    let parsed = null;
     try {
       const saved = localStorage.getItem("bookingInfo");
       if (saved) {
-        parsed = JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        const roomsVal = parsed.rooms || propRooms || "";
+        const durationVal = parsed.duration || "";
+        setBookingInfo({
+          checkIn: parsed.checkIn || "",
+          checkOutTime: parsed.checkOutTime || "",
+          duration: durationVal,
+          hotel: parsed.hotel || (t("TashkentAirportHotel") || "Tashkent Airport Hotel"),
+          guests: guestCountByRoomType[roomsVal] || propGuests || 1,
+          rooms: roomsVal,
+        });
+      } else {
+        setBookingInfo((prev) => ({
+          ...prev,
+          guests: guestCountByRoomType[propRooms] || propGuests || 1,
+          rooms: propRooms || "",
+          hotel: t("TashkentAirportHotel") || "Tashkent Airport Hotel",
+        }));
       }
     } catch (err) {
-      console.error("RoomModal: Error parsing bookingInfo from localStorage:", err);
-    }
-
-    if (parsed && typeof parsed === "object") {
-      // Tekshirish: parsed’da rooms va duration bo‘lishi kerak
-      const roomsVal = parsed.rooms || propRooms || "";
-      const durationVal = parsed.duration || "";
-
-      setBookingInfo({
-        checkIn: parsed.checkIn || "",
-        checkOutTime: parsed.checkOutTime || "",
-        duration: durationVal,
-        hotel: parsed.hotel || (t("TashkentAirportHotel") || "Tashkent Airport Hotel"),
-        guests: guestCountByRoomType[roomsVal] || propGuests || 1,
-        rooms: roomsVal,
-      });
-    } else {
-      // Agar localStorage’da ma’lumot yo‘q bo‘lsa yoki yaroqsiz bo‘lsa
-      setBookingInfo((prev) => ({
-        ...prev,
-        guests: guestCountByRoomType[propRooms] || propGuests || 1,
-        rooms: propRooms || "",
-        hotel: t("TashkentAirportHotel") || "Tashkent Airport Hotel",
-      }));
+      console.error("RoomModal: Error parsing bookingInfo:", err);
     }
   }, [t, propGuests, propRooms]);
 
@@ -165,100 +116,75 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     if (!dateStr) return "-";
     const parts = dateStr.split("-");
     if (parts.length !== 3) return dateStr;
-    const [year, month, day] = parts;
-    return `${day}.${month}.${year}`;
+    const [y, m, d] = parts;
+    return `${d}.${m}.${y}`;
   };
 
   const formatTime = (timeStr) => {
     if (!timeStr) return "-";
-    // Agar timeStr format DateTime bo'lsa: "YYYY-MM-DDTHH:MM:SS..."
     if (timeStr.includes("T")) {
       const timePart = timeStr.split("T")[1];
-      if (timePart) return timePart.slice(0,5); // HH:MM
+      if (timePart) return timePart.slice(0, 5);
     }
-    // yoki to'g'ridan format bo'lsa
-    return timeStr.length >=5 ? timeStr.slice(0,5) : timeStr;
+    return timeStr.length >= 5 ? timeStr.slice(0, 5) : timeStr;
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((p) => ({ ...p, [name]: value }));
   };
 
+  // 👉 Confirm bosilganda: faqat storage + success modal
   const handleConfirm = (e) => {
     e.preventDefault();
 
-    // Kerakli bookingInfo qiymatlari bo'lishini tekshirish
     if (!bookingInfo.checkIn || !bookingInfo.checkOutTime || !bookingInfo.duration || !bookingInfo.rooms) {
-      toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz!") || "Iltimos, barcha booking ma'lumotlarini to'ldiring!", {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz!") || "Iltimos, barcha booking ma'lumotlarini to'ldiring!", { position: "top-center", autoClose: 3000 });
       return;
     }
-
     const { firstName, lastName, phone, email } = formData;
     if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim()) {
-      toast.error(t("Iltimos, barcha maydonlarni to'ldiring") || "Please fill all fields", {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      toast.error(t("Iltimos, barcha maydonlarni to'ldiring") || "Please fill all fields", { position: "top-center", autoClose: 3000 });
       return;
     }
 
-    const durationKey = normalizeDuration(bookingInfo.duration);
+    const durationKey = normalizeDurationKey(bookingInfo.duration);
     if (!durationKey) {
-      toast.error(t("Duration no valid") || "Duration no valid", {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      toast.error(t("Duration no valid") || "Duration no valid", { position: "top-center", autoClose: 3000 });
       return;
     }
-
-    // rooms ham priceTable ichida bo'lishi kerak
     const roomKey = bookingInfo.rooms;
     const roomPricing = priceTable[roomKey];
     if (!roomPricing) {
-      toast.error(t("Room type no valid") || "Room type not valid for pricing", {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      toast.error(t("Room type no valid") || "Room type not valid for pricing", { position: "top-center", autoClose: 3000 });
       return;
     }
-
     const price = roomPricing[durationKey];
     if (price === undefined || price === null) {
-      toast.error(t("Price not available") || "Price not available for selected options", {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      toast.error(t("Price not available") || "Price not available for selected options", { position: "top-center", autoClose: 3000 });
       return;
     }
 
+    // ✅ Saqlash (MyBooking sahifasi ko'rsata olishi uchun)
     const fullBookingInfo = {
       ...bookingInfo,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       phone: phone.trim(),
       email: email.trim(),
-      price,
+      price,                 // EUR
+      status: "pending",     // to'lov hali qilinmagan
+      createdAt: new Date().toISOString(),
     };
 
     try {
-      const existingBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-      const updatedBookings = [...existingBookings, fullBookingInfo];
-      sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
+      const existing = JSON.parse(sessionStorage.getItem("allBookings")) || [];
+      sessionStorage.setItem("allBookings", JSON.stringify([...existing, fullBookingInfo]));
       sessionStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
       localStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
     } catch (err) {
       console.error("RoomModal: Storage error:", err);
-      toast.error(t("Ma'lumotlarni saqlashda xatolik yuz berdi!") || "Error saving booking info", {
-        position: "top-center",
-        autoClose: 4000,
-      });
+      toast.error(t("Ma'lumotlarni saqlashda xatolik yuz berdi!") || "Error saving booking info", { position: "top-center", autoClose: 4000 });
       return;
     }
 
@@ -269,49 +195,37 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     setShowSuccess(false);
     onClose && onClose();
   };
-
   const handleGoToMyBooking = () => {
-    // Agar SPA bo'lsa, Router’dagi yo’naltirish; a’gar link bo'lsa window.location...
     window.location.href = "/mybooking";
   };
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
+  if (showSuccess) return <SuccessModal onStayHere={handleStayHere} onGoToMyBooking={handleGoToMyBooking} />;
 
-  if (showSuccess) {
-    return <SuccessModal onStayHere={handleStayHere} onGoToMyBooking={handleGoToMyBooking} />;
-  }
-
-  const durationKey = normalizeDuration(bookingInfo.duration);
+  const durationKey = normalizeDurationKey(bookingInfo.duration);
   const roomKey = bookingInfo.rooms;
   const roomPricing = priceTable[roomKey];
-  let priceDisplay = "-";
-
-  if (roomPricing && durationKey && roomPricing[durationKey] !== undefined && roomPricing[durationKey] !== null) {
-    priceDisplay = `${roomPricing[durationKey]}€`;
-  }
+  const priceDisplay =
+    roomPricing && durationKey && roomPricing[durationKey] != null ? `${roomPricing[durationKey]}€` : "-";
 
   return (
     <div className="modal-main">
       <div className="modal-overlay" onClick={onClose} />
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <h2 className="modal__title" id="modal-title">
-          {t("bookyourstay") || "Book Your Stay"}
-        </h2>
+        <h2 className="modal__title" id="modal-title">{t("bookyourstay") || "Book Your Stay"}</h2>
 
         <div className="modal_all__section">
           <div className="modal__section">
-            <label>{t("check-in") || "Check‑In"}:</label>
-            <p>{formatDate(bookingInfo.checkIn)}</p>
+            <label>{t("check-in") || "Check-In"}:</label>
+            <p>{bookingInfo.checkIn ? formatDate(bookingInfo.checkIn) : "-"}</p>
           </div>
           <div className="modal__section">
-            <label>{t("check-in-hours") || "Check‑Out Time"}:</label>
+            <label>{t("check-in-hours") || "Check-In Time"}:</label>
             <p>{formatTime(bookingInfo.checkOutTime)}</p>
           </div>
           <div className="modal__section">
             <label>{t("duration") || "Duration"}:</label>
-            <p>{bookingInfo.duration ? t(durationKey) || bookingInfo.duration : "-"}</p>
+            <p>{bookingInfo.duration ? (t(durationKey) || bookingInfo.duration) : "-"}</p>
           </div>
           <div className="modal__section">
             <label>{t("rooms") || "Rooms"}:</label>
@@ -384,12 +298,11 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
             />
           </div>
 
-          {/* Payment method (agar boshqa imkoniyatlar bo'lsa kengaytirilishi mumkin) */}
           <div className="modal__field custom-select">
             <label htmlFor="payment-method">{t("paymentMethod") || "Payment Method"}</label>
             <div className="input-wrapper">
               <img src="/28.png" alt="Octobank" className="input-icon" />
-              <input id="payment-method" value="Octobank" disabled />
+              <input id="payment-method" value={t("payLaterAtMyBooking") || "Pay later on MyBooking"} disabled />
             </div>
           </div>
 
@@ -412,6 +325,4 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
       </div>
     </div>
   );
-};
-
-export default RoomModal;
+}
