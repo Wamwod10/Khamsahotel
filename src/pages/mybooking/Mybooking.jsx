@@ -4,35 +4,57 @@ import BookingCard from "./components/BookingCard/BookingCard";
 import EditBookingModal from "./components/Edit/EditBookingModal";
 import { v4 as uuidv4 } from "uuid";
 
-/** API bazasini aniqlash — Vite/Cra uchun */
+/** API bazasini aniqlash — Vite/CRA/prod uchun */
 function getApiBase() {
-  const env =
-    (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
-    process.env?.REACT_APP_API_BASE_URL ||
-    "";
-  // trailing slash yo'q
-  const cleaned = (env || "").replace(/\/+$/, "");
-  // hech narsa bo'lmasa — shu domen
-  return cleaned || window.location.origin;
+  // 1) Vite
+  const vite = import.meta?.env?.VITE_API_BASE_URL;
+  // 2) CRA
+  const cra = process.env?.REACT_APP_API_BASE_URL;
+  // 3) fallback: shu domen (agar backend shu domen ostida proksi qilingan bo'lsa)
+  const fallback = window.location.origin;
+
+  const pick = (vite || cra || fallback || "").replace(/\/+$/, "");
+  return pick;
 }
 
 /** JSON bo'lmasa ham xatoni to'g'ri qaytarish */
 async function safeFetchJson(input, init) {
   const res = await fetch(input, init);
-  const ct = res.headers.get("content-type") || "";
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
   let data;
   try {
-    data = ct.includes("application/json") ? await res.json() : await res.text();
-  } catch (e) {
-    data = await res.text().catch(() => "");
+    if (ct.includes("application/json")) data = await res.json();
+    else {
+      const text = await res.text();
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+    }
+  } catch {
+    data = "";
   }
   return { ok: res.ok, status: res.status, data };
+}
+
+/** Timeout bilan fetch */
+async function fetchWithTimeout(url, options = {}, ms = 15000) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 const MyBooking = () => {
   const [bookings, setBookings] = useState([]);
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [paying, setPaying] = useState(false);
   const API_BASE = useMemo(getApiBase, []);
 
   useEffect(() => {
@@ -41,13 +63,15 @@ const MyBooking = () => {
     const normalized = saved.map((b) => ({
       id: b.id || uuidv4(),
       ...b,
-      // number bo'lishi uchun
-      price: typeof b.price === "string" ? Number(b.price) || 0 : (b.price || 0),
+      // raqamga majburiy aylantirish
+      price:
+        typeof b.price === "string"
+          ? Number(String(b.price).replace(/[^\d.,-]/g, "").replace(",", ".")) || 0
+          : Number(b.price) || 0,
     }));
 
     setBookings(normalized);
     sessionStorage.setItem("allBookings", JSON.stringify(normalized));
-    // Tezkor kirish uchun localStorage ham yangilanadi
     localStorage.setItem("allBookings", JSON.stringify(normalized));
   }, []);
 
@@ -80,7 +104,7 @@ const MyBooking = () => {
 
   const handlePayment = async () => {
     if (!API_BASE) {
-      alert("API manzili topilmadi. Iltimos .env dagi VITE_API_BASE_URL ni tekshiring.");
+      alert("API manzili topilmadi. Iltimos .env dagi VITE_API_BASE_URL/REACT_APP_API_BASE_URL ni tekshiring.");
       return;
     }
     if (totalAmount <= 0) {
@@ -93,30 +117,50 @@ const MyBooking = () => {
       return;
     }
 
+    setPaying(true);
     try {
-      const { ok, status, data } = await safeFetchJson(`${API_BASE}/create-payment`, {
+      // 1) Cold-start ping — backend uyg'otiladi (agar uxlab bo'lsa)
+      try {
+        await fetch(`${API_BASE}/healthz`, { cache: "no-store" });
+      } catch {
+        /* ping muvaffaqiyatsiz bo'lsa ham davom etamiz */
+      }
+
+      // 2) To'lov yaratish
+      const res = await fetchWithTimeout(`${API_BASE}/create-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: Math.round(totalAmount * 100) / 100,
-          description: `Booking Payment for ${latestBooking.firstName || ""} ${latestBooking.lastName || ""}`.trim(),
+          amount: Math.round(totalAmount * 100) / 100, // EUR, 2 decimal
+          description: `Booking Payment for ${(latestBooking.firstName || "").trim()} ${(latestBooking.lastName || "").trim()}`.trim(),
           email: latestBooking.email,
         }),
       });
 
-      if (ok && data && typeof data === "object" && data.paymentUrl) {
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
+      const data =
+        ct.includes("application/json") ? await res.json() : await res.text().then((t) => {
+          try { return JSON.parse(t); } catch { return t; }
+        });
+
+      if (res.ok && data && typeof data === "object" && data.paymentUrl) {
         window.location.href = data.paymentUrl;
-      } else {
-        const msg =
-          (data && data.error) ||
-          (typeof data === "string" && data.slice(0, 300)) ||
-          `Xatolik (status ${status})`;
-        alert(`To‘lov yaratishda xatolik: ${msg}`);
-        console.error("create-payment error:", { status, data });
+        return;
       }
+
+      const msg =
+        (data && typeof data === "object" && (data.error || data.message)) ||
+        (typeof data === "string" && data.slice(0, 300)) ||
+        `Xatolik (status ${res.status})`;
+      alert(`To‘lov yaratishda xatolik: ${msg}`);
+      console.error("create-payment error:", { status: res.status, data });
     } catch (err) {
-      alert(`To‘lov yaratishda xatolik yuz berdi: ${err?.message || String(err)}`);
-      console.error(err);
+      // Bu yerga odatda CORS/preflight yoki network timeoutlar tushadi
+      const text = err?.name === "AbortError" ? "Server javob bermadi (timeout)" : (err?.message || String(err));
+      alert(`To‘lov yaratishda xatolik yuz berdi: ${text}`);
+      console.error("fetch failure:", err);
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -128,7 +172,7 @@ const MyBooking = () => {
     <div className="my-booking-container">
       <div className="booking-header">
         <h1>My Bookings</h1>
-        <button className="btn btn-add" onClick={addNewBooking}>
+        <button className="btn btn-add" onClick={addNewBooking} disabled={paying}>
           + New Booking
         </button>
       </div>
@@ -149,8 +193,15 @@ const MyBooking = () => {
           ))}
 
           <div className="my-booking-buttons">
-            <button className="btn btn-pay" onClick={handlePayment} disabled={totalAmount <= 0}>
-              {`Pay Now (${totalAmount > 0 ? `${totalAmount.toLocaleString()}€` : "No amount"})`}
+            <button
+              className="btn btn-pay"
+              onClick={handlePayment}
+              disabled={totalAmount <= 0 || paying}
+              aria-busy={paying ? "true" : "false"}
+            >
+              {paying
+                ? "Processing..."
+                : `Pay Now (${totalAmount > 0 ? `${totalAmount.toLocaleString()}€` : "No amount"})`}
             </button>
           </div>
         </>
