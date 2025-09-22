@@ -1,8 +1,27 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import "./PaymentSuccess.scss";
 
+function getApiBase() {
+  const env =
+    (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
+    process.env?.REACT_APP_API_BASE_URL ||
+    "";
+  return (env || "").replace(/\/+$/, "") || window.location.origin;
+}
+async function safeFetchJson(input, init) {
+  const res = await fetch(input, init);
+  const ct = res.headers.get("content-type") || "";
+  let data;
+  try {
+    data = ct.includes("application/json") ? await res.json() : await res.text();
+  } catch {
+    data = await res.text().catch(() => "");
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
 const PaymentSuccess = () => {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  const API_BASE = useMemo(getApiBase, []);
 
   const roomKeyMap = {
     "Standard Room": "Standard Room",
@@ -12,99 +31,87 @@ const PaymentSuccess = () => {
     "Standard + 1 Family room": "Standard + 1 Family room",
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "-";
-    const [year, month, day] = dateStr.split("-");
-    return `${day}.${month}.${year}`;
+  const formatDate = (s) => {
+    if (!s) return "-";
+    const [y, m, d] = s.split("-");
+    return `${d}.${m}.${y}`;
   };
-
-  const formatTime = (timeStr) => {
-    if (!timeStr) return "-";
-    if (timeStr.includes("T")) return timeStr.split("T")[1].slice(0, 5);
-    return timeStr.slice(0, 5);
+  const formatTime = (s) => {
+    if (!s) return "-";
+    if (s.includes("T")) return s.split("T")[1].slice(0, 5);
+    return s.slice(0, 5);
   };
-
-  const formatDateTime = (dateTimeStr) => {
-    if (!dateTimeStr) return "-";
-    const date = new Date(dateTimeStr);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${day}.${month}.${year} ${hours}:${minutes}`;
+  const formatDateTime = (s) => {
+    if (!s) return "-";
+    const d = new Date(s);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
 
   useEffect(() => {
-    const allBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-    const latest = allBookings[0];
+    const all = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
+    const latest = all[0];
+    if (!latest) return;
 
-    if (latest) {
-      const {
-        firstName,
-        lastName,
-        phone,
-        email,
-        checkIn,
-        checkOutTime,
-        rooms,
-        duration,
-        price,
-        createdAt,
-      } = latest;
+    const {
+      firstName,
+      lastName,
+      phone,
+      email,
+      checkIn,
+      checkOutTime,
+      rooms,
+      duration,
+      price,
+      createdAt,
+    } = latest;
 
-      const emailText = `
+    const emailText = `
 Thank you for choosing to stay with us via Khamsahotel.uz!
 
-Please be informed that we are a SLEEP LOUNGE located inside the airport within the transit area. 
+Please be informed that we are a SLEEP LOUNGE located inside the airport within the transit area.
 To stay with us, you must have a valid boarding pass departing from Tashkent Airport.
 
 IMPORTANT NOTE:
 We will never ask you for your credit card details or send links via Khamsahotel.uz for online payments or booking confirmation.
 
-If you have any doubts about your booking status, please check via the Khamsahotel.uz website or app only, 
+If you have any doubts about your booking status, please check via the Khamsahotel.uz website or app only,
 call us at +998 95 877 24 24 (tel/WhatsApp/Telegram), or email us at qonoqhotel@mail.ru
 
 ------------------------------
-🔔 YOUR BOOKING DETAILS
+YOUR BOOKING DETAILS
 ------------------------------
 
-👤 Guest: ${firstName} ${lastName}
-📧 Email: ${email}
-📞 Phone: ${phone}
+Guest: ${firstName} ${lastName}
+Email: ${email}
+Phone: ${phone}
 
-🗓️ Booking Date: ${formatDateTime(createdAt)}
-📅 Check-in Date: ${formatDate(checkIn)}
-⏰ Check-in Time: ${formatTime(checkOutTime)}
-🛏️ Room Type: ${roomKeyMap[rooms] || rooms}
-📆 Duration: ${duration}
-💶 Price: ${price ? `${price}€` : "-"}
+Booking Date: ${formatDateTime(createdAt)}
+Check-in Date: ${formatDate(checkIn)}
+Check-in Time: ${formatTime(checkOutTime)}
+Room Type: ${roomKeyMap[rooms] || rooms}
+Duration: ${duration}
+Price: ${price ? `${price}€` : "-"}
 
--------------------------------------
-Thank you for your reservation. We look forward to welcoming you! 
-
+Thank you for your reservation. We look forward to welcoming you!
 - Khamsa Sleep Lounge Team
-`;
+`.trim();
 
-      const emailData = {
+    // 1) mijozga email
+    safeFetchJson(`${API_BASE}/send-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         to: email,
         subject: "Your Booking Confirmation – Khamsahotel.uz",
         text: emailText,
-      };
+      }),
+    }).then(({ ok, data }) => {
+      if (!ok) console.error("send-email error:", data);
+    });
 
-      // 1. EMAIL YUBORISH
-      fetch(`${API_BASE}/send-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(emailData),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            console.log("✅ Email mijozga yuborildi");
-
-            // 2. EMAIL YUBORILGANDAN KEYIN TELEGRAMGA YUBORAMIZ
-            const telegramText = `
+    // 2) admin guruhiga telegramni backend orqali
+    const telegramText = `
 📢 Yangi bron qabul qilindi:
 
 👤 Ism: ${firstName} ${lastName}
@@ -117,45 +124,16 @@ Thank you for your reservation. We look forward to welcoming you!
 🛏️ Xona: ${roomKeyMap[rooms] || rooms}
 📆 Davomiylik: ${duration}
 💶 To'lov Summasi: ${price ? `${price}€` : "-"}
+`.trim();
 
-✅ Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi
-
-🌐 Sayt: khamsahotel.uz
-`;
-
-            const TELEGRAM_BOT_TOKEN = "8066986640:AAFpZPlyOkbjxWaSQTgBMbf3v8j7lgMg4Pk";
-            const TELEGRAM_CHAT_ID = "-1002944437298";
-
-            fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                chat_id: TELEGRAM_CHAT_ID,
-                text: telegramText,
-              }),
-            })
-              .then((res) => res.json())
-              .then((data) => {
-                if (data.ok) {
-                  console.log("✅ Telegramga xabar yuborildi");
-                } else {
-                  console.error("❌ Telegram xabar xatosi:", data);
-                }
-              })
-              .catch((err) => {
-                console.error("🔴 Telegram fetch xatolik:", err);
-              });
-          } else {
-            console.error("❌ Email yuborishda xatolik:", data.error);
-          }
-        })
-        .catch((err) => {
-          console.error("🔴 Email yuborishda texnik xatolik:", err);
-        });
-    }
-  }, []);
+    safeFetchJson(`${API_BASE}/notify-telegram`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: telegramText }),
+    }).then(({ ok, data }) => {
+      if (!ok) console.error("notify-telegram error:", data);
+    });
+  }, [API_BASE]);
 
   return (
     <div className="payment-success-container">
@@ -178,11 +156,9 @@ Thank you for your reservation. We look forward to welcoming you!
       </div>
       <h1>To‘lov muvaffaqiyatli bajarildi!</h1>
       <p className="message">
-        Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi. Sizga tasdiqnoma email orqali yuborildi.
+        Rahmat! Buyurtmangiz qabul qilindi. Tasdiqnoma email orqali yuborildi.
       </p>
-      <a className="back-home" href="/">
-        Bosh sahifaga qaytish
-      </a>
+      <a className="back-home" href="/">Bosh sahifaga qaytish</a>
     </div>
   );
 };
