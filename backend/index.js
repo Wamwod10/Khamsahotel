@@ -40,7 +40,7 @@ const transporter = nodemailer.createTransport({
 
 async function sendEmail(to, subject, text) {
   if (!to || !subject || !text) {
-    console.warn("Email yuborish uchun yetarli ma'lumot yo'q, yoki xato");
+    console.warn("Email yuborish uchun yetarli ma'lumot yo'q");
     return;
   }
   try {
