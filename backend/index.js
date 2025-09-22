@@ -7,6 +7,8 @@ import nodemailer from "nodemailer";
 dotenv.config();
 
 const app = express();
+
+// === ENV & CONSTS ===
 const PORT = process.env.PORT || 5002;
 const BASE_URL = process.env.BASE_URL || "https://hotel-backend-bmlk.onrender.com";
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://khamsahotel.uz";
@@ -17,17 +19,25 @@ const {
   OCTO_SECRET,
   EMAIL_USER,
   EMAIL_PASS,
-  // BNOVO_API_KEY, 
-  // BNOVO_API_BASE, 
+  TELEGRAM_BOT_TOKEN,
+  TELEGRAM_CHAT_ID,
+  // BNOVO_API_KEY,
+  // BNOVO_API_BASE,
 } = process.env;
 
+// Admin email (bu yerda ixtiyoriy ravishda .env dan ham o'qishingiz mumkin)
 const ADMIN_EMAIL = "shamshodochilov160@gmail.com";
 
-if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS /*|| !BNOVO_API_KEY*/) {
-  console.error("❌ .env faylida kerakli ma'lumotlar yetishmayapti yoki yoq");
+// Minimal tekshiruvlar
+if (!OCTO_SHOP_ID || !OCTO_SECRET || !EMAIL_USER || !EMAIL_PASS) {
+  console.error("❌ .env faylida kerakli ma'lumotlar yetishmayapti (OCTO_SHOP_ID/OCTO_SECRET/EMAIL_USER/EMAIL_PASS).");
   process.exit(1);
 }
+if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+  console.warn("⚠️ TELEGRAM_BOT_TOKEN yoki TELEGRAM_CHAT_ID topilmadi. Telegram xabarlari ishlamasligi mumkin.");
+}
 
+// === EMAIL transporter (Gmail SMTP) ===
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -38,9 +48,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendEmail(to, subject, text) {
-  if (!to || !subject || !text) {
-    console.warn("Email yuborish uchun yetarli ma'lumot yo'q, yoki xatolik bor");
+// === HELPERS ===
+async function sendEmail({ to, subject, text, html }) {
+  if (!to || !subject || (!text && !html)) {
+    console.warn("⚠️ Email yuborish uchun yetarli ma'lumot yo‘q (to/subject/text|html).");
     return;
   }
   try {
@@ -49,22 +60,55 @@ async function sendEmail(to, subject, text) {
       to,
       subject,
       text,
+      html,
     });
     console.log(`✅ Email yuborildi: ${to}`);
     return info;
   } catch (err) {
-    console.error(`❌ Email yuborishda xatolik (${to}):`, err.message || err);
+    console.error(`❌ Email yuborishda xatolik (${to}):`, err?.message || err);
     throw err;
   }
 }
 
-app.use(cors({
-  origin: [FRONTEND_URL, `${FRONTEND_URL}/`],
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"],
-}));
-app.use(express.json());
+async function sendTelegram(text) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.warn("⚠️ Telegram sozlamalari yo‘q — xabar yuborilmadi.");
+    return { ok: false, skipped: true };
+  }
+  if (!text) {
+    console.warn("⚠️ Telegram xabar matni yo‘q.");
+    return { ok: false };
+  }
+  const tgResp = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
+  }).then((r) => r.json());
 
+  if (!tgResp?.ok) {
+    console.error("❌ Telegram xatolik:", tgResp);
+    throw new Error("Telegram send failed");
+  }
+  console.log("✅ Telegramga xabar yuborildi");
+  return tgResp;
+}
+
+// Backend darajasida idempotentlik uchun oddiy xotira kechasi
+const sentMap = new Map(); // bookingId => timestamp
+
+// === MIDDLEWARES ===
+app.use(
+  cors({
+    origin: [FRONTEND_URL, `${FRONTEND_URL}/`],
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
+app.use(express.json({ limit: "1mb" }));
+
+// === ROUTES ===
+
+// 1) Octo orqali to‘lov yaratish
 app.post("/create-payment", async (req, res) => {
   try {
     const { amount, description = "Mehmonxona to'lovi", email } = req.body;
@@ -97,7 +141,13 @@ app.post("/create-payment", async (req, res) => {
     });
 
     const responseText = await response.text();
-    const data = JSON.parse(responseText);
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (_) {
+      console.error("❌ Octo javobi JSON emas:", responseText);
+      return res.status(400).json({ error: "Octobank javobi noto‘g‘ri formatda" });
+    }
 
     if (data.error === 0 && data.data?.octo_pay_url) {
       return res.json({ paymentUrl: data.data.octo_pay_url });
@@ -110,15 +160,14 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
+// 2) Faqat email yuborish (oddiy endpoint)
 app.post("/send-email", async (req, res) => {
   try {
-    const { to, subject, text } = req.body;
-
-    if (!to || !subject || !text) {
+    const { to, subject, text, html } = req.body;
+    if (!to || !subject || (!text && !html)) {
       return res.status(400).json({ success: false, error: "To‘liq ma’lumot yuborilmadi" });
     }
-
-    await sendEmail(to, subject, text);
+    await sendEmail({ to, subject, text, html });
     res.json({ success: true });
   } catch (err) {
     console.error("❌ /send-email xatolik:", err);
@@ -126,14 +175,27 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
+// 3) Telegram xabar yuborish (oddiy endpoint)
+app.post("/send-telegram", async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    if (!text) return res.status(400).json({ ok: false, error: "text required" });
+
+    const r = await sendTelegram(text);
+    res.json({ ok: true, result: r });
+  } catch (e) {
+    console.error("❌ /send-telegram xatolik:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Telegram yuborilmadi" });
+  }
+});
+
+// 4) To‘lov callback (audit uchun)
 app.post("/payment-callback", (req, res) => {
   console.log("🔁 Callback body:", req.body);
   res.json({ status: "callback received" });
 });
 
-// Bnovo bilan bog'liq import olib tashlandi
-// const bnovo = new BnovoAPI(BNOVO_API_KEY, BNOVO_API_BASE);
-
+// 5) Booking (Bnovo integratsiyasiz, admin emailga xabar)
 app.post("/api/bookings", async (req, res) => {
   try {
     const {
@@ -170,7 +232,6 @@ app.post("/api/bookings", async (req, res) => {
       "2 Family Rooms": 117446,
       "Standard + 1 Family room": 117447,
     };
-
     const room_type_id = roomTypeMap[rooms] || 117445;
 
     const createdAt = new Date().toISOString();
@@ -178,22 +239,17 @@ app.post("/api/bookings", async (req, res) => {
     const bookingPayload = {
       date_from: checkIn,
       date_to: checkOut,
-      rooms: [
-        {
-          room_type_id: room_type_id,
-          guests: guests,
-        },
-      ],
+      rooms: [{ room_type_id, guests }],
       customer: {
         first_name: firstName,
         last_name: lastName,
-        phone: phone,
-        email: email,
+        phone,
+        email,
       },
       comment: `Xona: ${rooms} | Narx: ${price} EUR | Sayt: ${FRONTEND_URL}`,
     };
 
-    // const bnovoResponse = await bnovo.createBooking(bookingPayload); // <-- olib tashlandi
+    // const bnovoResponse = await bnovo.createBooking(bookingPayload); // olib tashlangan
 
     const emailSubject = "Yangi bron qilish haqida xabar";
     const emailText = `
@@ -211,27 +267,106 @@ Yangi bron qabul qilindi:
 🕓 Bron qilingan vaqt: ${createdAt}
 
 🌐 Sayt: ${FRONTEND_URL}
-    `;
+`.trim();
 
     try {
-      await sendEmail(ADMIN_EMAIL, emailSubject, emailText);
+      await sendEmail({ to: ADMIN_EMAIL, subject: emailSubject, text: emailText });
       console.log("✅ Admin email yuborildi:", ADMIN_EMAIL);
     } catch (emailErr) {
-      console.error("❌ Admin email yuborishda xatolik:", emailErr.message || emailErr);
+      console.error("❌ Admin email yuborishda xatolik:", emailErr?.message || emailErr);
     }
 
     res.json({
       success: true,
       message: "Bron muvaffaqiyatli yuborildi",
-      // bnovoData: bnovoResponse, // <-- olib tashlandi
       createdAt,
+      bookingPayload, // audit uchun foydali
+      room_type_id,
     });
   } catch (error) {
-    console.error("❌ Bnovo booking xatolik:", error.message || error);
+    console.error("❌ /api/bookings xatolik:", error?.message || error);
     res.status(500).json({ error: "Bron qilishda server xatosi" });
   }
 });
 
+// 6) NOTIFY: mijozga email + admin email + telegram — barchasi bitta chaqiriqda
+app.post("/notify-booking", async (req, res) => {
+  try {
+    const { bookingId, customerEmail, subject, emailText, telegramText, booking } = req.body || {};
+
+    if (!bookingId) return res.status(400).json({ ok: false, error: "bookingId required" });
+    if (!customerEmail) return res.status(400).json({ ok: false, error: "customerEmail required" });
+    if (!emailText && !subject) return res.status(400).json({ ok: false, error: "email content required" });
+
+    // idempotentlik: server darajasida ham tekshiramiz
+    if (sentMap.has(bookingId)) {
+      return res.json({ ok: true, skipped: true, reason: "Already sent for this bookingId" });
+    }
+
+    // 6.1) Mijozga email (text + HTML versiya)
+    const html = `
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#111">
+        <p>Thank you for choosing to stay with us via <strong>Khamsahotel.uz</strong>!</p>
+        <p>Please be informed that we are a <strong>SLEEP LOUNGE</strong> located inside the airport within the transit area.
+        To stay with us, you must have a valid boarding pass departing from Tashkent Airport.</p>
+        <p><strong>IMPORTANT NOTE:</strong><br/>
+        We will never ask you for your credit card details or send links via Khamsahotel.uz for online payments or booking confirmation.</p>
+        <p>If you have any doubts about your booking status, please check via the Khamsahotel.uz website or app only,
+        call us at <a href="tel:+998958772424">+998 95 877 24 24</a> (tel/WhatsApp/Telegram), or email us at
+        <a href="mailto:qonoqhotel@mail.ru">qonoqhotel@mail.ru</a>.</p>
+        <hr/>
+        <h3>🔔 YOUR BOOKING DETAILS</h3>
+        <ul>
+          <li>👤 Guest: ${booking?.firstName || ""} ${booking?.lastName || ""}</li>
+          <li>📧 Email: ${booking?.email || customerEmail || ""}</li>
+          <li>📞 Phone: ${booking?.phone || ""}</li>
+          <li>🗓️ Booking Date: ${booking?.createdAt || ""}</li>
+          <li>📅 Check-in: ${booking?.checkIn || ""}</li>
+          <li>⏰ Time: ${booking?.checkOutTime || ""}</li>
+          <li>🛏️ Room: ${booking?.rooms || ""}</li>
+          <li>📆 Duration: ${booking?.duration || ""}</li>
+          <li>💶 Price: ${booking?.price ? `${booking.price}€` : "-"}</li>
+        </ul>
+        <p>Thank you for your reservation. We look forward to welcoming you!</p>
+        <p>– Khamsa Sleep Lounge Team</p>
+      </div>
+    `;
+
+    await sendEmail({
+      to: customerEmail,
+      subject: subject || "Your Booking Confirmation – Khamsahotel.uz",
+      text: emailText,
+      html,
+    });
+
+    // 6.2) Admin emailga nusxa (ixtiyoriy, teleqram matnini yuboramiz)
+    if (ADMIN_EMAIL) {
+      await sendEmail({
+        to: ADMIN_EMAIL,
+        subject: `New Booking – ${booking?.firstName || ""} ${booking?.lastName || ""}`,
+        text: telegramText || "[no telegram text provided]",
+      });
+    }
+
+    // 6.3) Telegramga xabar
+    if (telegramText) {
+      await sendTelegram(telegramText);
+    }
+
+    // idempotent belgi
+    sentMap.set(bookingId, Date.now());
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("❌ /notify-booking xatolik:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Notify failed" });
+  }
+});
+
+// 7) Health-check
+app.get("/health", (_, res) => res.json({ ok: true }));
+
+// === START ===
 app.listen(PORT, () => {
   console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
 });
