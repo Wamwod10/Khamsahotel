@@ -4,44 +4,26 @@ import BookingCard from "./components/BookingCard/BookingCard";
 import EditBookingModal from "./components/Edit/EditBookingModal";
 import { v4 as uuidv4 } from "uuid";
 
-// 🔗 Backend bazaviy URL
-const API_BASE =
-  (typeof import.meta !== "undefined" && import.meta.env && (import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_BASE_URL)) ||
-  window.__API_BASE__ ||
-  "https://hotel-backend-bmlk.onrender.com";
-
 const MyBooking = () => {
   const [bookings, setBookings] = useState([]);
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // 1) sessionStorage -> allBookings
-    const saved = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-    const normalized = saved.map((b) => ({ ...b, id: b.id || uuidv4() }));
-    setBookings(normalized);
-    sessionStorage.setItem("allBookings", JSON.stringify(normalized));
+    const savedBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
 
-    // 2) Agar RoomModal oxirgi bookingni localStorage.bookingInfo ga yozgan bo'lsa — sinxronlab qo'yamiz
-    try {
-      const last = JSON.parse(localStorage.getItem("bookingInfo"));
-      if (last && last.createdAt) {
-        const exists = normalized.some((b) => b.createdAt === last.createdAt);
-        if (!exists) {
-          const withId = { ...last, id: uuidv4() };
-          const updated = [withId, ...normalized];
-          setBookings(updated);
-          sessionStorage.setItem("allBookings", JSON.stringify(updated));
-          localStorage.setItem("allBookings", JSON.stringify(updated));
-        }
-      }
-    } catch {}
+    const normalizedBookings = savedBookings.map((b) => ({
+      ...b,
+      id: b.id || uuidv4(),
+    }));
+
+    setBookings(normalizedBookings);
+    sessionStorage.setItem("allBookings", JSON.stringify(normalizedBookings));
   }, []);
 
-  const saveBookingsToStorage = (list) => {
-    sessionStorage.setItem("allBookings", JSON.stringify(list));
-    localStorage.setItem("allBookings", JSON.stringify(list));
+  const saveBookingsToStorage = (updatedList) => {
+    sessionStorage.setItem("allBookings", JSON.stringify(updatedList));
+    localStorage.setItem("allBookings", JSON.stringify(updatedList));
   };
 
   const handleEditBooking = (booking) => {
@@ -50,11 +32,11 @@ const MyBooking = () => {
   };
 
   const handleSaveBooking = (updatedBooking) => {
-    const updated = bookings.map((b) =>
+    const updatedList = bookings.map((b) =>
       b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
     );
-    setBookings(updated);
-    saveBookingsToStorage(updated);
+    setBookings(updatedList);
+    saveBookingsToStorage(updatedList);
     setIsEditOpen(false);
   };
 
@@ -64,70 +46,47 @@ const MyBooking = () => {
     saveBookingsToStorage(filtered);
   };
 
-  // 👉 To'lovni hozircha faqat eng so'nggi yaratilgan booking uchun qilamiz (commit ham shunga mos)
-  const latestBooking = bookings[0] || null;
+  const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
   const handlePayment = async () => {
-    if (!latestBooking) {
-      alert("Hech qanday booking topilmadi");
-      return;
-    }
-    if (!latestBooking.price || !latestBooking.email) {
-      alert("Booking uchun narx yoki email mavjud emas");
+    if (totalAmount === 0) {
+      alert("To‘lov uchun summa mavjud emas");
       return;
     }
 
-    setLoading(true);
+    const latestBooking = bookings[0];
+    if (!latestBooking || !latestBooking.email) {
+      alert("Email ma'lumotlari mavjud emas");
+      return;
+    }
+
     try {
-      const description = `Booking Payment for ${latestBooking.firstName} ${latestBooking.lastName}`;
-      const resp = await fetch(`${API_BASE}/create-payment`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/create-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: Number(latestBooking.price), // EUR
-          description,
+          amount: totalAmount,
+          description: `Booking Payment for ${latestBooking.firstName} ${latestBooking.lastName}`,
           email: latestBooking.email,
         }),
       });
 
-      const text = await resp.text();
       let data = {};
-      try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+      try {
+        const text = await response.text();
+        data = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        alert("Serverdan noto'g'ri javob keldi");
+        return;
+      }
 
-      if (resp.ok && data?.paymentUrl) {
-        // Success sahifada /api/bookings/commit qilish uchun ma'lumotlarni saqlab qo'yamiz
-        const pending = {
-          bookingId: latestBooking.id,
-          amount: latestBooking.price,
-          email: latestBooking.email,
-          description,
-          shop_transaction_id: data.shop_transaction_id || null,
-          // commit uchun kerak bo'ladigan booking fieldlari
-          commitPayload: {
-            checkIn: latestBooking.checkIn,
-            duration: latestBooking.duration,
-            rooms: latestBooking.rooms,
-            firstName: latestBooking.firstName,
-            lastName: latestBooking.lastName,
-            phone: latestBooking.phone,
-            email: latestBooking.email,
-            guests: latestBooking.guests || 1,
-            price: latestBooking.price,
-          },
-          createdAt: new Date().toISOString(),
-        };
-        sessionStorage.setItem("pendingPayment", JSON.stringify(pending));
-        localStorage.setItem("pendingPayment", JSON.stringify(pending)); // zaxira
-
-        // Octobank sahifasiga yo'naltiramiz
+      if (response.ok && data.paymentUrl) {
         window.location.href = data.paymentUrl;
       } else {
         alert(`To‘lov yaratishda xatolik: ${data.error || "Noma'lum xatolik"}`);
       }
-    } catch (e) {
-      alert(`To‘lov yaratishda xatolik yuz berdi: ${e?.message || e}`);
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      alert(`To‘lov yaratishda xatolik yuz berdi: ${error.message || error}`);
     }
   };
 
@@ -156,7 +115,6 @@ const MyBooking = () => {
               booking={booking}
               onEdit={() => handleEditBooking(booking)}
               onDelete={() => handleDeleteBooking(booking.id)}
-              isLatest={latestBooking && booking.id === latestBooking.id}
             />
           ))}
 
@@ -164,10 +122,9 @@ const MyBooking = () => {
             <button
               className="btn btn-pay"
               onClick={handlePayment}
-              disabled={!latestBooking || !latestBooking.price || loading}
-              title={!latestBooking ? "No booking to pay" : ""}
+              disabled={totalAmount === 0}
             >
-              {loading ? "Loading..." : `Pay Now ${latestBooking?.price ? `(${latestBooking.price}€)` : ""}`}
+              Pay Now ({totalAmount > 0 ? `${totalAmount.toLocaleString()}€` : "No amount"})
             </button>
           </div>
         </>
@@ -184,3 +141,7 @@ const MyBooking = () => {
 };
 
 export default MyBooking;
+
+
+
+
