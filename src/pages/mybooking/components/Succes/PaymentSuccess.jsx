@@ -152,7 +152,7 @@ Thank you for your reservation. We look forward to welcoming you!
           }
         })
         .catch((err) => {
-          console.error("🔴 Email yuborishda xatolik:", err);
+          console.error("🔴 Email yuborishda texnik xatolik:", err);
         });
     }
   }, []);
