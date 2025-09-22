@@ -131,7 +131,7 @@ const MyBooking = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: Math.round(totalAmount * 100) / 100, // EUR, 2 decimal
+         amount: Number(totalAmount),// EUR, 2 decimal
           description: `Booking Payment for ${(latestBooking.firstName || "").trim()} ${(latestBooking.lastName || "").trim()}`.trim(),
           email: latestBooking.email,
         }),
