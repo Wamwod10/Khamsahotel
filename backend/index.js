@@ -202,7 +202,7 @@ Yangi bron qabul qilindi:
       console.error("❌ Admin email:", e?.message || e);
     }
 
-    res.json({ success: true, message: "Bron muvaffaqiyatli yuborildi", createdAt });
+    res.json({ success: true, message: "Bron muvaffaqiyatli tarzda yuborildi", createdAt });
   } catch (error) {
     console.error("❌ /api/bookings:", error);
     res.status(500).json({ error: "Bron qilishda server xatosi" });
