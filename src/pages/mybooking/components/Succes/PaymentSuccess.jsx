@@ -82,16 +82,16 @@ call us at +998 95 877 24 24 (tel/WhatsApp/Telegram), or email us at qonoqhotel@
 YOUR BOOKING DETAILS
 ------------------------------
 
-Guest: ${firstName} ${lastName}
-Email: ${email}
-Phone: ${phone}
+👤Guest: ${firstName} ${lastName}
+📧Email: ${email}
+📞Phone: ${phone}
 
-Booking Date: ${formatDateTime(createdAt)}
-Check-in Date: ${formatDate(checkIn)}
-Check-in Time: ${formatTime(checkOutTime)}
-Room Type: ${roomKeyMap[rooms] || rooms}
-Duration: ${duration}
-Price: ${price ? `${price}€` : "-"}
+🗓️Booking Date: ${formatDateTime(createdAt)}
+📅Check-in Date: ${formatDate(checkIn)}
+⏰Check-in Time: ${formatTime(checkOutTime)}
+🛏️Room Type: ${roomKeyMap[rooms] || rooms}
+📆Duration: ${duration}
+💶Price: ${price ? `${price}€` : "-"}
 
 Thank you for your reservation. We look forward to welcoming you!
 - Khamsa Sleep Lounge Team
@@ -124,6 +124,10 @@ Thank you for your reservation. We look forward to welcoming you!
 🛏️ Xona: ${roomKeyMap[rooms] || rooms}
 📆 Davomiylik: ${duration}
 💶 To'lov Summasi: ${price ? `${price}€` : "-"}
+
+✅ Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi
+
+🌐 Sayt: khamsahotel.uz
 `.trim();
 
     safeFetchJson(`${API_BASE}/notify-telegram`, {
