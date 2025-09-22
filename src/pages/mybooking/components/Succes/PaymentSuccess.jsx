@@ -1,8 +1,21 @@
 import React, { useEffect } from "react";
 import "./PaymentSuccess.scss";
 
+/**
+ * Ushbu komponent:
+ *  - sessionStorage dan oxirgi bookingni oladi (allBookings[0])
+ *  - localStorage ga tarix sifatida qo‘shadi
+ *  - bookingId (deterministik) hisoblaydi va idempotentlikni ta’minlaydi
+ *  - backenddagi /notify-booking endpointiga bitta so‘rov bilan
+ *    - mijozga email
+ *    - admin email
+ *    - Telegram xabar
+ *    yuborishni boshlaydi (token/parollar serverda)
+ */
+
 const PaymentSuccess = () => {
-  const API_BASE = import.meta.env.BNOVO_API_BASE;
+  // Vite bilan: oldingi BNOVO_API_BASE o‘rniga VITE_API_BASE ishlatamiz
+  const API_BASE = import.meta.env.VITE_API_BASE;
 
   const roomKeyMap = {
     "Standard Room": "Standard Room",
@@ -35,43 +48,66 @@ const PaymentSuccess = () => {
     return `${day}.${month}.${year} ${hours}:${minutes}`;
   };
 
-useEffect(() => {
-  const allBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
-  const latest = allBookings[0]; // oxirgi bookingni olamiz
+  // Bron uchun barqaror ID yaratamiz (email + createdAt + checkIn + rooms asosida)
+  const makeBookingId = (b) => {
+    const seed = `${b?.email || ""}|${b?.createdAt || ""}|${b?.checkIn || ""}|${b?.rooms || ""}`;
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) {
+      h = (h << 5) - h + seed.charCodeAt(i);
+      h |= 0;
+    }
+    return `bk_${Math.abs(h)}`;
+  };
 
-  if (!latest) return; // booking bo'lmasa chiqamiz
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!API_BASE) {
+          console.error("🔴 VITE_API_BASE aniqlanmadi. .env faylini tekshiring.");
+          return;
+        }
 
-  // bookingWithSource yaratish (source qo'shish)
-  const bookingWithSource = { ...latest, source: "local" };
+        // 1) Oxirgi bookingni sessionStorage’dan olamiz
+        const allBookings = JSON.parse(sessionStorage.getItem("allBookings")) || [];
+        const latest = allBookings[0];
+        if (!latest) {
+          console.warn("⚠️ SessionStorage’da allBookings topilmadi yoki bo‘sh.");
+          return;
+        }
 
-  // LocalStorage dan eski bookinglarni olish
-  const localBookings = JSON.parse(localStorage.getItem("allBookings")) || [];
+        // 2) Tarix uchun localStorage ga qo‘shib qo‘yamiz (boshiga)
+        const bookingWithSource = { ...latest, source: "local" };
+        const localBookings = JSON.parse(localStorage.getItem("allBookings")) || [];
+        const updatedLocalBookings = [bookingWithSource, ...localBookings];
+        localStorage.setItem("allBookings", JSON.stringify(updatedLocalBookings));
 
-  // Yangilangan bookinglar ro'yxatini yaratish (oxirgi booking boshda)
-  const updatedLocalBookings = [bookingWithSource, ...localBookings];
+        // 3) Idempotentlik kaliti
+        const bookingId = makeBookingId(latest);
+        const sentKey = `bookingSent:${bookingId}`;
+        if (localStorage.getItem(sentKey)) {
+          // allaqachon yuborilgan
+          return;
+        }
 
-  // Yangilangan bookinglarni localStorage ga saqlash
-  localStorage.setItem("allBookings", JSON.stringify(updatedLocalBookings));
+        // 4) Kerakli maydonlarni ajratib olamiz
+        const {
+          firstName,
+          lastName,
+          phone,
+          email,
+          checkIn,
+          checkOutTime,
+          rooms,
+          duration,
+          price,
+          createdAt, // agar backend /api/bookings qaytargan bo‘lsa, bo‘ladi
+        } = latest;
 
-  // Email va telegramga yuborish oldin, agar oldin yuborilgan bo'lsa, chiqamiz
-  const alreadySent = localStorage.getItem("bookingSent");
-  if (alreadySent) return;
+        // createdAt bo‘lmasa – hozirgi vaqtni yozib yuboramiz, formatDateTime bilan chiroyli chiqarish uchun
+        const createdAtSafe = createdAt || new Date().toISOString();
 
-  // Bookingdan ma'lumotlarni olish
-  const {
-    firstName,
-    lastName,
-    phone,
-    email,
-    checkIn,
-    checkOutTime,
-    rooms,
-    duration,
-    price,
-    createdAt,
-  } = latest;
-
-  const emailText = `
+        // 5) Mijozga boradigan email matni (TEXT)
+        const emailText = `
 Thank you for choosing to stay with us via Khamsahotel.uz!
 
 Please be informed that we are a SLEEP LOUNGE located inside the airport within the transit area. 
@@ -89,94 +125,82 @@ call us at +998 95 877 24 24 (tel/WhatsApp/Telegram), or email us at qonoqhotel@
 
 👤 Guest: ${firstName} ${lastName}
 📧 Email: ${email}
-📞 Phone: ${phone}
+📞 Phone: ${phone || "-"}
 
-🗓️ Booking Date: ${formatDateTime(createdAt)}
+🗓️ Booking Date: ${formatDateTime(createdAtSafe)}
 📅 Check-in Date: ${formatDate(checkIn)}
 ⏰ Check-in Time: ${formatTime(checkOutTime)}
-🛏️ Room Type: ${roomKeyMap[rooms] || rooms}
-📆 Duration: ${duration}
+🛏️ Room Type: ${roomKeyMap[rooms] || rooms || "-"}
+📆 Duration: ${duration || "-"}
 💶 Price: ${price ? `${price}€` : "-"}
 
 -------------------------------------
 Thank you for your reservation. We look forward to welcoming you! 
 
 - Khamsa Sleep Lounge Team
-`;
+`.trim();
 
-  const emailData = {
-    to: email,
-    subject: "Your Booking Confirmation – Khamsahotel.uz",
-    text: emailText,
-  };
-
-  // 1. EMAIL YUBORISH
-  fetch(`${API_BASE}/send-email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(emailData),
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.success) {
-        console.log("✅ Email mijozga yuborildi");
-
-        // 2. EMAIL YUBORILGANDAN KEYIN TELEGRAMGA YUBORAMIZ
+        // 6) Telegramga guruh xabari
         const telegramText = `
 📢 Yangi bron qabul qilindi:
 
 👤 Ism: ${firstName} ${lastName}
 📧 Email: ${email}
-📞 Telefon: ${phone}
+📞 Telefon: ${phone || "-"}
 
-🗓️ Bron vaqti: ${formatDateTime(createdAt)}
+🗓️ Bron vaqti: ${formatDateTime(createdAtSafe)}
 📅 Kirish sanasi: ${formatDate(checkIn)}
 ⏰ Kirish vaqti: ${formatTime(checkOutTime)}
-🛏️ Xona: ${roomKeyMap[rooms] || rooms}
-📆 Davomiylik: ${duration}
+🛏️ Xona: ${roomKeyMap[rooms] || rooms || "-"}
+📆 Davomiylik: ${duration || "-"}
 💶 To'lov Summasi: ${price ? `${price}€` : "-"}
 
 ✅ Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi
 
 🌐 Sayt: khamsahotel.uz
-`;
+`.trim();
 
-        const TELEGRAM_BOT_TOKEN = "8066986640:AAFpZPlyOkbjxWaSQTgBMbf3v8j7lgMg4Pk";
-        const TELEGRAM_CHAT_ID = "-1002944437298";
-
-        fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        // 7) Backendga bitta so‘rov bilan hammasini yuborish
+        const resp = await fetch(`${API_BASE}/notify-booking`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            chat_id: TELEGRAM_CHAT_ID,
-            text: telegramText,
+            bookingId,                 // idempotent
+            customerEmail: email,      // mijoz emaili
+            subject: "Your Booking Confirmation – Khamsahotel.uz",
+            emailText,                 // mijozga TEXT
+            telegramText,              // Telegram guruhga matn
+            booking: {
+              firstName,
+              lastName,
+              phone,
+              email,
+              checkIn,
+              checkOutTime,
+              rooms,
+              duration,
+              price,
+              createdAt: createdAtSafe,
+            },
           }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.ok) {
-              console.log("✅ Telegramga xabar yuborildi");
+        });
 
-              // Telegramga yuborilgandan keyin localStorage da belgi qo‘yamiz
-              localStorage.setItem("bookingSent", "true");
-            } else {
-              console.error("❌ Telegram xabar xatosi:", data);
-            }
-          })
-          .catch((err) => {
-            console.error("🔴 Telegram fetch xatolik:", err);
-          });
-      } else {
-        console.error("❌ Email yuborishda xatolik:", data.error);
+        const data = await resp.json();
+        if (resp.ok && data?.ok) {
+          localStorage.setItem(sentKey, "true");
+          console.log("✅ Xabarnomalar yuborildi (email + telegram).");
+        } else if (data?.skipped) {
+          // Server: Already sent for this bookingId
+          localStorage.setItem(sentKey, "true");
+          console.log("ℹ️ Bu booking uchun xabarlar allaqachon yuborilgan.");
+        } else {
+          console.error("❌ Xabarnomalar yuborishda xatolik:", data);
+        }
+      } catch (err) {
+        console.error("🔴 PaymentSuccess useEffect xatolik:", err);
       }
-    })
-    .catch((err) => {
-      console.error("🔴 Email yuborishda xatolik:", err);
-    });
-}, []);
-
+    })();
+  }, [API_BASE]);
 
   return (
     <div className="payment-success-container">
