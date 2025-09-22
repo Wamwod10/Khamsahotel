@@ -46,6 +46,7 @@ const MyBooking = () => {
     saveBookingsToStorage(filtered);
   };
 
+  // Summa, EURda deb hisoblaymiz
   const totalAmount = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
   const handlePayment = async () => {
@@ -71,14 +72,7 @@ const MyBooking = () => {
         }),
       });
 
-      let data = {};
-      try {
-        const text = await response.text();
-        data = text ? JSON.parse(text) : {};
-      } catch (parseError) {
-        alert("Serverdan noto'g'ri javob keldi");
-        return;
-      }
+      const data = await response.json();
 
       if (response.ok && data.paymentUrl) {
         window.location.href = data.paymentUrl;
@@ -141,7 +135,3 @@ const MyBooking = () => {
 };
 
 export default MyBooking;
-
-
-
-
