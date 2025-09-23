@@ -4,17 +4,13 @@ import BookingCard from "./components/BookingCard/BookingCard";
 import EditBookingModal from "./components/Edit/EditBookingModal";
 import { v4 as uuidv4 } from "uuid";
 
-/** API bazasini aniqlash — Vite/CRA/prod uchun */
+/** API bazasini aniqlash — Vite/CRA/prod uchun (process guard bilan) */
 function getApiBase() {
-  // 1) Vite
-  const vite = import.meta?.env?.VITE_API_BASE_URL;
-  // 2) CRA
-  const cra = process.env?.REACT_APP_API_BASE_URL;
-  // 3) fallback: shu domen (agar backend shu domen ostida proksi qilingan bo'lsa)
-  const fallback = window.location.origin;
-
-  const pick = (vite || cra || fallback || "").replace(/\/+$/, "");
-  return pick;
+  const viteBase = (import.meta?.env && import.meta.env.VITE_API_BASE_URL) || "";
+  const craBase =
+    (typeof process !== "undefined" && process?.env && process.env.REACT_APP_API_BASE_URL) || "";
+  const fallback = (typeof window !== "undefined" && window.location.origin) || "";
+  return (viteBase || craBase || fallback).replace(/\/+$/, "");
 }
 
 /** JSON bo'lmasa ham xatoni to'g'ri qaytarish */
@@ -26,15 +22,9 @@ async function safeFetchJson(input, init) {
     if (ct.includes("application/json")) data = await res.json();
     else {
       const text = await res.text();
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = text;
-      }
+      try { data = JSON.parse(text); } catch { data = text; }
     }
-  } catch {
-    data = "";
-  }
+  } catch { data = ""; }
   return { ok: res.ok, status: res.status, data };
 }
 
@@ -43,11 +33,28 @@ async function fetchWithTimeout(url, options = {}, ms = 15000) {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), ms);
   try {
-    const res = await fetch(url, { ...options, signal: controller.signal });
-    return res;
+    return await fetch(url, { ...options, signal: controller.signal });
   } finally {
     clearTimeout(t);
   }
+}
+
+/** duration’ni backend/description uchun kalitga normalizatsiya */
+function normalizeDuration(duration) {
+  if (!duration || typeof duration !== "string") return "";
+  const d = duration.toLowerCase();
+  if (d.includes("3") && (d.includes("hour") || d.includes("soat") || d.includes("saat"))) return "upTo3Hours";
+  if (d.includes("10") && (d.includes("hour") || d.includes("soat") || d.includes("saat"))) return "upTo10Hours";
+  if ((d.includes("1") || d.includes("bir")) && (d.includes("day") || d.includes("kun") || d.includes("день"))) return "oneDay";
+  return "";
+}
+
+/** rooms kodi -> label (faqat description uchun) */
+function roomCodeToLabel(code) {
+  const c = String(code || "").toUpperCase();
+  if (c === "STANDARD") return "Standard Room";
+  if (c === "FAMILY") return "Family Room";
+  return code || "-";
 }
 
 const MyBooking = () => {
@@ -58,12 +65,18 @@ const MyBooking = () => {
   const API_BASE = useMemo(getApiBase, []);
 
   useEffect(() => {
-    const saved = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
+    let saved = [];
+    try {
+      saved = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
+      if (!Array.isArray(saved)) saved = [];
+    } catch {
+      saved = [];
+    }
 
     const normalized = saved.map((b) => ({
       id: b.id || uuidv4(),
       ...b,
-      // raqamga majburiy aylantirish
+      rooms: String(b.rooms || "").toUpperCase(), // "STANDARD" | "FAMILY"
       price:
         typeof b.price === "string"
           ? Number(String(b.price).replace(/[^\d.,-]/g, "").replace(",", ".")) || 0
@@ -71,13 +84,17 @@ const MyBooking = () => {
     }));
 
     setBookings(normalized);
-    sessionStorage.setItem("allBookings", JSON.stringify(normalized));
-    localStorage.setItem("allBookings", JSON.stringify(normalized));
+    try {
+      sessionStorage.setItem("allBookings", JSON.stringify(normalized));
+      localStorage.setItem("allBookings", JSON.stringify(normalized));
+    } catch {}
   }, []);
 
   const saveBookingsToStorage = (updated) => {
-    sessionStorage.setItem("allBookings", JSON.stringify(updated));
-    localStorage.setItem("allBookings", JSON.stringify(updated));
+    try {
+      sessionStorage.setItem("allBookings", JSON.stringify(updated));
+      localStorage.setItem("allBookings", JSON.stringify(updated));
+    } catch {}
   };
 
   const handleEditBooking = (booking) => {
@@ -102,6 +119,7 @@ const MyBooking = () => {
 
   const totalAmount = bookings.reduce((sum, b) => sum + (Number(b.price) || 0), 0);
 
+  /** Umumiy "Pay Now" — oxirgi (birinchi) bookingni yuboramiz, summani esa umumiy qilib jo‘natamiz. */
   const handlePayment = async () => {
     if (!API_BASE) {
       alert("API manzili topilmadi. Iltimos .env dagi VITE_API_BASE_URL/REACT_APP_API_BASE_URL ni tekshiring.");
@@ -119,29 +137,37 @@ const MyBooking = () => {
 
     setPaying(true);
     try {
-      // 1) Cold-start ping — backend uyg'otiladi (agar uxlab bo'lsa)
-      try {
-        await fetch(`${API_BASE}/healthz`, { cache: "no-store" });
-      } catch {
-        /* ping muvaffaqiyatsiz bo'lsa ham davom etamiz */
-      }
+      try { await fetch(`${API_BASE}/healthz`, { cache: "no-store" }); } catch {}
 
-      // 2) To'lov yaratish
+      const durationKey = normalizeDuration(latestBooking.duration);
+      const body = {
+        amount: Number(totalAmount), // EUR
+        description: `Booking Payment (${roomCodeToLabel(latestBooking.rooms)} / ${durationKey || latestBooking.duration || ""})`,
+        email: latestBooking.email,
+        booking: {
+          checkIn: latestBooking.checkIn,
+          duration: latestBooking.duration,
+          rooms: latestBooking.rooms,
+          guests: latestBooking.guests,
+          firstName: latestBooking.firstName,
+          lastName: latestBooking.lastName,
+          phone: latestBooking.phone,
+          email: latestBooking.email,
+          price: Number(latestBooking.price),
+        },
+      };
+
       const res = await fetchWithTimeout(`${API_BASE}/create-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-         amount: Number(totalAmount),// EUR, 2 decimal
-          description: `Booking Payment for ${(latestBooking.firstName || "").trim()} ${(latestBooking.lastName || "").trim()}`.trim(),
-          email: latestBooking.email,
-        }),
+        body: JSON.stringify(body),
       });
 
       const ct = (res.headers.get("content-type") || "").toLowerCase();
       const data =
-        ct.includes("application/json") ? await res.json() : await res.text().then((t) => {
-          try { return JSON.parse(t); } catch { return t; }
-        });
+        ct.includes("application/json")
+          ? await res.json()
+          : await res.text().then((t) => { try { return JSON.parse(t); } catch { return t; } });
 
       if (res.ok && data && typeof data === "object" && data.paymentUrl) {
         window.location.href = data.paymentUrl;
@@ -155,7 +181,6 @@ const MyBooking = () => {
       alert(`To‘lov yaratishda xatolik: ${msg}`);
       console.error("create-payment error:", { status: res.status, data });
     } catch (err) {
-      // Bu yerga odatda CORS/preflight yoki network timeoutlar tushadi
       const text = err?.name === "AbortError" ? "Server javob bermadi (timeout)" : (err?.message || String(err));
       alert(`To‘lov yaratishda xatolik yuz berdi: ${text}`);
       console.error("fetch failure:", err);

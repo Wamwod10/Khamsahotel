@@ -11,6 +11,43 @@ import { MdOutlineCancel } from "react-icons/md";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TbAirConditioning } from "react-icons/tb";
 import { RiDrinks2Fill } from "react-icons/ri";
+import { toast } from "react-toastify";
+
+/** API bazasini aniqlash — Vite/Cra uchun */
+function getApiBase() {
+  const env =
+    (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
+    (process.env && process.env.REACT_APP_API_BASE_URL) ||
+    "";
+  const cleaned = (env || "").replace(/\/+$/, "");
+  return cleaned || window.location.origin;
+}
+
+/** Family availability tekshiruvi (STANDARD har doim available) */
+async function checkFamilyAvailability({ checkIn, nights = 1 }) {
+  const base = getApiBase();
+  const url = `${base}/api/bnovo/availability?checkIn=${encodeURIComponent(
+    checkIn
+  )}&nights=${encodeURIComponent(nights)}&roomType=FAMILY`;
+  try {
+    const res = await fetch(url, { credentials: "omit" });
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    const data = ct.includes("application/json") ? await res.json() : { _raw: await res.text() };
+    if (!res.ok) {
+      console.warn("availability http error:", res.status, data);
+      // API xatolik bersa ham foydalanuvchi tajribasi uchun "available" deb olamiz
+      return { ok: false, available: true, reason: `HTTP ${res.status}` };
+    }
+    // backend: { ok, available, ... }
+    if (typeof data?.available === "boolean") {
+      return { ok: true, available: data.available, reason: data.source || "bnovo" };
+    }
+    return { ok: false, available: true, reason: "unknown-shape" };
+  } catch (e) {
+    console.warn("availability fetch exception:", e);
+    return { ok: false, available: true, reason: "exception" };
+  }
+}
 
 const Header = () => {
   const { t } = useTranslation();
@@ -20,7 +57,7 @@ const Header = () => {
   const [checkIn, setCheckIn] = useState("");
   const [checkOutTime, setCheckOutTime] = useState("");
   const [duration, setDuration] = useState("Up to 3 hours");
-  const [rooms, setRooms] = useState("Standard Room");
+  const [rooms, setRooms] = useState("STANDARD"); // "STANDARD" | "FAMILY"
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -30,11 +67,22 @@ const Header = () => {
       setCheckIn("");
       setCheckOutTime("");
       setDuration("Up to 3 hours");
-      setRooms("Standard Room");
+      setRooms("STANDARD");
     }
   }, [location.state]);
 
-  const handleSubmit = (e) => {
+  /** Duration -> nights (availability uchun) */
+  const getNightsFromDuration = (d) => {
+    // 3 soat / 10 soat — bir kun ichidagi bandlikni tekshirish uchun 1 kecha deb hisoblaymiz
+    if (!d) return 1;
+    const s = String(d).toLowerCase();
+    if (s.includes("one day")) return 1;
+    if (s.includes("10")) return 1;
+    if (s.includes("3")) return 1;
+    return 1;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!checkIn || !checkOutTime || !duration || !rooms) {
@@ -42,18 +90,28 @@ const Header = () => {
       return;
     }
 
+    // Avval FAMILY band emasligini tekshiramiz (STANDARD doim mavjud)
+    if (rooms === "FAMILY") {
+      const nights = getNightsFromDuration(duration);
+      const avail = await checkFamilyAvailability({ checkIn, nights });
+      if (!avail.available) {
+        toast.error(t("familyNotAvailable") || "Family room is not available on selected date.");
+        return;
+      }
+    }
+
     const formattedCheckOut = `${checkIn}T${checkOutTime}`;
+
     const bookingInfo = {
       checkIn,
       checkOut: formattedCheckOut,
       checkOutTime,
       duration,
-      rooms,
+      rooms, // "STANDARD" | "FAMILY" — KOD saqlaymiz
       hotel: t("TashkentAirportHotel"),
       timestamp: new Date().toISOString(),
     };
 
-    // ✅ faqat localStorage ishlatiladi
     localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
     navigate("/rooms");
   };
@@ -130,8 +188,8 @@ const Header = () => {
                     value={rooms}
                     onChange={(e) => setRooms(e.target.value)}
                   >
-                    <option>{t("standard")}</option>
-                    <option>{t("family")}</option>
+                    <option value="STANDARD">{t("standard")}</option>
+                    <option value="FAMILY">{t("family")}</option>
                   </select>
                   <FaChevronDown className="select-icon" />
                 </div>

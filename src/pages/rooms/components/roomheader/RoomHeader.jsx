@@ -14,7 +14,7 @@ export default function RoomHeader() {
     checkOut: null,
     checkOutTime: null,
     duration: null,
-    rooms: null,
+    rooms: null,      // "STANDARD" | "FAMILY" (yoki eski matn)
     hotel: null,
   });
 
@@ -40,7 +40,6 @@ export default function RoomHeader() {
 
   const formatDate = (dateString) => {
     if (!dateString) return t("selectDate");
-
     try {
       const date = new Date(dateString);
       const day = String(date.getDate()).padStart(2, "0");
@@ -54,16 +53,24 @@ export default function RoomHeader() {
 
   const formatTime = (timeString) => {
     if (!timeString) return t("selectTime");
-
     try {
-      if (timeString.includes("T")) {
+      if (String(timeString).includes("T")) {
         return timeString.split("T")[1]?.slice(0, 5);
       }
-      return timeString.slice(0, 5);
+      return String(timeString).slice(0, 5);
     } catch (error) {
       return timeString;
     }
   };
+
+  /** Rooms kodini (STANDARD|FAMILY) ko‘rinadigan labelga o‘tkazamiz */
+  function roomCodeToLabel(code) {
+    const c = String(code || "").toUpperCase();
+    if (c === "FAMILY") return t("family");
+    if (c === "STANDARD") return t("standard");
+    // Eski formatdagi qiymatlar yoki noma'lum qiymat bo'lsa:
+    return code || t("notSelected");
+  }
 
   return (
     <div className="room-header">
@@ -103,7 +110,7 @@ export default function RoomHeader() {
           <div>
             <p className="room-header__label">{t("rooms")}</p>
             <p className="room-header__value">
-              {bookingInfo.rooms || t("notSelected")}
+              {roomCodeToLabel(bookingInfo.rooms)}
             </p>
           </div>
         </div>

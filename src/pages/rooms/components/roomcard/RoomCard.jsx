@@ -26,7 +26,9 @@ const RoomCard = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [noticeMessage, setNoticeMessage] = useState("");
   const [showNotice, setShowNotice] = useState(false);
-  const [selectedRoomType, setSelectedRoomType] = useState("Standard Room");
+
+  // "STANDARD" | "FAMILY"
+  const [selectedRoomType, setSelectedRoomType] = useState("STANDARD");
 
   useEffect(() => {
     // LocalStorage dan booking info ni o'qib selectedRoomType ni yangilash
@@ -35,7 +37,8 @@ const RoomCard = () => {
       try {
         const parsed = JSON.parse(bookingInfo);
         if (parsed.rooms) {
-          setSelectedRoomType(parsed.rooms);
+          // rooms endi kodda saqlanadi: "STANDARD" | "FAMILY"
+          setSelectedRoomType(String(parsed.rooms).toUpperCase());
         }
       } catch (e) {
         console.error("Error parsing bookingInfo from localStorage", e);
@@ -45,30 +48,36 @@ const RoomCard = () => {
 
   // Modalni ochishdan oldin mehmon soni uchun tekshiruvlar
   const openModalWithCheck = (roomData) => {
-    if (roomData.type === "Standard Room" && roomData.guests > 1) {
-      setNoticeMessage(t("standardRoomGuestLimit") || "Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz");
+    // Limitlar: STANDARD <=1, FAMILY <=3
+    if (roomData.typeCode === "STANDARD" && roomData.guests > 1) {
+      setNoticeMessage(
+        t("standardRoomGuestLimit") ||
+          "Siz bu yerda faqatgina 1 kishi uchun xona bron qila olasiz"
+      );
       setShowNotice(true);
       return;
     }
 
-    if (roomData.type === "Family Room" && roomData.guests > 3) {
-      setNoticeMessage(t("familyRoomGuestLimit") || "Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz");
+    if (roomData.typeCode === "FAMILY" && roomData.guests > 3) {
+      setNoticeMessage(
+        t("familyRoomGuestLimit") ||
+          "Siz bu yerda maksimum 3 kishi uchun xona bron qila olasiz"
+      );
       setShowNotice(true);
       return;
     }
 
-    // Agar bookingInfo dan sana bor bo'lsa, uni ham uzatish mumkin
+    // bookingInfo dan sanalarni olib Modalga uzatamiz
     const bookingInfo = localStorage.getItem("bookingInfo");
-    let checkInDate = new Date().toLocaleDateString();
-    let checkOutDate = new Date(Date.now() + 86400000).toLocaleDateString();
+    let checkInDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    let checkOutDate = new Date(Date.now() + 86400000).toISOString(); // ISO
 
     if (bookingInfo) {
       try {
         const parsed = JSON.parse(bookingInfo);
-        if (parsed.checkIn) checkInDate = parsed.checkIn;
-        if (parsed.checkOut) checkOutDate = parsed.checkOut;
+        if (parsed.checkIn) checkInDate = parsed.checkIn; // YYYY-MM-DD
+        if (parsed.checkOut) checkOutDate = parsed.checkOut; // ISO (YYYY-MM-DDTHH:mm)
       } catch {}
-
     }
 
     setSelectedRoom({
@@ -79,8 +88,8 @@ const RoomCard = () => {
     setIsModalOpen(true);
   };
 
-  const isStandardDisabled = selectedRoomType === "Family Room";
-  const isFamilyDisabled = selectedRoomType === "Standard Room";
+  const isStandardDisabled = selectedRoomType === "FAMILY";
+  const isFamilyDisabled = selectedRoomType === "STANDARD";
 
   return (
     <div className="room-card">
@@ -104,7 +113,9 @@ const RoomCard = () => {
                   src={img}
                   alt={`Room view ${idx + 1}`}
                   loading="lazy"
-                  className={`room-card__thumbnail ${mainImage === img ? "active" : ""}`}
+                  className={`room-card__thumbnail ${
+                    mainImage === img ? "active" : ""
+                  }`}
                   onClick={() => setMainImage(img)}
                 />
               ))}
@@ -162,7 +173,7 @@ const RoomCard = () => {
                 className="room-card__btn"
                 onClick={() =>
                   openModalWithCheck({
-                    type: "Standard Room",
+                    typeCode: "STANDARD",
                     guests: 1,
                     size: "3.2 m²",
                     hotel: "Tashkent Airport Khamsa Hotel",
@@ -190,7 +201,9 @@ const RoomCard = () => {
                   src={img}
                   alt={`Room view ${idx + 1}`}
                   loading="lazy"
-                  className={`room-card__thumbnail ${familyImage === img ? "active" : ""}`}
+                  className={`room-card__thumbnail ${
+                    familyImage === img ? "active" : ""
+                  }`}
                   onClick={() => setFamilyImage(img)}
                 />
               ))}
@@ -251,7 +264,7 @@ const RoomCard = () => {
                 className="room-card__btn"
                 onClick={() =>
                   openModalWithCheck({
-                    type: "Family Room",
+                    typeCode: "FAMILY",
                     guests: 3,
                     size: "7.5 m²",
                     hotel: "Tashkent Airport Khamsa Hotel",
@@ -275,7 +288,7 @@ const RoomCard = () => {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           guests={selectedRoom.guests}
-          rooms={selectedRoom.type}
+          rooms={selectedRoom.typeCode}   
           checkIn={selectedRoom.checkIn}
           checkOut={selectedRoom.checkOut}
           hotel={selectedRoom.hotel}
