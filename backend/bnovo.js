@@ -1,143 +1,130 @@
 // bnovo.js
 import fetch from "node-fetch";
 
-const BNOVO_API_BASE_URL = (process.env.BNOVO_API_BASE_URL || "https://api.pms.bnovo.ru").replace(/\/+$/,"");
+const RAW_BASE = process.env.BNOVO_API_BASE_URL || "https://api.pms.bnovo.ru/open-api";
+const BNOVO_API_BASE_URL = RAW_BASE.replace(/\/+$/, "");
 const BNOVO_API_KEY = process.env.BNOVO_API_KEY;
+const BNOVO_ALLOW_POST = String(process.env.BNOVO_ALLOW_POST || "false").toLowerCase() === "true";
+
+// JSON/HTML safe parse
+async function safeParse(res) {
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  if (ct.includes("application/json")) return res.json();
+  const txt = await res.text();
+  try { return JSON.parse(txt); } catch { return { _raw: txt }; }
+}
+
+// Qo‘shib yoziladigan fetch (majburiy Accept)
+async function bnovoFetch(url, init = {}) {
+  const headers = {
+    Accept: "application/json",
+    ...(init.headers || {}),
+  };
+  return fetch(url, { ...init, headers });
+}
 
 /**
- * Family availability (1 ta xona) uchun tekshiruv.
- * Standard (23 ta) — hech qachon band ko'rsatilmaydi (frontend talabiga ko'ra).
- * Bu funksiya Bnovo’dan mavjud bronlar orasida Familyga tegishli kesishma bormi – shuni tekshiradi.
+ * Availability tekshirish:
+ * - `open-api/bookings` bo‘yicha shu davrda FAMILY/roomType bandmi-yo‘qmi deb tekshiradi
+ * - Agar API kalit bo‘lmasa yoki API JSON bermasa, “available: true” fallback qaytaradi
  */
 export async function checkAvailability({ checkIn, checkOut, roomType }) {
   const rt = String(roomType || "").toUpperCase();
+
+  // STANDARD bo‘yicha sizda doimiy 23 ta xona bor deb ko‘rsatilgan edi — saqlab qo‘ydim
   if (rt === "STANDARD") {
-    // Har doim mavjud deb qaytaramiz (23 ta mavjud)
-    return { ok: true, roomType: rt, available: true, source: "static-standard-23" };
+    return { ok: true, roomType: rt, available: true, source: "static-23-standard" };
   }
 
-  // FAMILY: Bnovo API orqali tekshirishga urinamiz (read endpoints)
   if (!BNOVO_API_KEY) {
-    return { ok: false, roomType: rt, available: true, warning: "BNOVO_API_KEY yo'q, default: available" };
+    return { ok: false, roomType: rt, available: true, warning: "BNOVO_API_KEY yo‘q (fallback available=true)" };
   }
 
   try {
-    // ⚠️ Endpoint nomi Bnovo hisob konfiguratsiyasiga qarab farq qilishi mumkin.
-    // Biz "bookings list" tipidagi ochiq endpointga GET orqali murojaat qilib ko'ramiz.
-    const url = `${BNOVO_API_BASE_URL}/open-api/bookings?date_from=${encodeURIComponent(checkIn)}&date_to=${encodeURIComponent(checkOut)}&status=confirmed`;
-    const res = await fetch(url, {
-      headers: {
-        "Authorization": `Bearer ${BNOVO_API_KEY}`,
-        "Accept": "application/json"
-      }
+    const url = `${BNOVO_API_BASE_URL}/bookings?date_from=${checkIn}&date_to=${checkOut}&status=confirmed`;
+    const res = await bnovoFetch(url, {
+      headers: { Authorization: `Basic ${BNOVO_API_KEY}` },
     });
-    const data = await (async () => {
-      const ct = (res.headers.get("content-type") || "").toLowerCase();
-      if (ct.includes("application/json")) return res.json();
-      const txt = await res.text();
-      try { return JSON.parse(txt); } catch { return { _raw: txt }; }
-    })();
+    const data = await safeParse(res);
 
     if (!res.ok) {
       console.error("Bnovo availability error:", res.status, data);
-      // agar API ishlamasa – mijoz tajribasi uchun "available" deymiz, lekin warning bilan
+      // API JSON o‘rniga HTML qaytarsa ham frontend yiqilmasin
       return { ok: false, roomType: rt, available: true, warning: `Bnovo ${res.status}` };
     }
 
-    // data ichidagi bronlardan FAMILY xonasiga tegishlisini filtrlashga urinamiz
-    // (room_type_code / roomType / categoryName va h.k. maydonlar turlicha bo‘lishi mumkin)
-    const list = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
-    const hasFamilyBooked = list.some((b) => {
-      const code = String(
-        b?.room_type_code || b?.roomTypeCode || b?.room_type || b?.roomType || b?.category
-      ).toUpperCase();
-      return code.includes("FAMILY");
-    });
+    const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+    const familyTaken = items.some((b) =>
+      String(b?.room_type_code || b?.roomType || "").toUpperCase().includes("FAMILY")
+    );
 
-    return { ok: true, roomType: rt, available: !hasFamilyBooked, source: "bnovo-open-api" };
+    return { ok: true, roomType: rt, available: !familyTaken, source: "bnovo-open-api" };
   } catch (e) {
     console.error("Bnovo availability exception:", e);
-    return { ok: false, roomType: rt, available: true, warning: "availability exception, default: available" };
+    return { ok: false, roomType: rt, available: true, warning: "availability exception" };
   }
 }
 
 /**
- * Payment successdan keyin Bnovo'ga bron yaratish / push qilish.
- * Agar API 4xx/5xx qaytarsa, false qaytadi (fallback: email/telegram).
+ * Bnovo’da bron yaratish (POST):
+ * - BNOVO_ALLOW_POST=false bo‘lsa, API cheklovi sabab soft-return (push qilmaydi)
+ * - true bo‘lsa, POST urib ko‘radi; muvaffaqiyatli bo‘lsa `pushed:true`
  */
 export async function createBookingInBnovo(payload) {
   if (!BNOVO_API_KEY) {
-    return { ok: false, error: "BNOVO_API_KEY missing" };
+    return { ok: false, pushed: false, error: "BNOVO_API_KEY yo‘q" };
   }
 
-  // payload — biz Octo custom_data.booking da yuborgan obyekt:
-  // { checkIn, checkOut, duration, roomType, guests, firstName, lastName, phone, email, priceEur, payment: {...}, note }
   const {
     checkIn, checkOut, roomType, guests,
     firstName, lastName, phone, email,
-    priceEur, note
+    priceEur, note,
   } = payload || {};
 
-  // Minimal validatsiya
   if (!checkIn || !checkOut || !roomType || !firstName || !email) {
-    return { ok: false, error: "invalid booking payload" };
+    return { ok: false, pushed: false, error: "Invalid booking payload" };
   }
 
-  // Bnovo APIga mos strukturaga keltiramiz (taxminiy umumiy model).
-  // ⚠️ Agar sizda rasmiy “create booking” endpoint yo'l-yo'rig'i bo'lsa, shu yerda maydonlarni moslashtirasiz.
   const body = {
-    // Dates
     check_in: checkIn,
     check_out: checkOut,
-
-    // Guest
     guest: {
       first_name: firstName,
       last_name: lastName || "",
       phone: phone || "",
-      email: email
+      email,
     },
-
-    // Room / Category
-    room_type_code: String(roomType).toUpperCase(), // "STANDARD" | "FAMILY"
+    room_type_code: String(roomType).toUpperCase(),
     guests: Number(guests || 1),
-
-    // Price info
     currency: "EUR",
     total_amount: Number(priceEur || 0),
-
-    // Comment / source
     comment: note || "Khamsa website (post-payment push)",
-    source: "Website"
+    source: "Website",
   };
 
+  if (!BNOVO_ALLOW_POST) {
+    // Soft-fallback: API ruxsati bo‘lmaganda oqimni to‘xtatmaymiz
+    return { ok: true, pushed: false, reason: "BNOVO_ALLOW_POST=false (open-api odatda POSTni qo‘ymaydi)", data: body };
+  }
+
   try {
-    const res = await fetch(`${BNOVO_API_BASE_URL}/open-api/bookings`, {
+    const res = await bnovoFetch(`${BNOVO_API_BASE_URL}/bookings`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${BNOVO_API_KEY}`,
+        Authorization: `Basic ${BNOVO_API_KEY}`,
         "Content-Type": "application/json",
-        "Accept": "application/json"
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
-    const data = await (async () => {
-      const ct = (res.headers.get("content-type") || "").toLowerCase();
-      if (ct.includes("application/json")) return res.json();
-      const txt = await res.text();
-      try { return JSON.parse(txt); } catch { return { _raw: txt }; }
-    })();
-
+    const data = await safeParse(res);
     if (!res.ok) {
       console.error("Bnovo create booking failed:", res.status, data);
-      return { ok: false, status: res.status, error: data };
+      return { ok: false, pushed: false, status: res.status, error: data };
     }
-
-    // Muvaffaqiyatli yaratildi deb hisoblaymiz
-    return { ok: true, data };
+    return { ok: true, pushed: true, data };
   } catch (e) {
     console.error("Bnovo create booking exception:", e);
-    return { ok: false, error: e?.message || String(e) };
+    return { ok: false, pushed: false, error: e?.message || String(e) };
   }
 }

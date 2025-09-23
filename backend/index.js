@@ -1,4 +1,3 @@
-// index.js
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
@@ -26,7 +25,6 @@ const {
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "shamshodochilov160@gmail.com";
 
-// --- Early env validation (log-only)
 const missing = [];
 if (!OCTO_SHOP_ID) missing.push("OCTO_SHOP_ID");
 if (!OCTO_SECRET) missing.push("OCTO_SECRET");
@@ -38,7 +36,7 @@ if (missing.length) {
 
 app.set("trust proxy", 1);
 
-// --- CORS
+// CORS
 const ALLOWED_ORIGINS = [
   FRONTEND_URL,
   "https://www.khamsahotel.uz",
@@ -61,15 +59,15 @@ app.use(
 );
 app.options("*", cors());
 
-// --- Body parsers
+// Bodies
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(express.text({ type: ["text/*"], limit: "512kb" }));
 
-// --- Health
+// Health
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
-// --- Mail
+// Mail
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
@@ -89,7 +87,7 @@ async function sendEmail(to, subject, text) {
   return info;
 }
 
-// --- Telegram
+// Telegram
 async function notifyTelegram(text) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
   try {
@@ -103,19 +101,15 @@ async function notifyTelegram(text) {
   }
 }
 
-// --- Helper: xavfsiz JSON parse
+// JSON-safe parse for external responses
 async function safeParseResponse(res) {
   const ct = (res.headers.get("content-type") || "").toLowerCase();
   if (ct.includes("application/json")) return res.json();
   const txt = await res.text();
-  try {
-    return JSON.parse(txt);
-  } catch {
-    return { _raw: txt };
-  }
+  try { return JSON.parse(txt); } catch { return { _raw: txt }; }
 }
 
-// --- SIGN helper (Octo custom_data integrity)
+// SIGN helper (Octo custom_data integrity)
 const SIGN_SECRET = crypto.createHash("sha256").update(String(process.env.OCTO_SECRET || "octo")).digest();
 
 function signData(obj) {
@@ -135,7 +129,6 @@ function verifyData(json, sig) {
 /* =======================
  *  SERVER-SIDE PENDING STORE
  * ======================= */
-
 const PENDING = new Map(); // key: shop_transaction_id, val: { payload, ts }
 
 function savePending(id, payload) {
@@ -146,7 +139,6 @@ function popPending(id) {
   if (rec) PENDING.delete(String(id));
   return rec?.payload || null;
 }
-// 24 soatdan eski yozuvlarni tozalash
 setInterval(() => {
   const now = Date.now();
   for (const [k, v] of PENDING.entries()) {
@@ -158,9 +150,7 @@ setInterval(() => {
  *  BNOVO ROUTES
  * ======================= */
 
-/** Availability (frontend Header/Room oqimi)
- *  GET /api/bnovo/availability?checkIn=YYYY-MM-DD&nights=1&roomType=STANDARD|FAMILY
- */
+/** GET /api/bnovo/availability?checkIn=YYYY-MM-DD&nights=1&roomType=STANDARD|FAMILY */
 app.get("/api/bnovo/availability", async (req, res) => {
   try {
     const { checkIn, nights = 1, roomType = "STANDARD" } = req.query || {};
@@ -188,7 +178,6 @@ app.get("/api/bnovo/availability", async (req, res) => {
   }
 });
 
-
 /* =======================
  *  PAYMENTS
  * ======================= */
@@ -204,7 +193,7 @@ app.post("/create-payment", async (req, res) => {
       amount,                       // EUR
       description = "Mehmonxona to'lovi",
       email,
-      booking = {}                  // {checkIn, duration, rooms (STANDARD|FAMILY), guests, firstName, lastName, phone, email, price}
+      booking = {}                  // {checkIn, duration, rooms, guests, firstName, lastName, phone, email, price}
     } = req.body || {};
 
     const amt = Number(amount);
@@ -212,7 +201,6 @@ app.post("/create-payment", async (req, res) => {
       return res.status(400).json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
     }
 
-    // checkout sanasi
     const computeCheckOut = (checkInStr, durationStr) => {
       const d = new Date(checkInStr);
       if (durationStr?.includes("3")) d.setHours(d.getHours() + 3);
@@ -222,11 +210,8 @@ app.post("/create-payment", async (req, res) => {
     };
 
     const checkOut = computeCheckOut(booking.checkIn, booking.duration);
-
-    // Octo'ga UZS jo'natamiz
     const amountUZS = Math.max(1000, Math.round(amt * EUR_TO_UZS));
 
-    // Bnovo uchun booking payload (serverda saqlaymiz)
     const bookingPayload = {
       checkIn: booking.checkIn,
       checkOut,
@@ -241,9 +226,7 @@ app.post("/create-payment", async (req, res) => {
       note: "Khamsa website payment success → push to Bnovo"
     };
 
-    // custom_data — ko'pincha notify’da qaytmaydi, lekin qoldiramiz (checkout sahifaga borishi mumkin)
     const signed = signData(bookingPayload);
-
     const shopTransactionId = Date.now().toString();
 
     const payload = {
@@ -266,7 +249,6 @@ app.post("/create-payment", async (req, res) => {
       },
     };
 
-    // ✅ Muhim: payloadni serverda saqlaymiz (notify kelganda shu orqali topamiz)
     savePending(shopTransactionId, bookingPayload);
 
     const controller = new AbortController();
@@ -297,17 +279,15 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// Octo notify (SUCCESS → Bnovo)
+// Octo notify (SUCCESS → optional Bnovo push)
 app.post("/payment-callback", async (req, res) => {
   try {
-    // Octo turli Content-Type yuborishi mumkin
     const body =
       typeof req.body === "string"
         ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })()
         : (req.body || {});
     console.log("🔁 payment-callback body:", body);
 
-    // Success status detektori (kengaytirilgan)
     const statusFields = [
       body?.status, body?.payment_status, body?.transaction_status, body?.result
     ].map((s) => String(s || "").toLowerCase());
@@ -316,7 +296,6 @@ app.post("/payment-callback", async (req, res) => {
         ["ok","success","succeeded","paid","captured","approved","done"].includes(s)
       ) || body?.paid === true || body?.error === 0 || String(body?.state || "").toUpperCase() === "CAPTURED";
 
-    // Avval custom_data dan urinamiz (string/obj bo‘lishi mumkin)
     let verifiedPayload = null;
     try {
       let custom = body?.custom_data;
@@ -328,14 +307,12 @@ app.post("/payment-callback", async (req, res) => {
       if (json && sig && verifyData(json, sig)) {
         verifiedPayload = JSON.parse(json);
       } else if (json && !sig) {
-        // ba’zi hollarda sig kelmasligi mumkin (kamdan-kam) — fallback
         try { verifiedPayload = JSON.parse(json); } catch {}
       }
     } catch (e) {
       console.warn("custom_data parse error:", e);
     }
 
-    // Agar custom_data bo'lmasa — pending store’dan shop_transaction_id orqali qidiramiz
     if (!verifiedPayload) {
       console.warn("⚠️ custom_data yo‘q yoki verify bo‘lmadi — pending store’dan izlaymiz");
       const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
@@ -348,10 +325,8 @@ app.post("/payment-callback", async (req, res) => {
     }
 
     if (isSuccess && verifiedPayload) {
-      // 1) Bnovo'ga push
       const pushRes = await createBookingInBnovo(verifiedPayload);
 
-      // 2) Admin uchun xabar
       const human = `
 To'lov muvaffaqiyatli.
 
@@ -365,8 +340,8 @@ Bron:
 - Mehmonlar: ${verifiedPayload.guests || 1}
 - Narx (EUR): ${verifiedPayload.priceEur}
 
-Bnovo push: ${pushRes.ok ? "✅ OK" : "❌ FAIL"}
-${pushRes.ok ? "" : `Reason: ${JSON.stringify(pushRes.error || pushRes.status || pushRes.data || {}, null, 2)}`}
+Bnovo push: ${pushRes.pushed ? "✅ Pushed" : (pushRes.ok ? "⚠️ Skipped (cheklov)" : "❌ Fail")}
+${pushRes.ok ? (pushRes.pushed ? "" : `Reason: ${pushRes.reason || ""}`) : `Reason: ${JSON.stringify(pushRes.error || pushRes.status || pushRes.data || {}, null, 2)}`}
       `.trim();
 
       try { await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human); } catch {}
@@ -384,25 +359,8 @@ ${pushRes.ok ? "" : `Reason: ${JSON.stringify(pushRes.error || pushRes.status ||
 });
 
 /* =======================
- *  MISC
+ *  MISC (legacy)
  * ======================= */
-
-// Email endpoint (manual)
-app.post("/send-email", async (req, res) => {
-  try {
-    const { to, subject, text } = req.body || {};
-    if (!to || !subject || !text) {
-      return res.status(400).json({ success: false, error: "To‘liq ma’lumot yuborilmadi" });
-    }
-    await sendEmail(to, subject, text);
-    res.json({ success: true });
-  } catch (err) {
-    console.error("❌ /send-email:", err);
-    res.status(500).json({ success: false, error: "Email yuborilmadi" });
-  }
-});
-
-// Legacy booking (agar frontend eski oqimni ham yuborsa)
 app.post("/api/bookings", async (req, res) => {
   try {
     const {

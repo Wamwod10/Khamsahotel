@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import "./PaymentSuccess.scss";
 
+/** API bazasi (mavjud bo'lsa email/notify backendlari uchun) */
 function getApiBase() {
   const env =
     (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
@@ -8,6 +9,8 @@ function getApiBase() {
     "";
   return (env || "").replace(/\/+$/, "") || window.location.origin;
 }
+
+/** JSON bo'lmasa ham xatoni to'g'ri qaytarish */
 async function safeFetchJson(input, init) {
   const res = await fetch(input, init);
   const ct = res.headers.get("content-type") || "";
@@ -18,6 +21,49 @@ async function safeFetchJson(input, init) {
     data = await res.text().catch(() => "");
   }
   return { ok: res.ok, status: res.status, data };
+}
+
+/** --- TELEGRAM --- */
+/* Istasangiz .env.local ga qo'yib ishlating:
+   VITE_TG_BOT_TOKEN=xxxxxxxx:yyyy
+   VITE_TG_CHAT_ID=-100...
+*/
+const TELEGRAM_BOT_TOKEN =
+  (import.meta?.env && import.meta.env.VITE_TG_BOT_TOKEN) ||
+  "8066986640:AAFpZPlyOkbjxWaSQTgBMbf3v8j7lgMg4Pk";
+const TELEGRAM_CHAT_ID =
+  (import.meta?.env && import.meta.env.VITE_TG_CHAT_ID) ||
+  "-1002944437298";
+
+async function sendTelegramMessage(text) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.error("Telegram sozlanmagan: BOT_TOKEN yoki CHAT_ID yo'q");
+    return { ok: false, reason: "missing-config" };
+  }
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const body = {
+    chat_id: TELEGRAM_CHAT_ID,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  };
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      console.error("Telegram sendMessage error:", data);
+      return { ok: false, status: res.status, data };
+    }
+    return { ok: true, data };
+  } catch (e) {
+    console.error("Telegram sendMessage failed:", e);
+    return { ok: false, reason: "network-error" };
+  }
 }
 
 const PaymentSuccess = () => {
@@ -64,8 +110,43 @@ const PaymentSuccess = () => {
       duration,
       price,
       createdAt,
+      id, // agar bo'lsa
     } = latest;
 
+    // DEDUPE: shu bron uchun telegram xabarini bir marta yuborish
+    const dedupeKey = `tg-notified:${id || `${createdAt || ""}:${email || ""}:${price || ""}`}`;
+    if (sessionStorage.getItem(dedupeKey) === "1") {
+      // allaqachon yuborilgan
+    } else {
+      const telegramText = `
+📢 Yangi bron qabul qilindi
+
+👤 Ism: ${firstName || "-"} ${lastName || ""}
+📧 Email: ${email || "-"}
+📞 Telefon: ${phone || "-"}
+
+🗓️ Bron vaqti: ${formatDateTime(createdAt)}
+📅 Kirish sanasi: ${formatDate(checkIn)}
+⏰ Kirish vaqti: ${formatTime(checkOutTime)}
+🛏️ Xona: ${roomKeyMap[rooms] || rooms || "-"}
+📆 Davomiylik: ${duration || "-"}
+💶 To'lov summasi: ${price ? `${price}€` : "-"}
+
+✅ Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi
+🌐 khamsahotel.uz
+      `.trim();
+
+      // 1) Frontend → Telegram (to‘g‘ridan-to‘g‘ri)
+      sendTelegramMessage(telegramText).then(({ ok, data }) => {
+        if (ok) {
+          sessionStorage.setItem(dedupeKey, "1");
+        } else {
+          console.error("Telegram yuborilmadi:", data);
+        }
+      });
+    }
+
+    // 2) Mijozga email (backend orqali — ishlasa foydali, ishlamasa xatoni log qiladi)
     const emailText = `
 Thank you for choosing to stay with us via Khamsahotel.uz!
 
@@ -95,9 +176,8 @@ YOUR BOOKING DETAILS
 
 Thank you for your reservation. We look forward to welcoming you!
 - Khamsa Sleep Lounge Team
-`.trim();
+    `.trim();
 
-    // 1) mijozga email
     safeFetchJson(`${API_BASE}/send-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -110,26 +190,9 @@ Thank you for your reservation. We look forward to welcoming you!
       if (!ok) console.error("send-email error:", data);
     });
 
-    // 2) admin guruhiga telegramni backend orqali
-    const telegramText = `
-📢 Yangi bron qabul qilindi:
-
-👤 Ism: ${firstName} ${lastName}
-📧 Email: ${email}
-📞 Telefon: ${phone}
-
-🗓️ Bron vaqti: ${formatDateTime(createdAt)}
-📅 Kirish sanasi: ${formatDate(checkIn)}
-⏰ Kirish vaqti: ${formatTime(checkOutTime)}
-🛏️ Xona: ${roomKeyMap[rooms] || rooms}
-📆 Davomiylik: ${duration}
-💶 To'lov Summasi: ${price ? `${price}€` : "-"}
-
-✅ Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi
-
-🌐 Sayt: khamsahotel.uz
-`.trim();
-
+    // 3) (ixtiyoriy) — agar backenddagi notify-telegram keyinroq tuzalib ishlasa:
+    //    dublikat bo‘lishi mumkin, xohlasangiz shu bo‘limni olib tashlang.
+    /*
     safeFetchJson(`${API_BASE}/notify-telegram`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -137,6 +200,7 @@ Thank you for your reservation. We look forward to welcoming you!
     }).then(({ ok, data }) => {
       if (!ok) console.error("notify-telegram error:", data);
     });
+    */
   }, [API_BASE]);
 
   return (
