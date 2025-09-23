@@ -1,31 +1,15 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./mybooking.scss";
 import BookingCard from "./components/BookingCard/BookingCard";
 import EditBookingModal from "./components/Edit/EditBookingModal";
 import { v4 as uuidv4 } from "uuid";
 
-/** API bazasini aniqlash — Vite/CRA/prod uchun (process guard bilan) */
+/** API bazasi (Vite/CRA) */
 function getApiBase() {
   const viteBase = (import.meta?.env && import.meta.env.VITE_API_BASE_URL) || "";
-  const craBase =
-    (typeof process !== "undefined" && process?.env && process.env.REACT_APP_API_BASE_URL) || "";
+  const craBase = (typeof process !== "undefined" && process?.env?.REACT_APP_API_BASE_URL) || "";
   const fallback = (typeof window !== "undefined" && window.location.origin) || "";
   return (viteBase || craBase || fallback).replace(/\/+$/, "");
-}
-
-/** JSON bo'lmasa ham xatoni to'g'ri qaytarish */
-async function safeFetchJson(input, init) {
-  const res = await fetch(input, init);
-  const ct = (res.headers.get("content-type") || "").toLowerCase();
-  let data;
-  try {
-    if (ct.includes("application/json")) data = await res.json();
-    else {
-      const text = await res.text();
-      try { data = JSON.parse(text); } catch { data = text; }
-    }
-  } catch { data = ""; }
-  return { ok: res.ok, status: res.status, data };
 }
 
 /** Timeout bilan fetch */
@@ -34,12 +18,10 @@ async function fetchWithTimeout(url, options = {}, ms = 15000) {
   const t = setTimeout(() => controller.abort(), ms);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(t);
-  }
+  } finally { clearTimeout(t); }
 }
 
-/** duration’ni backend/description uchun kalitga normalizatsiya */
+/** Duration → key */
 function normalizeDuration(duration) {
   if (!duration || typeof duration !== "string") return "";
   const d = duration.toLowerCase();
@@ -49,12 +31,22 @@ function normalizeDuration(duration) {
   return "";
 }
 
-/** rooms kodi -> label (faqat description uchun) */
+/** Label/code → code */
+function toRoomCode(v) {
+  const s = String(v || "").toLowerCase();
+  if (s.includes("family")) return "FAMILY";
+  if (s.includes("standard")) return "STANDARD";
+  if (s === "family") return "FAMILY";
+  if (s === "standard") return "STANDARD";
+  return "";
+}
+
+/** Code → label (faqat description uchun) */
 function roomCodeToLabel(code) {
   const c = String(code || "").toUpperCase();
   if (c === "STANDARD") return "Standard Room";
   if (c === "FAMILY") return "Family Room";
-  return code || "-";
+  return "-";
 }
 
 const MyBooking = () => {
@@ -69,14 +61,12 @@ const MyBooking = () => {
     try {
       saved = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
       if (!Array.isArray(saved)) saved = [];
-    } catch {
-      saved = [];
-    }
+    } catch { saved = []; }
 
     const normalized = saved.map((b) => ({
       id: b.id || uuidv4(),
       ...b,
-      rooms: String(b.rooms || "").toUpperCase(), // "STANDARD" | "FAMILY"
+      rooms: toRoomCode(b.rooms), // "STANDARD" | "FAMILY"
       price:
         typeof b.price === "string"
           ? Number(String(b.price).replace(/[^\d.,-]/g, "").replace(",", ".")) || 0
@@ -103,9 +93,7 @@ const MyBooking = () => {
   };
 
   const handleSaveBooking = (updatedBooking) => {
-    const updated = bookings.map((b) =>
-      b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
-    );
+    const updated = bookings.map((b) => (b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b));
     setBookings(updated);
     saveBookingsToStorage(updated);
     setIsEditOpen(false);
@@ -119,10 +107,10 @@ const MyBooking = () => {
 
   const totalAmount = bookings.reduce((sum, b) => sum + (Number(b.price) || 0), 0);
 
-  /** Umumiy "Pay Now" — oxirgi (birinchi) bookingni yuboramiz, summani esa umumiy qilib jo‘natamiz. */
+  /** Pay Now → Octo create-payment (oxirgi booking ma’lumoti bilan) */
   const handlePayment = async () => {
     if (!API_BASE) {
-      alert("API manzili topilmadi. Iltimos .env dagi VITE_API_BASE_URL/REACT_APP_API_BASE_URL ni tekshiring.");
+      alert("API manzili topilmadi. .env dagi VITE_API_BASE_URL/REACT_APP_API_BASE_URL ni tekshiring.");
       return;
     }
     if (totalAmount <= 0) {
@@ -147,7 +135,7 @@ const MyBooking = () => {
         booking: {
           checkIn: latestBooking.checkIn,
           duration: latestBooking.duration,
-          rooms: latestBooking.rooms,
+          rooms: latestBooking.rooms, // "STANDARD" | "FAMILY"
           guests: latestBooking.guests,
           firstName: latestBooking.firstName,
           lastName: latestBooking.lastName,
@@ -164,10 +152,9 @@ const MyBooking = () => {
       });
 
       const ct = (res.headers.get("content-type") || "").toLowerCase();
-      const data =
-        ct.includes("application/json")
-          ? await res.json()
-          : await res.text().then((t) => { try { return JSON.parse(t); } catch { return t; } });
+      const data = ct.includes("application/json")
+        ? await res.json()
+        : await res.text().then((t) => { try { return JSON.parse(t); } catch { return t; } });
 
       if (res.ok && data && typeof data === "object" && data.paymentUrl) {
         window.location.href = data.paymentUrl;
@@ -189,9 +176,7 @@ const MyBooking = () => {
     }
   };
 
-  const addNewBooking = () => {
-    window.location.href = "/";
-  };
+  const addNewBooking = () => (window.location.href = "/");
 
   return (
     <div className="my-booking-container">
@@ -203,9 +188,7 @@ const MyBooking = () => {
       </div>
 
       {bookings.length === 0 ? (
-        <div className="my-booking-empty">
-          <p>No Bookings yet</p>
-        </div>
+        <div className="my-booking-empty"><p>No Bookings yet</p></div>
       ) : (
         <>
           {bookings.map((booking) => (
@@ -224,9 +207,7 @@ const MyBooking = () => {
               disabled={totalAmount <= 0 || paying}
               aria-busy={paying ? "true" : "false"}
             >
-              {paying
-                ? "Processing..."
-                : `Pay Now (${totalAmount > 0 ? `${totalAmount.toLocaleString()}€` : "No amount"})`}
+              {paying ? "Processing..." : `Pay Now (${totalAmount > 0 ? `${totalAmount.toLocaleString()}€` : "No amount"})`}
             </button>
           </div>
         </>

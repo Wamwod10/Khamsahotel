@@ -67,7 +67,7 @@ const Header = () => {
       setCheckIn("");
       setCheckOutTime("");
       setDuration("Up to 3 hours");
-      setRooms("STANDARD");
+       setRooms("Standard Room");
     }
   }, [location.state]);
 

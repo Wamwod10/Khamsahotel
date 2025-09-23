@@ -1,5 +1,5 @@
 // RoomModal.jsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaCheck } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -7,50 +7,63 @@ import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
 import "./roomModalMedia.scss";
 
-/** Rooms kod → ko‘rinadigan label */
+/* ---------------- Helpers ---------------- */
+
+/** Label/code → code (STANDARD | FAMILY) */
+function normalizeRoomCode(v) {
+  const s = String(v || "").toLowerCase().trim();
+  // labellar
+  if (s.includes("family")) return "FAMILY";
+  if (s.includes("standard")) return "STANDARD";
+  // allaqachon code bo'lsa
+  if (s === "family") return "FAMILY";
+  if (s === "standard") return "STANDARD";
+  return "";
+}
+
+/** Code → UI label */
 function roomCodeToLabel(code, t) {
   const c = String(code || "").toUpperCase();
   if (c === "STANDARD") return t("standard") || "Standard Room";
   if (c === "FAMILY") return t("family") || "Family Room";
-  return code || "-";
+  return "-";
 }
 
-/** Guests limiti (kod bilan) */
-const guestCountByCode = {
-  STANDARD: 1,
-  FAMILY: 3,
-};
+/** Guests limiti */
+const guestCountByCode = { STANDARD: 1, FAMILY: 3 };
 
-/** Narx jadvali (EUR) — kod bilan */
+/** Narx jadvali (EUR) — code bilan */
 const priceTable = {
-  STANDARD: {
-    upTo3Hours: 0.001, // test/cheap
-    upTo10Hours: 60,
-    oneDay: 100,
-  },
-  FAMILY: {
-    upTo3Hours: 70,
-    upTo10Hours: 100,
-    oneDay: 150,
-  },
+  STANDARD: { upTo3Hours: 0.001, upTo10Hours: 60, oneDay: 100 },
+  FAMILY: { upTo3Hours: 70, upTo10Hours: 100, oneDay: 150 },
 };
 
-const normalizeDuration = (duration) => {
-  if (!duration || typeof duration !== "string") {
-    return "";
-  }
+/** Duration → key */
+function normalizeDuration(duration) {
+  if (!duration || typeof duration !== "string") return "";
   const d = duration.toLowerCase();
-  if (d.includes("3") && (d.includes("hour") || d.includes("soat") || d.includes("saat"))) {
+  if (d.includes("3") && (d.includes("hour") || d.includes("soat") || d.includes("saat")))
     return "upTo3Hours";
-  }
-  if (d.includes("10") && (d.includes("hour") || d.includes("soat") || d.includes("saat"))) {
+  if (d.includes("10") && (d.includes("hour") || d.includes("soat") || d.includes("saat")))
     return "upTo10Hours";
-  }
-  if ((d.includes("1") || d.includes("bir")) && (d.includes("day") || d.includes("kun") || d.includes("день"))) {
+  if ((d.includes("1") || d.includes("bir")) && (d.includes("day") || d.includes("kun") || d.includes("день")))
     return "oneDay";
-  }
   return "";
+}
+
+/** Sana/vaqt format */
+const formatDate = (s) => {
+  if (!s) return "-";
+  const [y, m, d] = s.split("-");
+  return [d, m, y].join(".");
 };
+const formatTime = (s) => {
+  if (!s) return "-";
+  if (String(s).includes("T")) return s.split("T")[1].slice(0, 5);
+  return s.slice(0, 5);
+};
+
+/* ---------------- UI: Success modal ---------------- */
 
 const SuccessModal = ({ onStayHere, onGoToMyBooking }) => {
   const { t } = useTranslation();
@@ -62,7 +75,6 @@ const SuccessModal = ({ onStayHere, onGoToMyBooking }) => {
           {t("bookingsucced") || "Bron qabul qilindi"} <FaCheck className="modal-icon" />
         </h2>
         <p>{t("bookingsuccess") || "Booking success!"}</p>
-
         <div className="success-modal-buttons">
           <button className="btn-stay" onClick={onStayHere}>
             {t("stayhere") || "Stay here"}
@@ -76,18 +88,18 @@ const SuccessModal = ({ onStayHere, onGoToMyBooking }) => {
   );
 };
 
-/** Asosiy modal */
+/* ---------------- Main component ---------------- */
+
 const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) => {
   const { t } = useTranslation();
 
-  // bookingInfo: rooms endi KOD (STANDARD|FAMILY)
   const [bookingInfo, setBookingInfo] = useState({
     checkIn: "",
     checkOutTime: "",
     duration: "",
     hotel: t("TashkentAirportHotel") || "Tashkent Airport Hotel",
     guests: propGuests || 1,
-    rooms: (propRooms || "").toUpperCase(), // KOD
+    rooms: normalizeRoomCode(propRooms || ""), // ALWAYS code inside
   });
 
   const [formData, setFormData] = useState({
@@ -99,23 +111,23 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
 
   const [showSuccess, setShowSuccess] = useState(false);
 
+  // Load from localStorage (header'dan kelgan label bo'lsa ham code'ga aylantiramiz)
   useEffect(() => {
-    // localStorage.bookingInfo dan o‘qish
     try {
       const saved = localStorage.getItem("bookingInfo");
       if (saved) {
         const parsed = JSON.parse(saved);
-        const roomsCode = String(parsed.rooms || propRooms || "").toUpperCase();
+        const roomsCode = normalizeRoomCode(parsed.rooms || propRooms || "");
         setBookingInfo({
           checkIn: parsed.checkIn || "",
           checkOutTime: parsed.checkOutTime || "",
           duration: parsed.duration || "",
           hotel: parsed.hotel || (t("TashkentAirportHotel") || "Tashkent Airport Hotel"),
           guests: guestCountByCode[roomsCode] || propGuests || 1,
-          rooms: roomsCode, // KOD
+          rooms: roomsCode,
         });
       } else {
-        const roomsCode = String(propRooms || "").toUpperCase();
+        const roomsCode = normalizeRoomCode(propRooms || "");
         setBookingInfo((prev) => ({
           ...prev,
           hotel: t("TashkentAirportHotel") || "Tashkent Airport Hotel",
@@ -124,56 +136,34 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
         }));
       }
     } catch (err) {
-      console.error("RoomModal: Error parsing bookingInfo from localStorage:", err);
+      console.error("RoomModal: bookingInfo parse error:", err);
     }
   }, [t, propGuests, propRooms]);
 
   const durationKey = useMemo(() => normalizeDuration(bookingInfo.duration), [bookingInfo.duration]);
-
   const price = useMemo(() => {
     const table = priceTable[bookingInfo.rooms];
     if (!table || !durationKey) return null;
     return table[durationKey];
   }, [bookingInfo.rooms, durationKey]);
-
   const priceDisplay = useMemo(() => (price != null ? `${price}€` : "-"), [price]);
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "-";
-    const parts = dateStr.split("-");
-    if (parts.length !== 3) return dateStr;
-    const [year, month, day] = parts;
-    return `${day}.${month}.${year}`;
-  };
-
-  const formatTime = (timeStr) => {
-    if (!timeStr) return "-";
-    if (String(timeStr).includes("T")) {
-      const timePart = timeStr.split("T")[1];
-      if (timePart) return timePart.slice(0, 5);
-    }
-    return timeStr.length >= 5 ? timeStr.slice(0, 5) : timeStr;
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((p) => ({ ...p, [name]: value }));
   };
 
-  /** Confirm → FAKAT saqlash + Success modal (Octo yo‘q) */
+  /** Confirm: faqat local/sessionStorage'ga saqlaymiz + success modal (Octo yo'q) */
   const handleConfirm = (e) => {
     e.preventDefault();
 
-    // Booking ma'lumotlari to'liqmi?
     if (!bookingInfo.checkIn || !bookingInfo.checkOutTime || !bookingInfo.duration || !bookingInfo.rooms) {
-      toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz!") || "Iltimos, barcha booking ma'lumotlarini to'ldiring!", {
+      toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz!") || "Please complete booking info", {
         position: "top-center",
         autoClose: 3000,
       });
       return;
     }
-
-    // Form to‘liqmi?
     const { firstName, lastName, phone, email } = formData;
     if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim()) {
       toast.error(t("Iltimos, barcha maydonlarni to'ldiring") || "Please fill all fields", {
@@ -182,26 +172,17 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
       });
       return;
     }
-
     if (!durationKey) {
-      toast.error(t("Duration no valid") || "Duration no valid", {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      toast.error(t("Duration no valid") || "Duration invalid", { position: "top-center", autoClose: 3000 });
       return;
     }
-
     const priceEur = Number(price);
     if (!Number.isFinite(priceEur) || priceEur <= 0) {
-      toast.error(t("Price not available") || "Price not available for selected options", {
-        position: "top-center",
-        autoClose: 3000,
-      });
+      toast.error(t("Price not available") || "Price not available", { position: "top-center", autoClose: 3000 });
       return;
     }
 
-    // localStorage/sessionStorage’ga to‘liq bookingni saqlab qo‘yamiz (SPA oqimi uchun)
-    const fullBookingInfo = {
+    const full = {
       ...bookingInfo,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -212,22 +193,21 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     };
 
     try {
-      const existingBookings = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
-      const updatedBookings = [fullBookingInfo, ...existingBookings]; // eng yangisi boshida
-      sessionStorage.setItem("allBookings", JSON.stringify(updatedBookings));
-      sessionStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
-      localStorage.setItem("bookingInfo", JSON.stringify(fullBookingInfo));
-      localStorage.setItem("allBookings", JSON.stringify(updatedBookings));
+      const existing = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
+      const updated = [full, ...existing]; // newest first
+      sessionStorage.setItem("allBookings", JSON.stringify(updated));
+      sessionStorage.setItem("bookingInfo", JSON.stringify(full));
+      localStorage.setItem("bookingInfo", JSON.stringify(full));
+      localStorage.setItem("allBookings", JSON.stringify(updated));
     } catch (err) {
       console.error("RoomModal: Storage error:", err);
-      toast.error(t("Ma'lumotlarni saqlashda xatolik yuz berdi!") || "Error saving booking info", {
+      toast.error(t("Ma'lumotlarni saqlashda xatolik yuz berdi!") || "Storage error", {
         position: "top-center",
         autoClose: 4000,
       });
       return;
     }
 
-    // ✅ Endi faqat success modalni ko‘rsatamiz
     setShowSuccess(true);
   };
 
@@ -235,15 +215,10 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     setShowSuccess(false);
     onClose && onClose();
   };
-
-  const handleGoToMyBooking = () => {
-    window.location.href = "/mybooking";
-  };
+  const handleGoToMyBooking = () => (window.location.href = "/mybooking");
 
   if (!isOpen) return null;
-  if (showSuccess) {
-    return <SuccessModal onStayHere={handleStayHere} onGoToMyBooking={handleGoToMyBooking} />;
-  }
+  if (showSuccess) return <SuccessModal onStayHere={handleStayHere} onGoToMyBooking={handleGoToMyBooking} />;
 
   return (
     <div className="modal-main">
@@ -259,15 +234,15 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
             <p>{bookingInfo.checkIn ? formatDate(bookingInfo.checkIn) : "-"}</p>
           </div>
           <div className="modal__section">
-            <label>{t("check-in-hours") || "Check-Out Time"}:</label>
+            <label>{t("check-in-hours") || "Check-In Time"}:</label>
             <p>{bookingInfo.checkOutTime ? formatTime(bookingInfo.checkOutTime) : "-"}</p>
           </div>
           <div className="modal__section">
             <label>{t("duration") || "Duration"}:</label>
-            <p>{bookingInfo.duration ? (t(normalizeDuration(bookingInfo.duration)) || bookingInfo.duration) : "-"}</p>
+            <p>{bookingInfo.duration ? (t(durationKey) || bookingInfo.duration) : "-"}</p>
           </div>
           <div className="modal__section">
-            <label>{t("rooms") || "Rooms"}:</label>
+            <label>{t("rooms") || "Room"}:</label>
             <p>{roomCodeToLabel(bookingInfo.rooms, t)}</p>
           </div>
           <div className="modal__section">
@@ -337,7 +312,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
             />
           </div>
 
-          {/* Payment method (hozircha ko‘rsatmacha sifatida) */}
+          {/* Payment method (indikativ) */}
           <div className="modal__field custom-select">
             <label htmlFor="payment-method">{t("paymentMethod") || "Payment Method"}</label>
             <div className="input-wrapper">
@@ -348,7 +323,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
 
           <div className="total-price-display">
             <label>{t("totalPrice") || "Total Price"}:</label>
-            <p style={{ fontWeight: "600", color: "#f7931e", marginTop: "0.2rem" }}>
+            <p style={{ fontWeight: 600, color: "#f7931e", marginTop: "0.2rem" }}>
               {priceDisplay}
             </p>
           </div>
