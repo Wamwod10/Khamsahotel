@@ -133,6 +133,28 @@ function verifyData(json, sig) {
 }
 
 /* =======================
+ *  SERVER-SIDE PENDING STORE
+ * ======================= */
+
+const PENDING = new Map(); // key: shop_transaction_id, val: { payload, ts }
+
+function savePending(id, payload) {
+  PENDING.set(String(id), { payload, ts: Date.now() });
+}
+function popPending(id) {
+  const rec = PENDING.get(String(id));
+  if (rec) PENDING.delete(String(id));
+  return rec?.payload || null;
+}
+// 24 soatdan eski yozuvlarni tozalash
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of PENDING.entries()) {
+    if (now - (v?.ts || 0) > 24 * 60 * 60 * 1000) PENDING.delete(k);
+  }
+}, 60 * 60 * 1000);
+
+/* =======================
  *  BNOVO ROUTES
  * ======================= */
 
@@ -154,10 +176,9 @@ app.get("/api/bnovo/availability", async (req, res) => {
       roomType: String(roomType).toUpperCase(),
     });
 
-    // ✅ muhim: avval avail ni qo'yamiz, keyin ok:true bilan ustidan yozamiz
     return res.json({
       ...avail,
-      ok: true,                     // doim true: warning bo'lsa ham API ishlayapti
+      ok: true,
       checkIn: String(checkIn).slice(0,10),
       checkOut
     });
@@ -183,7 +204,6 @@ app.post("/create-payment", async (req, res) => {
       amount,                       // EUR
       description = "Mehmonxona to'lovi",
       email,
-      // 🔽 BU YERDA bron uchun barcha ma’lumotlar keladi (frontenddan yuborasiz)
       booking = {}                  // {checkIn, duration, rooms (STANDARD|FAMILY), guests, firstName, lastName, phone, email, price}
     } = req.body || {};
 
@@ -206,7 +226,7 @@ app.post("/create-payment", async (req, res) => {
     // Octo'ga UZS jo'natamiz
     const amountUZS = Math.max(1000, Math.round(amt * EUR_TO_UZS));
 
-    // custom_data'ni imzolab yuboramiz – callbackda tekshiramiz
+    // Bnovo uchun booking payload (serverda saqlaymiz)
     const bookingPayload = {
       checkIn: booking.checkIn,
       checkOut,
@@ -220,12 +240,16 @@ app.post("/create-payment", async (req, res) => {
       priceEur: amt,
       note: "Khamsa website payment success → push to Bnovo"
     };
-    const signed = signData(bookingPayload); // {json, sig}
+
+    // custom_data — ko'pincha notify’da qaytmaydi, lekin qoldiramiz (checkout sahifaga borishi mumkin)
+    const signed = signData(bookingPayload);
+
+    const shopTransactionId = Date.now().toString();
 
     const payload = {
       octo_shop_id: Number(OCTO_SHOP_ID),
       octo_secret: OCTO_SECRET,
-      shop_transaction_id: Date.now().toString(),
+      shop_transaction_id: shopTransactionId,
       auto_capture: true,
       test: false,
       init_time: new Date().toISOString().replace("T", " ").substring(0, 19),
@@ -236,12 +260,14 @@ app.post("/create-payment", async (req, res) => {
       notify_url: `${BASE_URL}/payment-callback`,
       language: "uz",
       custom_data: {
-        // mijoz emaili + imzolangan booking ma’lumotlari
         email,
         booking_json: signed.json,
         booking_sig: signed.sig
       },
     };
+
+    // ✅ Muhim: payloadni serverda saqlaymiz (notify kelganda shu orqali topamiz)
+    savePending(shopTransactionId, bookingPayload);
 
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 20000);
@@ -274,39 +300,58 @@ app.post("/create-payment", async (req, res) => {
 // Octo notify (SUCCESS → Bnovo)
 app.post("/payment-callback", async (req, res) => {
   try {
-    // Octo bu yerga turli Content-Type yuborishi mumkin (json/urlencoded) — biz parserlarni yoqqanmiz.
+    // Octo turli Content-Type yuborishi mumkin
     const body =
       typeof req.body === "string"
         ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })()
         : (req.body || {});
     console.log("🔁 payment-callback body:", body);
 
-    // Octo custom_data
-    const custom = body?.custom_data || {};
-    const json = custom?.booking_json;
-    const sig  = custom?.booking_sig;
-
-    let verifiedPayload = null;
-    if (json && sig && verifyData(json, sig)) {
-      try { verifiedPayload = JSON.parse(json); } catch {}
-    } else {
-      console.warn("⚠️ custom_data signature verify failed, fallback to empty payload");
-    }
-
-    // Octo success holatini aniqlash
+    // Success status detektori (kengaytirilgan)
     const statusFields = [
       body?.status, body?.payment_status, body?.transaction_status, body?.result
     ].map((s) => String(s || "").toLowerCase());
     const isSuccess =
       statusFields.some((s) =>
-        ["success", "succeeded", "paid", "captured", "approved"].includes(s)
-      ) || body?.paid === true || body?.error === 0;
+        ["ok","success","succeeded","paid","captured","approved","done"].includes(s)
+      ) || body?.paid === true || body?.error === 0 || String(body?.state || "").toUpperCase() === "CAPTURED";
+
+    // Avval custom_data dan urinamiz (string/obj bo‘lishi mumkin)
+    let verifiedPayload = null;
+    try {
+      let custom = body?.custom_data;
+      if (typeof custom === "string") {
+        try { custom = JSON.parse(custom); } catch { /* ignore */ }
+      }
+      const json = custom?.booking_json;
+      const sig  = custom?.booking_sig;
+      if (json && sig && verifyData(json, sig)) {
+        verifiedPayload = JSON.parse(json);
+      } else if (json && !sig) {
+        // ba’zi hollarda sig kelmasligi mumkin (kamdan-kam) — fallback
+        try { verifiedPayload = JSON.parse(json); } catch {}
+      }
+    } catch (e) {
+      console.warn("custom_data parse error:", e);
+    }
+
+    // Agar custom_data bo'lmasa — pending store’dan shop_transaction_id orqali qidiramiz
+    if (!verifiedPayload) {
+      console.warn("⚠️ custom_data yo‘q yoki verify bo‘lmadi — pending store’dan izlaymiz");
+      const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
+      if (stid) {
+        verifiedPayload = popPending(stid);
+        if (!verifiedPayload) console.warn("⚠️ pending store’da ham topilmadi:", stid);
+      } else {
+        console.warn("⚠️ shop_transaction_id kelmadi");
+      }
+    }
 
     if (isSuccess && verifiedPayload) {
       // 1) Bnovo'ga push
       const pushRes = await createBookingInBnovo(verifiedPayload);
 
-      // 2) Adminga xabar (email + telegram)
+      // 2) Admin uchun xabar
       const human = `
 To'lov muvaffaqiyatli.
 
@@ -327,20 +372,19 @@ ${pushRes.ok ? "" : `Reason: ${JSON.stringify(pushRes.error || pushRes.status ||
       try { await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human); } catch {}
       try { await notifyTelegram(human); } catch {}
 
-      // 3) Javob qaytaramiz
       return res.json({ ok: true });
     }
 
-    console.warn("⚠️ Payment not success or no verified payload:", { statusFields, paid: body?.paid });
-    return res.json({ ok: true });
+    console.warn("⚠️ Payment not success yoki payload topilmadi:", { statusFields, paid: body?.paid });
+    return res.json({ ok: true }); // Octo qayta urmasin
   } catch (e) {
     console.error("❌ /payment-callback:", e);
-    res.status(200).json({ ok: true }); // Octo qayta urmasin deb 200 qaytaramiz
+    res.status(200).json({ ok: true });
   }
 });
 
 /* =======================
- *  MISC (sendagi endpointlar)
+ *  MISC
  * ======================= */
 
 // Email endpoint (manual)
