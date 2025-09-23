@@ -151,15 +151,22 @@ app.get("/api/bnovo/availability", async (req, res) => {
     const avail = await checkAvailability({
       checkIn: String(checkIn).slice(0,10),
       checkOut,
-      roomType: String(roomType).toUpperCase()
+      roomType: String(roomType).toUpperCase(),
     });
 
-    res.json({ ok: true, ...avail, checkIn: String(checkIn).slice(0,10), checkOut });
+    // ✅ muhim: avval avail ni qo'yamiz, keyin ok:true bilan ustidan yozamiz
+    return res.json({
+      ...avail,
+      ok: true,                     // doim true: warning bo'lsa ham API ishlayapti
+      checkIn: String(checkIn).slice(0,10),
+      checkOut
+    });
   } catch (e) {
     console.error("/api/bnovo/availability error:", e);
     res.status(500).json({ ok: false, error: "availability failed" });
   }
 });
+
 
 /* =======================
  *  PAYMENTS
