@@ -85,9 +85,9 @@ async function getBearerHeader(forceRenew = false) {
   if (!token) throw new Error("Auth token missing in response");
 
   cachedToken = { value: token, exp: now + ttl };
-  return { Authorization: `Bearer ${token}` };
+  return { Authorization: `Bearer ${token}` };``
 }
-console.log("[BNOVO] fetching:", url);
+
 
 async function bnovoFetch(path, { method = "GET", headers = {}, body, retry401 = true } = {}) {
   const url = path.startsWith("http") ? path : `${BNOVO_API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
