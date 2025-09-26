@@ -10,8 +10,13 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5002;
-const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/+$/, "");
-const FRONTEND_URL = (process.env.FRONTEND_URL || "https://khamsahotel.uz").replace(/\/+$/, "");
+const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(
+  /\/+$/,
+  ""
+);
+const FRONTEND_URL = (
+  process.env.FRONTEND_URL || "https://khamsahotel.uz"
+).replace(/\/+$/, "");
 const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
 
 const {
@@ -28,8 +33,8 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "shamshodochilov160@gmail.com";
 const missing = [];
 if (!OCTO_SHOP_ID) missing.push("OCTO_SHOP_ID");
 if (!OCTO_SECRET) missing.push("OCTO_SECRET");
-if (!EMAIL_USER)  missing.push("EMAIL_USER");
-if (!EMAIL_PASS)  missing.push("EMAIL_PASS");
+if (!EMAIL_USER) missing.push("EMAIL_USER");
+if (!EMAIL_PASS) missing.push("EMAIL_PASS");
 if (missing.length) {
   console.warn("⚠️ .env dagi quyidagi maydonlar yo'q:", missing.join(", "));
 }
@@ -76,7 +81,8 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendEmail(to, subject, text) {
-  if (!EMAIL_USER || !EMAIL_PASS) throw new Error("email transport is not configured");
+  if (!EMAIL_USER || !EMAIL_PASS)
+    throw new Error("email transport is not configured");
   if (!to || !subject || !text) throw new Error("email: invalid payload");
   const info = await transporter.sendMail({
     from: `"Khamsa Hotel" <${EMAIL_USER}>`,
@@ -91,11 +97,14 @@ async function sendEmail(to, subject, text) {
 async function notifyTelegram(text) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
   try {
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
-    });
+    await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
+      }
+    );
   } catch (e) {
     console.error("Telegram error:", e);
   }
@@ -106,11 +115,18 @@ async function safeParseResponse(res) {
   const ct = (res.headers.get("content-type") || "").toLowerCase();
   if (ct.includes("application/json")) return res.json();
   const txt = await res.text();
-  try { return JSON.parse(txt); } catch { return { _raw: txt }; }
+  try {
+    return JSON.parse(txt);
+  } catch {
+    return { _raw: txt };
+  }
 }
 
 // SIGN helper (Octo custom_data integrity)
-const SIGN_SECRET = crypto.createHash("sha256").update(String(process.env.OCTO_SECRET || "octo")).digest();
+const SIGN_SECRET = crypto
+  .createHash("sha256")
+  .update(String(process.env.OCTO_SECRET || "octo"))
+  .digest();
 
 function signData(obj) {
   const json = JSON.stringify(obj);
@@ -158,10 +174,11 @@ app.get("/api/bnovo/availability", async (req, res) => {
 
     const checkInDate = new Date(checkIn);
     const checkOut = new Date(checkInDate.getTime() + Number(nights) * 86400000)
-      .toISOString().slice(0,10);
+      .toISOString()
+      .slice(0, 10);
 
     const avail = await checkAvailability({
-      checkIn: String(checkIn).slice(0,10),
+      checkIn: String(checkIn).slice(0, 10),
       checkOut,
       roomType: String(roomType).toUpperCase(),
     });
@@ -169,8 +186,8 @@ app.get("/api/bnovo/availability", async (req, res) => {
     return res.json({
       ...avail,
       ok: true,
-      checkIn: String(checkIn).slice(0,10),
-      checkOut
+      checkIn: String(checkIn).slice(0, 10),
+      checkOut,
     });
   } catch (e) {
     console.error("/api/bnovo/availability error:", e);
@@ -190,15 +207,17 @@ app.post("/create-payment", async (req, res) => {
     }
 
     const {
-      amount,                       // EUR
+      amount, // EUR
       description = "Mehmonxona to'lovi",
       email,
-      booking = {}                  // {checkIn, duration, rooms, guests, firstName, lastName, phone, email, price}
+      booking = {}, // {checkIn, duration, rooms, guests, firstName, lastName, phone, email, price}
     } = req.body || {};
 
     const amt = Number(amount);
     if (!Number.isFinite(amt) || amt <= 0 || !email) {
-      return res.status(400).json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
+      return res
+        .status(400)
+        .json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
     }
 
     const computeCheckOut = (checkInStr, durationStr) => {
@@ -223,7 +242,7 @@ app.post("/create-payment", async (req, res) => {
       phone: booking.phone,
       email: booking.email,
       priceEur: amt,
-      note: "Khamsa website payment success → push to Bnovo"
+      note: "Khamsa website payment success → push to Bnovo",
     };
 
     const signed = signData(bookingPayload);
@@ -245,7 +264,7 @@ app.post("/create-payment", async (req, res) => {
       custom_data: {
         email,
         booking_json: signed.json,
-        booking_sig: signed.sig
+        booking_sig: signed.sig,
       },
     };
 
@@ -271,7 +290,9 @@ app.post("/create-payment", async (req, res) => {
     }
 
     console.error("Octo error:", { status: octoRes.status, data });
-    const msg = (data && (data.errMessage || data.message)) || `Octo error (status ${octoRes.status})`;
+    const msg =
+      (data && (data.errMessage || data.message)) ||
+      `Octo error (status ${octoRes.status})`;
     return res.status(400).json({ error: msg });
   } catch (err) {
     console.error("❌ create-payment:", err);
@@ -284,41 +305,70 @@ app.post("/payment-callback", async (req, res) => {
   try {
     const body =
       typeof req.body === "string"
-        ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })()
-        : (req.body || {});
+        ? (() => {
+            try {
+              return JSON.parse(req.body);
+            } catch {
+              return {};
+            }
+          })()
+        : req.body || {};
     console.log("🔁 payment-callback body:", body);
 
     const statusFields = [
-      body?.status, body?.payment_status, body?.transaction_status, body?.result
+      body?.status,
+      body?.payment_status,
+      body?.transaction_status,
+      body?.result,
     ].map((s) => String(s || "").toLowerCase());
     const isSuccess =
       statusFields.some((s) =>
-        ["ok","success","succeeded","paid","captured","approved","done"].includes(s)
-      ) || body?.paid === true || body?.error === 0 || String(body?.state || "").toUpperCase() === "CAPTURED";
+        [
+          "ok",
+          "success",
+          "succeeded",
+          "paid",
+          "captured",
+          "approved",
+          "done",
+        ].includes(s)
+      ) ||
+      body?.paid === true ||
+      body?.error === 0 ||
+      String(body?.state || "").toUpperCase() === "CAPTURED";
 
     let verifiedPayload = null;
     try {
       let custom = body?.custom_data;
       if (typeof custom === "string") {
-        try { custom = JSON.parse(custom); } catch { /* ignore */ }
+        try {
+          custom = JSON.parse(custom);
+        } catch {
+          /* ignore */
+        }
       }
       const json = custom?.booking_json;
-      const sig  = custom?.booking_sig;
+      const sig = custom?.booking_sig;
       if (json && sig && verifyData(json, sig)) {
         verifiedPayload = JSON.parse(json);
       } else if (json && !sig) {
-        try { verifiedPayload = JSON.parse(json); } catch {}
+        try {
+          verifiedPayload = JSON.parse(json);
+        } catch {}
       }
     } catch (e) {
       console.warn("custom_data parse error:", e);
     }
 
     if (!verifiedPayload) {
-      console.warn("⚠️ custom_data yo‘q yoki verify bo‘lmadi — pending store’dan izlaymiz");
+      console.warn(
+        "⚠️ custom_data yo‘q yoki verify bo‘lmadi — pending store’dan izlaymiz"
+      );
       const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
       if (stid) {
         verifiedPayload = popPending(stid);
-        if (!verifiedPayload) console.warn("⚠️ pending store’da ham topilmadi:", stid);
+        if (!verifiedPayload)
+          console.warn("⚠️ pending store’da ham topilmadi:", stid);
       } else {
         console.warn("⚠️ shop_transaction_id kelmadi");
       }
@@ -340,17 +390,40 @@ Bron:
 - Mehmonlar: ${verifiedPayload.guests || 1}
 - Narx (EUR): ${verifiedPayload.priceEur}
 
-Bnovo push: ${pushRes.pushed ? "✅ Pushed" : (pushRes.ok ? "⚠️ Skipped (cheklov)" : "❌ Fail")}
-${pushRes.ok ? (pushRes.pushed ? "" : `Reason: ${pushRes.reason || ""}`) : `Reason: ${JSON.stringify(pushRes.error || pushRes.status || pushRes.data || {}, null, 2)}`}
+Bnovo push: ${
+        pushRes.pushed
+          ? "✅ Pushed"
+          : pushRes.ok
+          ? "⚠️ Skipped (cheklov)"
+          : "❌ Fail"
+      }
+${
+  pushRes.ok
+    ? pushRes.pushed
+      ? ""
+      : `Reason: ${pushRes.reason || ""}`
+    : `Reason: ${JSON.stringify(
+        pushRes.error || pushRes.status || pushRes.data || {},
+        null,
+        2
+      )}`
+}
       `.trim();
 
-      try { await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human); } catch {}
-      try { await notifyTelegram(human); } catch {}
+      try {
+        await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human);
+      } catch {}
+      try {
+        await notifyTelegram(human);
+      } catch {}
 
       return res.json({ ok: true });
     }
 
-    console.warn("⚠️ Payment not success yoki payload topilmadi:", { statusFields, paid: body?.paid });
+    console.warn("⚠️ Payment not success yoki payload topilmadi:", {
+      statusFields,
+      paid: body?.paid,
+    });
     return res.json({ ok: true }); // Octo qayta urmasin
   } catch (e) {
     console.error("❌ /payment-callback:", e);
@@ -377,7 +450,9 @@ app.post("/api/bookings", async (req, res) => {
     } = req.body || {};
 
     if (!checkIn || !checkOutTime || !rooms || !firstName || !email) {
-      return res.status(400).json({ error: "Kerakli ma'lumotlar yetarli emas" });
+      return res
+        .status(400)
+        .json({ error: "Kerakli ma'lumotlar yetarli emas" });
     }
 
     const getCheckoutDate = (checkInStr, durationStr) => {
@@ -409,9 +484,15 @@ Yangi bron qabul qilindi:
 🌐 Sayt: ${FRONTEND_URL}
 `.trim();
 
-    try { await sendEmail(ADMIN_EMAIL, emailSubject, emailText); } catch {}
+    try {
+      await sendEmail(ADMIN_EMAIL, emailSubject, emailText);
+    } catch {}
 
-    res.json({ success: true, message: "Bron muvaffaqiyatli tarzda yuborildi", createdAt });
+    res.json({
+      success: true,
+      message: "Bron muvaffaqiyatli tarzda yuborildi",
+      createdAt,
+    });
   } catch (error) {
     console.error("❌ /api/bookings:", error);
     res.status(500).json({ error: "Bron qilishda server xatosi" });
@@ -429,4 +510,9 @@ app.use((err, req, res, _next) => {
 
 app.listen(PORT, () => {
   console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
+  console.log(
+    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
+      process.env.BNOVO_AUTH_URL
+    } payload_set=${!!process.env.BNOVO_AUTH_PAYLOAD}`
+  );
 });

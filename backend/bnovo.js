@@ -60,6 +60,7 @@ async function getBearerHeader(forceRenew = false) {
   if (!forceRenew && cachedToken.value && cachedToken.exp > now + 30) {
     return { Authorization: `Bearer ${cachedToken.value}` };
   }
+  console.log("[BNOVO] getBearerHeader(): bearer flow start");
 
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 15000);
@@ -86,6 +87,7 @@ async function getBearerHeader(forceRenew = false) {
   cachedToken = { value: token, exp: now + ttl };
   return { Authorization: `Bearer ${token}` };
 }
+console.log("[BNOVO] fetching:", url);
 
 async function bnovoFetch(path, { method = "GET", headers = {}, body, retry401 = true } = {}) {
   const url = path.startsWith("http") ? path : `${BNOVO_API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
