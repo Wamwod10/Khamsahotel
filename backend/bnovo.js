@@ -1,5 +1,6 @@
 // bnovo.js — Availability (Bearer/JWT, read-only)
 import fetch from "node-fetch";
+import 'dotenv/config';  
 
 /* =======================
  * ENV
