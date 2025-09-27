@@ -513,6 +513,6 @@ app.listen(PORT, () => {
   console.log(
     `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
       process.env.BNOVO_AUTH_URL
-    } payload_set=${!!process.env.BNOVO_AUTH_PAYLOAD}`
+    } id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD}`
   );
 });

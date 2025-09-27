@@ -6,12 +6,16 @@ import fetch from "node-fetch";
  * ======================= */
 const RAW_BASE = process.env.BNOVO_API_BASE_URL || "https://api.pms.bnovo.ru/open-api";
 const BNOVO_API_BASE_URL = RAW_BASE.replace(/\/+$/, "");
+
 const AUTH_MODE = String(process.env.BNOVO_AUTH_MODE || "bearer").toLowerCase();
-const AUTH_URL = process.env.BNOVO_AUTH_URL || "https://api.pms.bnovo.ru/api/v1/auth";
-const AUTH_PAYLOAD = process.env.BNOVO_AUTH_PAYLOAD ? JSON.parse(process.env.BNOVO_AUTH_PAYLOAD) : null;
+const AUTH_URL  = process.env.BNOVO_AUTH_URL || "https://api.pms.bnovo.ru/api/v1/auth";
 const TOKEN_TTL = Number(process.env.BNOVO_TOKEN_TTL || 300);
 
-// FAMILY kodlarini .env dan sozlash (mas: FAMILY,FAM,FAM1)
+// Soddalashtirilgan auth kalitlari (JSON parsing muammosini chetlashish uchun)
+const BNOVO_ID       = process.env.BNOVO_ID;        // masalan: 109828
+const BNOVO_PASSWORD = process.env.BNOVO_PASSWORD;  // Octopus oynasidagi "Пароль"
+
+// FAMILY kodlarini .env dan sozlash (mas: FAMILY,FAM,FAMILY_ROOM)
 const FAMILY_CODES = (process.env.BNOVO_FAMILY_CODES || "FAMILY,FAM")
   .split(",")
   .map((s) => s.trim().toUpperCase())
@@ -52,15 +56,14 @@ async function getBearerHeader(forceRenew = false) {
   if (AUTH_MODE !== "bearer") {
     throw new Error("BNOVO_AUTH_MODE=bearer bo'lishi kerak (read-only Open API JWT).");
   }
-  if (!AUTH_URL || !AUTH_PAYLOAD) {
-    throw new Error("BNOVO_AUTH_URL yoki BNOVO_AUTH_PAYLOAD sozlanmagan.");
+  if (!AUTH_URL || !BNOVO_ID || !BNOVO_PASSWORD) {
+    throw new Error("BNOVO_AUTH_URL yoki BNOVO_ID yoki BNOVO_PASSWORD sozlanmagan.");
   }
 
   const now = Math.floor(Date.now() / 1000);
   if (!forceRenew && cachedToken.value && cachedToken.exp > now + 30) {
     return { Authorization: `Bearer ${cachedToken.value}` };
   }
-  console.log("[BNOVO] getBearerHeader(): bearer flow start");
 
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 15000);
@@ -68,7 +71,7 @@ async function getBearerHeader(forceRenew = false) {
   const r = await fetch(AUTH_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(AUTH_PAYLOAD),
+    body: JSON.stringify({ id: Number(BNOVO_ID), password: BNOVO_PASSWORD }),
     signal: controller.signal,
   }).catch((e) => {
     throw new Error(`Auth fetch failed: ${e?.message || e}`);
@@ -85,12 +88,13 @@ async function getBearerHeader(forceRenew = false) {
   if (!token) throw new Error("Auth token missing in response");
 
   cachedToken = { value: token, exp: now + ttl };
-  return { Authorization: `Bearer ${token}` };``
+  return { Authorization: `Bearer ${token}` };
 }
 
-
 async function bnovoFetch(path, { method = "GET", headers = {}, body, retry401 = true } = {}) {
-  const url = path.startsWith("http") ? path : `${BNOVO_API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+  const url = path.startsWith("http")
+    ? path
+    : `${BNOVO_API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
 
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 15000);
@@ -110,18 +114,13 @@ async function bnovoFetch(path, { method = "GET", headers = {}, body, retry401 =
 
   // 2) 401 bo‘lsa — bir marta tokenni yangilab qayta uramiz
   if (retry401 && res.status === 401) {
-    try {
-      auth = await getBearerHeader(true);
-      res = await fetch(url, {
-        method,
-        headers: { Accept: "application/json", ...auth, ...headers },
-        body,
-        signal: controller.signal,
-      });
-    } catch (e) {
-      clearTimeout(t);
-      throw e;
-    }
+    auth = await getBearerHeader(true);
+    res = await fetch(url, {
+      method,
+      headers: { Accept: "application/json", ...auth, ...headers },
+      body,
+      signal: controller.signal,
+    });
   }
 
   clearTimeout(t);
