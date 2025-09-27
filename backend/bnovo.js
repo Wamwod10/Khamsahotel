@@ -1,231 +1,145 @@
-// bnovo.js — Availability (Bearer/JWT, read-only, api/v1 + hotel_id autodetect)
+// bnovo.js — Robust availability (JWT + multi-endpoint fallback)
 import "dotenv/config";
 import fetch from "node-fetch";
 
-/* =======================
- * ENV
- * ======================= */
-const RAW_BASE = process.env.BNOVO_API_BASE_URL || "https://api.pms.bnovo.ru/api/v1";
-const BNOVO_API_BASE_URL = RAW_BASE.replace(/\/+$/, "");
-
-const AUTH_MODE = String(process.env.BNOVO_AUTH_MODE || "bearer").toLowerCase();
-const AUTH_URL  = process.env.BNOVO_AUTH_URL || "https://api.pms.bnovo.ru/api/v1/auth";
+/* ===== ENV ===== */
+const AUTH_URL = process.env.BNOVO_AUTH_URL || "https://api.pms.bnovo.ru/api/v1/auth";
+const API_BASES = [
+  (process.env.BNOVO_API_BASE_URL || "https://api.pms.bnovo.ru/api/v1").replace(/\/+$/,""),
+  "https://api.pms.bnovo.ru/open-api" // fallback
+];
+const BNOVO_ID = process.env.BNOVO_ID;
+const BNOVO_PASSWORD = process.env.BNOVO_PASSWORD;
 const TOKEN_TTL = Number(process.env.BNOVO_TOKEN_TTL || 300);
-
-const BNOVO_ID       = process.env.BNOVO_ID;        // masalan: 109828
-const BNOVO_PASSWORD = process.env.BNOVO_PASSWORD;  // Octopus oynasidagi "Пароль"
-
 const FAMILY_CODES = (process.env.BNOVO_FAMILY_CODES || "FAMILY,FAM")
-  .split(",")
-  .map((s) => s.trim().toUpperCase())
-  .filter(Boolean);
+  .split(",").map(s=>s.trim().toUpperCase()).filter(Boolean);
 
-/* =======================
- * Helpers
- * ======================= */
-function toISODate(d) {
-  if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-  const dd = new Date(d);
-  if (Number.isNaN(dd.getTime())) return null;
-  return dd.toISOString().slice(0, 10);
-}
-
-async function safeParse(res) {
-  const ct = (res.headers.get("content-type") || "").toLowerCase();
+/* ===== helpers ===== */
+const toISO = (d)=>{
+  if (typeof d==="string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  const x = new Date(d);
+  return Number.isNaN(x.getTime()) ? null : x.toISOString().slice(0,10);
+};
+async function safeParse(res){
+  const ct = (res.headers.get("content-type")||"").toLowerCase();
   if (ct.includes("application/json")) return res.json();
   const txt = await res.text();
   try { return JSON.parse(txt); } catch { return { _raw: txt }; }
 }
-
-function qs(params = {}) {
-  const usp = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && String(v).length) usp.set(k, String(v));
-  });
-  return usp.toString();
+function pickItems(payload){
+  if (!payload) return [];
+  if (Array.isArray(payload?.data?.items)) return payload.data.items;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload)) return payload;
+  return [];
 }
 
-/* =======================
- * Auth (Bearer) with cache
- * ======================= */
-let cachedToken = { value: null, exp: 0 };
-
-async function getBearerHeader(forceRenew = false) {
-  if (AUTH_MODE !== "bearer") {
-    throw new Error("BNOVO_AUTH_MODE=bearer bo'lishi kerak (api/v1 JWT).");
-  }
-  if (!AUTH_URL || !BNOVO_ID || !BNOVO_PASSWORD) {
-    throw new Error("BNOVO_AUTH_URL yoki BNOVO_ID yoki BNOVO_PASSWORD sozlanmagan.");
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (!forceRenew && cachedToken.value && cachedToken.exp > now + 30) {
-    return { Authorization: `Bearer ${cachedToken.value}` };
-  }
-
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 15000);
+/* ===== auth cache ===== */
+let cached = { token:null, exp:0 };
+async function auth(force=false){
+  const now = Math.floor(Date.now()/1000);
+  if (!force && cached.token && cached.exp > now+30) return cached.token;
+  if (!BNOVO_ID || !BNOVO_PASSWORD) throw new Error("BNOVO_ID/BNOVO_PASSWORD yo‘q");
 
   const r = await fetch(AUTH_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ id: Number(BNOVO_ID), password: BNOVO_PASSWORD }),
-    signal: controller.signal,
-  }).catch((e) => {
-    throw new Error(`Auth fetch failed: ${e?.message || e}`);
+    method:"POST",
+    headers: { "Content-Type":"application/json", "Accept":"application/json" },
+    body: JSON.stringify({ id: Number(BNOVO_ID), password: BNOVO_PASSWORD })
   });
-
-  clearTimeout(t);
   const j = await safeParse(r);
-  if (!r.ok) {
-    throw new Error(`Auth failed: ${r.status} ${JSON.stringify(j)}`);
-  }
+  if (!r.ok) throw new Error(`auth ${r.status} ${JSON.stringify(j)}`);
 
-  const payload = j?.data ? j.data : j;
-  const token = payload?.access_token || payload?.token;
-  const ttl = Number(payload?.expires_in || TOKEN_TTL || 300);
+  const p = j?.data || j;
+  const token = p?.access_token || p?.token;
+  const ttl = Number(p?.expires_in || TOKEN_TTL || 300);
+  if (!token) throw new Error(`auth token missing: ${JSON.stringify(j)}`);
 
-  if (!token) throw new Error(`Auth token missing in response: ${JSON.stringify(j)}`);
-
-  cachedToken = { value: token, exp: now + ttl };
-  return { Authorization: `Bearer ${token}` };
+  cached = { token, exp: now + ttl };
+  return token;
 }
 
-async function bnovoFetch(path, { method = "GET", headers = {}, body, retry401 = true } = {}) {
-  const url = path.startsWith("http")
-    ? path
-    : `${BNOVO_API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
-
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 20000);
-
-  let auth = await getBearerHeader(false);
-
+/* ===== single request with retry ===== */
+async function doGet(url){
+  const token = await auth(false);
   let res = await fetch(url, {
-    method,
-    headers: {
-      // 406 oldini olish uchun Accept’ni kengaytiramiz
-      Accept: "application/json, */*;q=0.1",
-      ...auth,
-      ...headers,
-    },
-    body,
-    signal: controller.signal,
-  }).catch((e) => {
-    clearTimeout(t);
-    throw new Error(`Fetch failed: ${e?.message || e}`);
+    headers: { Accept: "application/json, */*;q=0.1", Authorization: `Bearer ${token}` }
   });
-
-  if (retry401 && res.status === 401) {
-    auth = await getBearerHeader(true);
+  if (res.status === 401){
+    const t2 = await auth(true);
     res = await fetch(url, {
-      method,
-      headers: {
-        Accept: "application/json, */*;q=0.1",
-        ...auth,
-        ...headers,
-      },
-      body,
-      signal: controller.signal,
+      headers: { Accept: "application/json, */*;q=0.1", Authorization: `Bearer ${t2}` }
     });
   }
-
-  clearTimeout(t);
   return res;
 }
 
-/* =======================
- * Hotel autodetect (cache)
- * ======================= */
-let cachedHotelId = null;
-
-async function getHotelId() {
-  if (cachedHotelId) return cachedHotelId;
-
-  // hotels endpoint (pagination talab qiladi)
-  const query = qs({ limit: 1, offset: 0 });
-  const res = await bnovoFetch(`/hotels?${query}`);
-  const data = await safeParse(res);
-
-  if (!res.ok) {
-    const raw = data?._raw || JSON.stringify(data);
-    throw new Error(`Hotels fetch failed: ${res.status} ${raw}`);
-  }
-
-  const payload = data?.data ? data.data : data;
-  const items = Array.isArray(payload?.items) ? payload.items : [];
-  if (!items.length || !items[0]?.id) {
-    throw new Error(`No hotels returned: ${JSON.stringify(payload)}`);
-  }
-
-  cachedHotelId = items[0].id;
-  return cachedHotelId;
+/* ===== optional: get hotel id (v1) ===== */
+async function tryGetHotelId(){
+  try{
+    const base = API_BASES[0]; // api/v1
+    const r = await doGet(`${base}/hotels?limit=1&offset=0`);
+    const j = await safeParse(r);
+    if (!r.ok) return null;
+    const items = pickItems(j);
+    const id = items?.[0]?.id;
+    return id || null;
+  }catch{ return null; }
 }
 
-/* =======================
- * Public API
- * ======================= */
+/* ===== public ===== */
+export async function checkAvailability({ checkIn, checkOut, roomType }){
+  const rt = String(roomType||"").toUpperCase();
+  if (rt === "STANDARD"){
+    return { ok:true, roomType:rt, available:true, source:"static-23-standard" };
+  }
+  const from = toISO(checkIn), to = toISO(checkOut);
+  if (!from || !to) return { ok:false, roomType:rt, available:false, warning:"invalid dates" };
 
-/**
- * Availability check:
- *  - STANDARD: har doim available (biznes qoida — 23 ta xona)
- *  - FAMILY: Bnovo /bookings orasidan bandlikni aniqlaydi
- */
-export async function checkAvailability({ checkIn, checkOut, roomType }) {
-  const rt = String(roomType || "").toUpperCase();
+  // Build candidate URLs (most permissive → strict)
+  const urls = [];
+  // 1) api/v1 without status, with pagination (ko‘p hollarda kerak bo‘ladi)
+  urls.push(`${API_BASES[0]}/bookings?date_from=${from}&date_to=${to}&limit=100&offset=0`);
+  // 2) open-api minimal (faqat date_from/date_to)
+  urls.push(`${API_BASES[1]}/bookings?date_from=${from}&date_to=${to}`);
 
-  if (rt === "STANDARD") {
-    return { ok: true, roomType: rt, available: true, source: "static-23-standard" };
+  // 3) agar kerak bo‘lsa hotel_id bilan ham urib ko‘ramiz (v1 da ba’zi akkauntlarda shart)
+  const hotelId = await tryGetHotelId();
+  if (hotelId){
+    urls.unshift(`${API_BASES[0]}/bookings?hotel_id=${hotelId}&date_from=${from}&date_to=${to}&limit=100&offset=0`);
   }
 
-  const from = toISODate(checkIn);
-  const to   = toISODate(checkOut);
-  if (!from || !to) {
-    return { ok: false, roomType: rt, available: false, warning: "invalid dates" };
-  }
-
-  try {
-    // 1) hotel_id ni autodetect qilamiz
-    const hotelId = await getHotelId();
-
-    // 2) bookings (v1: hotel_id + limit/offset majburiy bo‘ladi)
-    const query = qs({
-      hotel_id: hotelId,
-      date_from: from,
-      date_to: to,
-      limit: 100,
-      offset: 0,
-    });
-    const res = await bnovoFetch(`/bookings?${query}`);
-    const data = await safeParse(res);
-
-    if (!res.ok) {
-      const raw = data?._raw || JSON.stringify(data);
-      console.error("Bnovo availability error:", res.status, raw);
-      return { ok: false, roomType: rt, available: false, warning: `Bnovo ${res.status}` };
+  let lastError = null, lastStatus = null, lastBody = null;
+  for (const u of urls){
+    try{
+      const res = await doGet(u);
+      const data = await safeParse(res);
+      if (res.ok){
+        const items = pickItems(data);
+        const taken = items.some(b =>
+          FAMILY_CODES.includes(String(b?.room_type_code || b?.roomType || "").toUpperCase())
+        );
+        return { ok:true, roomType:rt, available:!taken, source:u.includes("/open-api")?"open-api":"api-v1" };
+      } else {
+        lastError = data; lastStatus = res.status; lastBody = data?._raw || JSON.stringify(data);
+        // 404/406 bo‘lsa keyingisini uramiz
+        continue;
+      }
+    } catch(e){
+      lastError = e?.message || String(e);
+      continue;
     }
-
-    const payload = data?.data ? data.data : data;
-    const items = Array.isArray(payload?.items)
-      ? payload.items
-      : Array.isArray(payload)
-      ? payload
-      : [];
-
-    const isFamilyTaken = items.some((b) =>
-      FAMILY_CODES.includes(String(b?.room_type_code || b?.roomType || "").toUpperCase())
-    );
-
-    return { ok: true, roomType: rt, available: !isFamilyTaken, source: "bnovo-api-v1" };
-  } catch (e) {
-    console.error("Bnovo availability exception:", e);
-    return { ok: false, roomType: rt, available: false, warning: `exception: ${e?.message || e}` };
   }
+
+  // Hech biri ishlamadi — xavfsizlik uchun band deb qaytaramiz (overbookingni oldini olish)
+  if (lastStatus){
+    console.error("Bnovo availability failed:", lastStatus, lastBody || lastError);
+    return { ok:false, roomType:rt, available:false, warning:`Bnovo ${lastStatus}` };
+  }
+  console.error("Bnovo availability exception:", lastError);
+  return { ok:false, roomType:rt, available:false, warning:`exception: ${lastError}` };
 }
 
-/**
- * POST create — API read-only.
- */
-export async function createBookingInBnovo() {
-  return { ok: true, pushed: false, reason: "API read-only; POST yo‘q" };
+// Open API — read-only; POST create mavjud emas
+export async function createBookingInBnovo(){
+  return { ok:true, pushed:false, reason:"API is read-only; POST yo‘q" };
 }
