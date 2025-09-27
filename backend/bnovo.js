@@ -83,13 +83,19 @@ async function getBearerHeader(forceRenew = false) {
     throw new Error(`Auth failed: ${r.status} ${JSON.stringify(j)}`);
   }
 
-  const token = j.access_token || j.token;
-  const ttl = Number(j.expires_in || TOKEN_TTL || 300);
-  if (!token) throw new Error("Auth token missing in response");
+  // ⬇️ BNOVO javobi ko‘pincha { data: { access_token, expires_in, ... } } ko‘rinishida
+  const payload = (j && j.data) ? j.data : j;
+  const token = payload.access_token || payload.token;
+  const ttl = Number(payload.expires_in || TOKEN_TTL || 300);
+
+  if (!token) {
+    throw new Error(`Auth token missing in response: ${JSON.stringify(j)}`);
+  }
 
   cachedToken = { value: token, exp: now + ttl };
   return { Authorization: `Bearer ${token}` };
 }
+
 
 async function bnovoFetch(path, { method = "GET", headers = {}, body, retry401 = true } = {}) {
   const url = path.startsWith("http")
