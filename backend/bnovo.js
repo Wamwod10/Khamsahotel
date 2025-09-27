@@ -87,57 +87,79 @@ async function tryGetHotelId(){
 }
 
 /* ===== public ===== */
-export async function checkAvailability({ checkIn, checkOut, roomType }){
-  const rt = String(roomType||"").toUpperCase();
-  if (rt === "STANDARD"){
-    return { ok:true, roomType:rt, available:true, source:"static-23-standard" };
-  }
-  const from = toISO(checkIn), to = toISO(checkOut);
-  if (!from || !to) return { ok:false, roomType:rt, available:false, warning:"invalid dates" };
+// bnovo.js ichida — eski checkAvailability’ni to‘liq shu bilan almashtiring
+export async function checkAvailability({ checkIn, checkOut, roomType }) {
+  const rt = String(roomType || "").toUpperCase();
 
-  // Build candidate URLs (most permissive → strict)
-  const urls = [];
-  // 1) api/v1 without status, with pagination (ko‘p hollarda kerak bo‘ladi)
-  urls.push(`${API_BASES[0]}/bookings?date_from=${from}&date_to=${to}&limit=100&offset=0`);
-  // 2) open-api minimal (faqat date_from/date_to)
-  urls.push(`${API_BASES[1]}/bookings?date_from=${from}&date_to=${to}`);
-
-  // 3) agar kerak bo‘lsa hotel_id bilan ham urib ko‘ramiz (v1 da ba’zi akkauntlarda shart)
-  const hotelId = await tryGetHotelId();
-  if (hotelId){
-    urls.unshift(`${API_BASES[0]}/bookings?hotel_id=${hotelId}&date_from=${from}&date_to=${to}&limit=100&offset=0`);
+  // STANDARD — biznes qoidangiz: doim bor
+  if (rt === "STANDARD") {
+    return { ok: true, roomType: rt, available: true, source: "static-23-standard" };
   }
 
-  let lastError = null, lastStatus = null, lastBody = null;
-  for (const u of urls){
-    try{
-      const res = await doGet(u);
-      const data = await safeParse(res);
-      if (res.ok){
-        const items = pickItems(data);
-        const taken = items.some(b =>
-          FAMILY_CODES.includes(String(b?.room_type_code || b?.roomType || "").toUpperCase())
-        );
-        return { ok:true, roomType:rt, available:!taken, source:u.includes("/open-api")?"open-api":"api-v1" };
-      } else {
-        lastError = data; lastStatus = res.status; lastBody = data?._raw || JSON.stringify(data);
-        // 404/406 bo‘lsa keyingisini uramiz
-        continue;
+  // YYYY-MM-DD ga normalize
+  const toISO = (d) => (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : new Date(d).toISOString().slice(0,10));
+  const from = toISO(checkIn);
+  const to   = toISO(checkOut);
+  if (!from || !to) {
+    return { ok: false, roomType: rt, available: false, warning: "invalid dates" };
+  }
+
+  // ENV: hotel_id (agar alohida bo'lsa BNOVO_HOTEL_ID ni .env ga qo'ying)
+  const hotelId = process.env.BNOVO_HOTEL_ID || process.env.BNOVO_ID;
+  const FAMILY_CODES = (process.env.BNOVO_FAMILY_CODES || "FAMILY,FAM")
+    .split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
+
+  try {
+    const LIMIT = 20;  // v1 cheklovi: 20 dan katta bo'lmaydi
+    let offset = 0;
+    let anyFamilyTaken = false;
+
+    while (true) {
+      const q = new URLSearchParams({
+        hotel_id: String(hotelId || ""),
+        date_from: from,
+        date_to: to,
+        limit: String(LIMIT),
+        offset: String(offset),
+      }).toString();
+
+      const res = await bnovoFetch(`/bookings?${q}`);
+      const data = await (async () => {
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (ct.includes("application/json")) return res.json();
+        const txt = await res.text(); try { return JSON.parse(txt); } catch { return { _raw: txt }; }
+      })();
+
+      if (!res.ok) {
+        const raw = data?._raw || JSON.stringify(data);
+        console.error("Bnovo availability error:", res.status, raw);
+        return { ok: false, roomType: rt, available: false, warning: `Bnovo ${res.status}` };
       }
-    } catch(e){
-      lastError = e?.message || String(e);
-      continue;
-    }
-  }
 
-  // Hech biri ishlamadi — xavfsizlik uchun band deb qaytaramiz (overbookingni oldini olish)
-  if (lastStatus){
-    console.error("Bnovo availability failed:", lastStatus, lastBody || lastError);
-    return { ok:false, roomType:rt, available:false, warning:`Bnovo ${lastStatus}` };
+      // v1 javobi ko'pincha { data: { items: [...], meta: {...} } }
+      const payload = data?.data ? data.data : data;
+      const items = Array.isArray(payload?.items) ? payload.items
+                  : Array.isArray(payload)      ? payload
+                  : [];
+
+      // FAMILY bandligini tekshirish
+      const taken = items.some(b =>
+        FAMILY_CODES.includes(String(b?.room_type_code || b?.roomType || "").toUpperCase())
+      );
+      if (taken) { anyFamilyTaken = true; break; }
+
+      // Sahifalash tugashi sharti
+      if (items.length < LIMIT) break;
+      offset += LIMIT;
+    }
+
+    return { ok: true, roomType: rt, available: !anyFamilyTaken, source: "bnovo-api-v1" };
+  } catch (e) {
+    console.error("Bnovo availability exception:", e);
+    return { ok: false, roomType: rt, available: false, warning: `exception: ${e?.message || e}` };
   }
-  console.error("Bnovo availability exception:", lastError);
-  return { ok:false, roomType:rt, available:false, warning:`exception: ${lastError}` };
 }
+
 
 // Open API — read-only; POST create mavjud emas
 export async function createBookingInBnovo(){
