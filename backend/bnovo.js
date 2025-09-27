@@ -157,28 +157,30 @@ export async function checkAvailability({ checkIn, checkOut, roomType }) {
   }
 
   try {
-    // v1’da status=confirmed ba'zan 406 beradi — olib tashladik
-    const query = qs({ date_from: from, date_to: to });
+    // v1: limit/offset majburiy
+    const query = qs({ date_from: from, date_to: to, limit: 100, offset: 0 });
     const res = await bnovoFetch(`/bookings?${query}`);
     const data = await safeParse(res);
 
     if (!res.ok) {
-      // diagnostika uchun xom matnni ham log’ga yozamiz
-      try {
-        const raw = data?._raw || JSON.stringify(data);
-        console.error("Bnovo availability error:", res.status, raw);
-      } catch {}
+      const raw = data?._raw || JSON.stringify(data);
+      console.error("Bnovo availability error:", res.status, raw);
       return { ok: false, roomType: rt, available: false, warning: `Bnovo ${res.status}` };
     }
 
-    const items = Array.isArray(data?.items)
-      ? data.items
-      : Array.isArray(data)
-      ? data
+    // v1 ko‘pincha { data: { items: [...], meta: {...} } } ko‘rinishda
+    const payload = data?.data ? data.data : data;
+    const items = Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload)
+      ? payload
       : [];
 
     const isFamilyTaken = items.some((b) =>
-      FAMILY_CODES.includes(String(b?.room_type_code || b?.roomType || "").toUpperCase())
+      (process.env.BNOVO_FAMILY_CODES || "FAMILY,FAM")
+        .split(",")
+        .map(s => s.trim().toUpperCase())
+        .includes(String(b?.room_type_code || b?.roomType || "").toUpperCase())
     );
 
     return { ok: true, roomType: rt, available: !isFamilyTaken, source: "bnovo-api-v1" };
@@ -187,6 +189,7 @@ export async function checkAvailability({ checkIn, checkOut, roomType }) {
     return { ok: false, roomType: rt, available: false, warning: `exception: ${e?.message || e}` };
   }
 }
+
 
 /**
  * POST create — Open API bilan mavjud emas (read-only).
