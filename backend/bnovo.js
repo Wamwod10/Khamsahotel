@@ -1,4 +1,4 @@
-// bnovo.js — Availability (Bearer/JWT, read-only)
+// bnovo.js — Availability (Bearer/JWT, read-only, api/v1 + hotel_id autodetect)
 import "dotenv/config";
 import fetch from "node-fetch";
 
@@ -52,7 +52,7 @@ let cachedToken = { value: null, exp: 0 };
 
 async function getBearerHeader(forceRenew = false) {
   if (AUTH_MODE !== "bearer") {
-    throw new Error("BNOVO_AUTH_MODE=bearer bo'lishi kerak (read-only Open API JWT).");
+    throw new Error("BNOVO_AUTH_MODE=bearer bo'lishi kerak (api/v1 JWT).");
   }
   if (!AUTH_URL || !BNOVO_ID || !BNOVO_PASSWORD) {
     throw new Error("BNOVO_AUTH_URL yoki BNOVO_ID yoki BNOVO_PASSWORD sozlanmagan.");
@@ -97,7 +97,7 @@ async function bnovoFetch(path, { method = "GET", headers = {}, body, retry401 =
     : `${BNOVO_API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
 
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 15000);
+  const t = setTimeout(() => controller.abort(), 20000);
 
   let auth = await getBearerHeader(false);
 
@@ -135,6 +135,34 @@ async function bnovoFetch(path, { method = "GET", headers = {}, body, retry401 =
 }
 
 /* =======================
+ * Hotel autodetect (cache)
+ * ======================= */
+let cachedHotelId = null;
+
+async function getHotelId() {
+  if (cachedHotelId) return cachedHotelId;
+
+  // hotels endpoint (pagination talab qiladi)
+  const query = qs({ limit: 1, offset: 0 });
+  const res = await bnovoFetch(`/hotels?${query}`);
+  const data = await safeParse(res);
+
+  if (!res.ok) {
+    const raw = data?._raw || JSON.stringify(data);
+    throw new Error(`Hotels fetch failed: ${res.status} ${raw}`);
+  }
+
+  const payload = data?.data ? data.data : data;
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  if (!items.length || !items[0]?.id) {
+    throw new Error(`No hotels returned: ${JSON.stringify(payload)}`);
+  }
+
+  cachedHotelId = items[0].id;
+  return cachedHotelId;
+}
+
+/* =======================
  * Public API
  * ======================= */
 
@@ -151,14 +179,23 @@ export async function checkAvailability({ checkIn, checkOut, roomType }) {
   }
 
   const from = toISODate(checkIn);
-  const to = toISODate(checkOut);
+  const to   = toISODate(checkOut);
   if (!from || !to) {
     return { ok: false, roomType: rt, available: false, warning: "invalid dates" };
   }
 
   try {
-    // v1: limit/offset majburiy
-    const query = qs({ date_from: from, date_to: to, limit: 100, offset: 0 });
+    // 1) hotel_id ni autodetect qilamiz
+    const hotelId = await getHotelId();
+
+    // 2) bookings (v1: hotel_id + limit/offset majburiy bo‘ladi)
+    const query = qs({
+      hotel_id: hotelId,
+      date_from: from,
+      date_to: to,
+      limit: 100,
+      offset: 0,
+    });
     const res = await bnovoFetch(`/bookings?${query}`);
     const data = await safeParse(res);
 
@@ -168,7 +205,6 @@ export async function checkAvailability({ checkIn, checkOut, roomType }) {
       return { ok: false, roomType: rt, available: false, warning: `Bnovo ${res.status}` };
     }
 
-    // v1 ko‘pincha { data: { items: [...], meta: {...} } } ko‘rinishda
     const payload = data?.data ? data.data : data;
     const items = Array.isArray(payload?.items)
       ? payload.items
@@ -177,10 +213,7 @@ export async function checkAvailability({ checkIn, checkOut, roomType }) {
       : [];
 
     const isFamilyTaken = items.some((b) =>
-      (process.env.BNOVO_FAMILY_CODES || "FAMILY,FAM")
-        .split(",")
-        .map(s => s.trim().toUpperCase())
-        .includes(String(b?.room_type_code || b?.roomType || "").toUpperCase())
+      FAMILY_CODES.includes(String(b?.room_type_code || b?.roomType || "").toUpperCase())
     );
 
     return { ok: true, roomType: rt, available: !isFamilyTaken, source: "bnovo-api-v1" };
@@ -190,9 +223,8 @@ export async function checkAvailability({ checkIn, checkOut, roomType }) {
   }
 }
 
-
 /**
- * POST create — Open API bilan mavjud emas (read-only).
+ * POST create — API read-only.
  */
 export async function createBookingInBnovo() {
   return { ok: true, pushed: false, reason: "API read-only; POST yo‘q" };
