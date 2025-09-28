@@ -390,7 +390,7 @@
     border-radius: 50%;
     color: #666;
     cursor: pointer;
-    transition: background-color 160ms ease, transform 120ms ease;
+    transition: background-color 0.2s ease, transform 0.2 ease;
   
     &:hover {
       background: rgba(0,0,0,0.05);

@@ -37,6 +37,8 @@
   "upTo10Hours": "Up to 10 hours",
   "oneDay": "1 Day",
   "fillAllFields": "Please fill in all fields!",
+  "familyNotAvailable": "Unfortunately, the room is unavailable for the dates you selected. Please consider other dates or room types!",
+  "understand": "Understandable",
 
   "roomcardtitle": "Featured Rooms",
   "roomcardtext": "Choose from our carefully selected accommodations",

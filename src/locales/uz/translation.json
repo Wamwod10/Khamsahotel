@@ -37,6 +37,8 @@
   "upTo10Hours": "10 soatgacha",
   "oneDay": "1 kun",
   "fillAllFields": "Iltimos, barcha maydonlarni to‘ldiring!",
+  "familyNotAvailable": "Afsuski, siz tanlagan sana bo'yicha xonamiz band edi. Iltimos boshqa sana yoki xona turlarini ko'rib chiqing!",
+  "understand": "Tushunarli",
 
   "roomcardtitle": "Tavsiya etilgan xonalar",
   "roomcardtext": "Diqqat bilan tanlangan xonalardan tanlang",

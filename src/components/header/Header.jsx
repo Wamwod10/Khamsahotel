@@ -124,7 +124,7 @@ const Header = () => {
         // ⬇️ TEST: URL’da ?forceFamilyBusy=1 bo'lsa modalni majburan ochamiz
         if (isForceFamilyBusy()) {
           openModal(t("familyNotAvailable") || "Bu xona band qilingan");
-          return; // navigate bo'lmaydi
+          return; 
         }
     
         const nights = getNightsFromDuration(duration);
@@ -199,7 +199,7 @@ const Header = () => {
                 onClick={closeModal}
                 className="kh-modal__btn kh-modal__btn--primary"
               >
-                {t("ok") || "OK"}
+                {t("understand") || "OK"}
               </button>
             </div>
           </div>
