@@ -141,7 +141,7 @@ const Roomcard = () => {
                 <FaMapLocationDot /> Qo'noq Hotel Tashkent Railway
               </p>
               <p className="roomcard__boxes-text txt-color">
-                Cozy rooms at Qo'noq Railway Hotel with private bathrooms, and air conditioning.
+                {t("roomtext3")}
               </p>
               <h3 className="roomcard__boxes-ft text-color">{t("roomcardft")}:</h3>
               <div className="roomcard__ft-box">
