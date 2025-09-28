@@ -6,7 +6,7 @@
   "contact": "Aloqa",
   "mybooking": "Bronim",
   "booknow": "Hozir band qilish",
-  "headertitle": "Toshkent aeroporti tranzit zonasida qulay kapsula mehmonxonasi",
+  "headertitle": "Toshkent aeroporti tranzit zonasida qulay",
   "khamsahotel": "Xamsa Mehmonxonasi",
   "headertext": "Shovqindan yiroq, kerakli narsalarga yaqin. Xamsa – dam, qulaylik va xizmat uyg‘unligi",
   "freewifi": "Bepul Wi-Fi",
@@ -39,6 +39,7 @@
   "fillAllFields": "Iltimos, barcha maydonlarni to‘ldiring!",
   "familyNotAvailable": "Afsuski, siz tanlagan sana bo'yicha xonamiz band edi. Iltimos boshqa sana yoki xona turlarini ko'rib chiqing!",
   "understand": "Tushunarli",
+  "searchrooms": "Xona qidirilmoqda...",
 
   "roomcardtitle": "Tavsiya etilgan xonalar",
   "roomcardtext": "Diqqat bilan tanlangan xonalardan tanlang",

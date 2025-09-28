@@ -296,7 +296,7 @@ const Header = () => {
                 className="header__form-button"
                 disabled={checking || !checkIn || !checkOutTime}
               >
-                {checking ? "Searching Room..." : (t("checkavailable") || "Check availability")}
+                {checking ? (t("searchrooms")) : (t("checkavailable") || "Check availability")}
               </button>
 
               <div className="header__info-row">
