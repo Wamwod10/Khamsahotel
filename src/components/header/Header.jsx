@@ -20,13 +20,23 @@ function getApiBase() {
   const cleaned = (env || "").replace(/\/+$/, "");
   return cleaned || window.location.origin;
 }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// URL orqali test qilish: ?forceFamilyBusy=1 => majburan band deb ko‘rsatadi
+const isForceFamilyBusy = () => {
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    return sp.get("forceFamilyBusy") === "1";
+  } catch {
+    return false;
+  }
+};
 
 async function checkFamilyAvailability({ checkIn, nights = 1 }) {
   const base = getApiBase();
   const url = `${base}/api/bnovo/availability?checkIn=${encodeURIComponent(
     checkIn
   )}&nights=${encodeURIComponent(nights)}&roomType=FAMILY`;
-
   try {
     const res = await fetch(url, { credentials: "omit" });
     const ct = (res.headers.get("content-type") || "").toLowerCase();
@@ -36,7 +46,7 @@ async function checkFamilyAvailability({ checkIn, nights = 1 }) {
 
     if (!res.ok) {
       console.warn("availability http error:", res.status, data);
-      // API xatoligida UXni buzmaslik uchun available=true deb olamiz
+      // API yiqilsa UXni to‘xtatmaslik uchun available=true deb olamiz (navigate bo‘lsin)
       return { ok: false, available: true, reason: `HTTP ${res.status}` };
     }
     if (typeof data?.available === "boolean") {
@@ -49,8 +59,6 @@ async function checkFamilyAvailability({ checkIn, nights = 1 }) {
   }
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 /* ===== Component ===== */
 const Header = () => {
   const { t } = useTranslation();
@@ -62,14 +70,12 @@ const Header = () => {
   const [duration, setDuration] = useState("Up to 3 hours");
   const [rooms, setRooms] = useState("STANDARD"); // STANDARD | FAMILY
 
-  // Loading va modal
   const [checking, setChecking] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMsg, setModalMsg] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Clear flow
   useEffect(() => {
     if (location.state?.clearSearch) {
       localStorage.removeItem("bookingInfo");
@@ -80,14 +86,12 @@ const Header = () => {
     }
   }, [location.state]);
 
-  // ESC bilan modal yopish
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && setIsModalOpen(false);
     if (isModalOpen) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [isModalOpen]);
 
-  // Modal helpers
   const openModal = useCallback(
     (message) => {
       setModalMsg(message || t("familyNotAvailable") || "Bu xona band qilingan");
@@ -102,7 +106,7 @@ const Header = () => {
     document.body.style.overflow = "";
   }, []);
 
-  // 3 soat / 10 soat / 1 kun — availability uchun 1 kecha deb olamiz
+  // Avail uchun 3/10 soat/1 kunni 1 kecha deb olamiz
   const getNightsFromDuration = useCallback((d) => {
     if (!d) return 1;
     const s = String(d).toLowerCase();
@@ -112,56 +116,40 @@ const Header = () => {
     return 1;
   }, []);
 
-  // Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (rooms === "FAMILY") {
-      setChecking(true);
-      try {
-        await sleep(3000);
-    
-        // ⬇️ TEST: URL’da ?forceFamilyBusy=1 bo'lsa modalni majburan ochamiz
-        if (isForceFamilyBusy()) {
-          openModal(t("familyNotAvailable") || "Bu xona band qilingan");
-          return; 
-        }
-    
-        const nights = getNightsFromDuration(duration);
-        const avail = await checkFamilyAvailability({ checkIn, nights });
-        if (!avail.available) {
-          openModal(t("familyNotAvailable") || "Bu xona band qilingan");
-          return;
-        }
-      } finally {
-        setChecking(false);
-      }
-    }
-    
-
+    // 1) Form validatsiya
     if (!checkIn || !checkOutTime || !duration || !rooms) {
       alert(t("fillAllFields") || "Please fill in all fields!");
       return;
     }
 
+    // 2) Agar FAMILY bo‘lsa — 3s kutish + Bnovo’dan availability
     if (rooms === "FAMILY") {
       setChecking(true);
       try {
-        // Sun'iy 3s kutish (vizual feedback)
-        await sleep(3000);
+        await sleep(3000); // sun’iy kutish
+
+        // test uchun majburiy band rejimi
+        if (isForceFamilyBusy()) {
+          openModal(t("familyNotAvailable") || "Bu xona band qilingan");
+          return; // navigatsiyani to‘xtatamiz
+        }
 
         const nights = getNightsFromDuration(duration);
         const avail = await checkFamilyAvailability({ checkIn, nights });
+
         if (!avail.available) {
           openModal(t("familyNotAvailable") || "Bu xona band qilingan");
-          return; // modal ochildi — oqim to‘xtaydi
+          return; // band bo‘lsa — to‘xtash
         }
       } finally {
         setChecking(false);
       }
     }
 
-    // STANDARD yoki FAMILY available:true bo‘lsa — davom
+    // 3) STANDARD yoki FAMILY available:true bo‘lsa — davom
     const formattedCheckOut = `${checkIn}T${checkOutTime}`;
     const bookingInfo = {
       checkIn,
@@ -174,13 +162,6 @@ const Header = () => {
     };
     localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
     navigate("/rooms");
-  };
-
-  const isForceFamilyBusy = () => {
-    try {
-      const sp = new URLSearchParams(window.location.search);
-      return sp.get("forceFamilyBusy") === "1";
-    } catch { return false; }
   };
 
   return (
@@ -296,7 +277,7 @@ const Header = () => {
                 className="header__form-button"
                 disabled={checking || !checkIn || !checkOutTime}
               >
-                {checking ? (t("searchrooms")) : (t("checkavailable") || "Check availability")}
+                {checking ? (t("searchrooms") || "Searching Room...") : (t("checkavailable") || "Check availability")}
               </button>
 
               <div className="header__info-row">
