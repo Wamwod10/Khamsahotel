@@ -139,8 +139,6 @@ function isFamilyBooking(b) {
  */
 export async function checkAvailability({ checkIn, checkOut, roomType }) {
   const rt = String(roomType || "").toUpperCase();
-
-  // STANDARD — doim bor (biznes qoida)
   if (rt === "STANDARD") {
     return { ok: true, roomType: rt, available: true, source: "static-23-standard" };
   }
@@ -151,37 +149,17 @@ export async function checkAvailability({ checkIn, checkOut, roomType }) {
     return { ok: false, roomType: rt, available: false, warning: "invalid dates" };
   }
 
-  // wide window (create_date cheklovidan qutulish)
-  const padDays = 180;
-  const fDate = new Date(from);
-  const tDate = new Date(to);
-  const wideFrom = new Date(fDate.getTime() - padDays * 86400000).toISOString().slice(0, 10);
-  const wideTo   = new Date(tDate.getTime() + padDays * 86400000).toISOString().slice(0, 10);
-
-  try {
-    const LIMIT = 100;
-    let offset = 0;
-    let taken = false;
-    let total = null;
+  const LIMIT = 20;
+  const tryOnce = async (params) => {
+    let offset = 0, taken = false, total = null;
 
     while (true) {
-      const params = {
-        // create_date bo‘yicha keng qamrov
-        date_from: wideFrom,
-        date_to: wideTo,
-        // check-in bo‘yicha haqiqiy toraytirish
-        check_in_from: from,
-        check_in_to: to,
-        limit: LIMIT,
-        offset,
-      };
-      if (BNOVO_HOTEL_ID) params.hotel_id = BNOVO_HOTEL_ID;
-
-      const res = await bnovoFetch(`/bookings?${qs(params)}`);
+      const res = await bnovoFetch(`/bookings?${qs({ ...params, limit: LIMIT, offset })}`);
       const data = await safeParse(res);
+
       if (!res.ok) {
-        console.error("Bnovo availability failed:", res.status, data);
-        return { ok: false, roomType: rt, available: false, warning: `Bnovo ${res.status}` };
+        // 406 bo‘lsa tashqarida fallback qilamiz
+        return { http: res.status, data };
       }
 
       const payload = data?.data ?? data;
@@ -190,26 +168,23 @@ export async function checkAvailability({ checkIn, checkOut, roomType }) {
                   : Array.isArray(payload)           ? payload
                   : [];
 
-      // meta.total bo'lsa undan foyd.
       const metaTotal = Number(payload?.meta?.total ?? NaN);
       if (Number.isFinite(metaTotal)) total = metaTotal;
 
       for (const b of items) {
-        if (!isFamilyBooking(b)) continue;
-
-        // arrival/dep: real_* bo‘lsa shuni olamiz
         const d = b?.dates || {};
         const arr = String(d.real_arrival || d.arrival || "");
         const dep = String(d.real_departure || d.departure || "");
-        if (arr && dep && overlapsDays(from, to, arr, dep)) {
-          taken = true;
-          break;
+        const isFamily =
+          (FAMILY_ROOM_NAMES.length ? FAMILY_ROOM_NAMES.includes(String(b?.room_name ?? "").trim()) : false) ||
+          (String(b?.plan_name ?? "").toUpperCase() && FAMILY_NAMES.some(n => String(b?.plan_name ?? "").toUpperCase().includes(n))) ||
+          (String(b?.room_type_code ?? "").toUpperCase() && FAMILY_CODES.includes(String(b?.room_type_code ?? "").toUpperCase()));
+        if (isFamily && arr && dep && overlapsDays(from, to, arr, dep)) {
+          taken = true; break;
         }
       }
+      if (taken) return { ok: true, taken };
 
-      if (taken) break;
-
-      // pagination
       if (total != null) {
         offset += items.length;
         if (offset >= total) break;
@@ -219,12 +194,42 @@ export async function checkAvailability({ checkIn, checkOut, roomType }) {
       }
     }
 
-    return { ok: true, roomType: rt, available: !taken, source: "bnovo-api-v1" };
+    return { ok: true, taken: false };
+  };
+
+  try {
+    // 1) To‘liq filtr (ko‘proq aniq)
+    const baseParams = { date_from: from, date_to: to };
+    if (process.env.BNOVO_HOTEL_ID) baseParams.hotel_id = process.env.BNOVO_HOTEL_ID;
+
+    const res1 = await tryOnce({ ...baseParams, check_in_from: from, check_in_to: to });
+    if (res1.ok) return { ok: true, roomType: rt, available: !res1.taken, source: "bnovo-api-v1" };
+
+    // 406 / validatsiya xatosi bo‘lsa — 2) check_in_*siz fallback
+    if (res1.http === 406) {
+      const res2 = await tryOnce(baseParams);
+      if (res2.ok) {
+        return { ok: true, roomType: rt, available: !res2.taken, source: "bnovo-fallback-no-checkin" };
+      }
+
+      // 3) Yana ham soddaroq fallback: hotel_id’siz (ba’zi akkuntlarda kerak bo‘ladi)
+      const { hotel_id, ...noHotel } = baseParams;
+      const res3 = await tryOnce(noHotel);
+      if (res3.ok) {
+        return { ok: true, roomType: rt, available: !res3.taken, source: "bnovo-fallback-no-checkin-no-hotel" };
+      }
+
+      return { ok: false, roomType: rt, available: false, warning: `Bnovo ${res2.http || res3.http || 406}` };
+    }
+
+    // boshqa HTTP xatolar
+    return { ok: false, roomType: rt, available: false, warning: `Bnovo ${res1.http || "error"}` };
   } catch (e) {
-    console.error("Bnovo availability exception:", e);
+    console.error("Availability exception:", e);
     return { ok: false, roomType: rt, available: false, warning: `exception: ${e?.message || e}` };
   }
 }
+
 
 /**
  * Diagnostika uchun: ko‘rsatilgan kun oralig‘ida topilgan “family” bronlar ro‘yxati.
