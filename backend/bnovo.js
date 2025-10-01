@@ -290,7 +290,7 @@ async function findFamilyBookings({ from, to }) {
 
 /* POST yo‘q — read-only */
 async function createBookingInBnovo() {
-  return { ok: true, pushed: false, reason: "API read-only; POST mavjud emas" };
+  return { ok: true, pushed: false, reason: "API read-only; POST mavjud emas yoki ishlamayapti" };
 }
 
 module.exports = {
