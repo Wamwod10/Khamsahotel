@@ -5,7 +5,11 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
-import { checkAvailability, createBookingInBnovo } from "./bnovo.js";
+import {
+  checkAvailability,
+  findFamilyBookings,
+  HOTEL_TZ_OFFSET,
+} from "./bnovo.js";
 
 dotenv.config();
 
@@ -73,6 +77,7 @@ app.get("/", (_req, res) => {
     name: "Khamsa backend",
     time: new Date().toISOString(),
     port: PORT,
+    tzOffset: HOTEL_TZ_OFFSET,
   });
 });
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
@@ -163,42 +168,81 @@ setInterval(() => {
  *  BNOVO ROUTES
  * ======================= */
 
-/** GET /api/bnovo/availability?checkIn=YYYY-MM-DD&nights=1&roomType=STANDARD|FAMILY */
+/**
+ * GET /api/bnovo/availability
+ * Query:
+ *   checkIn=YYYY-MM-DD (majburiy)
+ *   duration=1|3h|10h|...  (ixtiyoriy; yo‘q bo‘lsa 1 kecha deb olinadi)
+ *   rooms=1..N             (ixtiyoriy; default 1)
+ *   roomType=STANDARD|FAMILY (default STANDARD)
+ *   nights=...             (oldingi kod bilan moslik uchun)
+ */
 app.get("/api/bnovo/availability", async (req, res) => {
   try {
-    const { checkIn, nights = 1, roomType = "STANDARD" } = req.query || {};
+    const {
+      checkIn,
+      duration,
+      rooms = 1,
+      roomType = "STANDARD",
+      nights, // backward-compat
+    } = req.query || {};
+
     if (!checkIn) return res.status(400).json({ ok: false, error: "checkIn required" });
 
-    const ci = String(checkIn).slice(0, 10);
-    const n = Math.max(1, Number(nights || 1));
-    const checkInDate = new Date(ci + "T00:00:00Z");
-    if (Number.isNaN(checkInDate.getTime())) {
-      return res.status(400).json({ ok: false, error: "checkIn invalid" });
+    // duration / nights → checkOut
+    const ciISO = String(checkIn).slice(0, 10);
+
+    function computeCheckOut(checkInStr, durationStr, nightsStr) {
+      const base = new Date(checkInStr + "T00:00:00Z");
+      if (durationStr) {
+        if (String(durationStr).includes("3")) base.setUTCHours(base.getUTCHours() + 3);
+        else if (String(durationStr).includes("10")) base.setUTCHours(base.getUTCHours() + 10);
+        else base.setUTCDate(base.getUTCDate() + 1);
+      } else if (nightsStr) {
+        base.setUTCDate(base.getUTCDate() + Number(nightsStr || 1));
+      } else {
+        base.setUTCDate(base.getUTCDate() + 1);
+      }
+      return base.toISOString().slice(0, 10);
     }
 
-    const checkOut = new Date(checkInDate.getTime() + n * 86400000).toISOString().slice(0, 10);
+    const coISO = computeCheckOut(ciISO, duration, nights);
 
-    // Bnovo
-    const avail = await checkAvailability({
-      checkIn: ci,
-      checkOut,
+    const result = await checkAvailability({
+      checkIn: ciISO,
+      checkOut: coISO,
       roomType: String(roomType).toUpperCase(),
+      rooms: Math.max(1, Number(rooms || 1)),
     });
 
-    // Frontend uchun soddalashtirilgan, ammo to‘liq javob:
-    // { ok, roomType, available, checkIn, checkOut, [source|warning] }
     return res.json({
-      ok: Boolean(avail?.ok),
-      roomType: String(avail?.roomType || roomType).toUpperCase(),
-      available: Boolean(avail?.available),
-      checkIn: ci,
-      checkOut,
-      ...(avail?.source ? { source: avail.source } : {}),
-      ...(avail?.warning ? { warning: avail.warning } : {}),
+      ok: Boolean(result?.ok),
+      roomType: String(result?.roomType || roomType).toUpperCase(),
+      available: Boolean(result?.available),
+      checkIn: ciISO,
+      checkOut: coISO,
+      ...(result?.freeRooms !== undefined ? { freeRooms: result.freeRooms } : {}),
+      ...(result?.occupiedRooms !== undefined ? { occupiedRooms: result.occupiedRooms } : {}),
+      ...(result?.totalRooms !== undefined ? { totalRooms: result.totalRooms } : {}),
+      ...(result?.source ? { source: result.source } : {}),
+      ...(result?.warning ? { warning: result.warning } : {}),
     });
   } catch (e) {
     console.error("/api/bnovo/availability error:", e);
     res.status(500).json({ ok: false, available: false, error: "availability failed" });
+  }
+});
+
+/** Diagnostika: family bronlarni ko‘rish (debug uchun) */
+app.get("/api/bnovo/debug-family", async (req, res) => {
+  try {
+    const { from, to } = req.query || {};
+    const f = (from || "").slice(0, 10);
+    const t = (to || "").slice(0, 10) || f;
+    const data = await findFamilyBookings({ from: f, to: t });
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 });
 
@@ -366,7 +410,8 @@ app.post("/payment-callback", async (req, res) => {
     }
 
     if (isSuccess && verifiedPayload) {
-      const pushRes = await createBookingInBnovo(verifiedPayload);
+      // Read-only: push yo‘q
+      const pushRes = { ok: true, pushed: false, reason: "API read-only; POST mavjud emas" };
 
       const human = `
 To'lov muvaffaqiyatli.
@@ -381,16 +426,8 @@ Bron:
 - Mehmonlar: ${verifiedPayload.guests || 1}
 - Narx (EUR): ${verifiedPayload.priceEur}
 
-Bnovo push: ${
-        pushRes.pushed ? "✅ Pushed" : pushRes.ok ? "⚠️ Skipped (cheklov)" : "❌ Fail"
-      }
-${
-  pushRes.ok
-    ? pushRes.pushed
-      ? ""
-      : `Reason: ${pushRes.reason || ""}`
-    : `Reason: ${JSON.stringify(pushRes.error || pushRes.status || pushRes.data || {}, null, 2)}`
-}
+Bnovo push: ${pushRes.pushed ? "✅ Pushed" : "⚠️ Skipped (read-only)"}
+Reason: ${pushRes.reason}
       `.trim();
 
       try {
@@ -493,6 +530,6 @@ app.use((err, req, res, _next) => {
 app.listen(PORT, () => {
   console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
-    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${process.env.BNOVO_AUTH_URL} id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD}`
+    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${process.env.BNOVO_AUTH_URL} id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD} tzOffset=${HOTEL_TZ_OFFSET}`
   );
 });
