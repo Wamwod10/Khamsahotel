@@ -1,26 +1,33 @@
 {
-  "name": "khamsa-backend",
+  "name": "hotel-backend",
   "version": "1.0.0",
-  "description": "Khamsa Hotel backend (Express + Bnovo, CommonJS)",
-  "private": true,
+  "description": "Node.js backend for khamsahotel.uz",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
     "build": "echo \"No build step required\""
   },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "jq": "^1.7.2",
+    "mongoose": "^8.18.0",
+    "node-fetch": "^3.3.2",
+    "node-telegram-bot-api": "^0.63.0",
+    "nodemailer": "^6.10.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.10"
+  },
   "engines": {
     "node": ">=18"
   },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "nodemailer": "^6.9.13"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.0"
-  },
-  "license": "UNLICENSED",
-  "keywords": []
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
