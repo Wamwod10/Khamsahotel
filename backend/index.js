@@ -248,7 +248,7 @@ app.get("/api/bnovo/debug-family", async (req, res) => {
 });
 
 /* =======================
- *  PAYMENTS (Octo) — QISQARTIRILMAGAN, O'Z HOLIDA QOLDIM
+ *  PAYMENTS (Octo) — qisqartirmagan holda
  * ======================= */
 
 app.post("/create-payment", async (req, res) => {
@@ -296,7 +296,13 @@ app.post("/create-payment", async (req, res) => {
 
     const { json: booking_json, sig: booking_sig } = (function sign(obj) {
       const json = JSON.stringify(obj);
-      const h = crypto.createHmac("sha256", crypto.createHash("sha256").update(String(process.env.OCTO_SECRET || "octo")).digest()).update(json).digest("hex");
+      const h = crypto
+        .createHmac(
+          "sha256",
+          crypto.createHash("sha256").update(String(process.env.OCTO_SECRET || "octo")).digest()
+        )
+        .update(json)
+        .digest("hex");
       return { json, sig: h };
     })(bookingPayload);
 
