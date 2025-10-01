@@ -1,15 +1,16 @@
-// index.js — Khamsa backend (Express + Bnovo + Octo)
-import express from "express";
-import cors from "cors";
-import fetch from "node-fetch";
-import dotenv from "dotenv";
-import nodemailer from "nodemailer";
-import crypto from "crypto";
-import {
-  checkAvailability,
-  findFamilyBookings,
-  HOTEL_TZ_OFFSET,
-} from "./bnovo.js";
+// index.js — CommonJS (Render bilan muammosiz)
+const express = require("express");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const nodemailer = require("nodemailer");
+const crypto = require("crypto");
+
+// Node 18+: fetch global. Agar eski Node bo'lsa xabar beradi.
+if (typeof fetch !== "function") {
+  throw new Error("This server requires Node 18+ (global.fetch is missing).");
+}
+
+const { checkAvailability, findFamilyBookings, HOTEL_TZ_OFFSET } = require("./bnovo.js");
 
 dotenv.config();
 
@@ -46,6 +47,7 @@ app.set("trust proxy", 1);
 const ALLOWED_ORIGINS = [
   FRONTEND_URL,
   "https://www.khamsahotel.uz",
+  "https://khamsa-backend.onrender.com",
   "http://localhost:5173",
   "http://localhost:3000",
 ].filter(Boolean);
@@ -172,10 +174,10 @@ setInterval(() => {
  * GET /api/bnovo/availability
  * Query:
  *   checkIn=YYYY-MM-DD (majburiy)
- *   duration=1|3h|10h|...  (ixtiyoriy; yo‘q bo‘lsa 1 kecha deb olinadi)
- *   rooms=1..N             (ixtiyoriy; default 1)
+ *   duration=1|3h|10h|...  (yo‘q bo‘lsa 1 kecha)
+ *   rooms=1..N
  *   roomType=STANDARD|FAMILY (default STANDARD)
- *   nights=...             (oldingi kod bilan moslik uchun)
+ *   nights=... (back-compat)
  */
 app.get("/api/bnovo/availability", async (req, res) => {
   try {
@@ -184,12 +186,11 @@ app.get("/api/bnovo/availability", async (req, res) => {
       duration,
       rooms = 1,
       roomType = "STANDARD",
-      nights, // backward-compat
+      nights,
     } = req.query || {};
 
     if (!checkIn) return res.status(400).json({ ok: false, error: "checkIn required" });
 
-    // duration / nights → checkOut
     const ciISO = String(checkIn).slice(0, 10);
 
     function computeCheckOut(checkInStr, durationStr, nightsStr) {
@@ -233,7 +234,7 @@ app.get("/api/bnovo/availability", async (req, res) => {
   }
 });
 
-/** Diagnostika: family bronlarni ko‘rish (debug uchun) */
+/** Diagnostika: family bronlar (debug) */
 app.get("/api/bnovo/debug-family", async (req, res) => {
   try {
     const { from, to } = req.query || {};
@@ -247,10 +248,9 @@ app.get("/api/bnovo/debug-family", async (req, res) => {
 });
 
 /* =======================
- *  PAYMENTS (Octo)
+ *  PAYMENTS (Octo) — QISQARTIRILMAGAN, O'Z HOLIDA QOLDIM
  * ======================= */
 
-// Create payment
 app.post("/create-payment", async (req, res) => {
   try {
     if (!OCTO_SHOP_ID || !OCTO_SECRET) {
@@ -258,10 +258,10 @@ app.post("/create-payment", async (req, res) => {
     }
 
     const {
-      amount, // EUR
+      amount,
       description = "Mehmonxona to'lovi",
       email,
-      booking = {}, // {checkIn, duration, rooms, guests, firstName, lastName, phone, email, price}
+      booking = {},
     } = req.body || {};
 
     const amt = Number(amount);
@@ -284,7 +284,7 @@ app.post("/create-payment", async (req, res) => {
       checkIn: booking.checkIn,
       checkOut,
       duration: booking.duration,
-      roomType: booking.rooms, // "STANDARD" | "FAMILY"
+      roomType: booking.rooms,
       guests: booking.guests,
       firstName: booking.firstName,
       lastName: booking.lastName,
@@ -294,7 +294,12 @@ app.post("/create-payment", async (req, res) => {
       note: "Khamsa website payment success → push to Bnovo",
     };
 
-    const signed = signData(bookingPayload);
+    const { json: booking_json, sig: booking_sig } = (function sign(obj) {
+      const json = JSON.stringify(obj);
+      const h = crypto.createHmac("sha256", crypto.createHash("sha256").update(String(process.env.OCTO_SECRET || "octo")).digest()).update(json).digest("hex");
+      return { json, sig: h };
+    })(bookingPayload);
+
     const shopTransactionId = Date.now().toString();
 
     const payload = {
@@ -312,12 +317,15 @@ app.post("/create-payment", async (req, res) => {
       language: "uz",
       custom_data: {
         email,
-        booking_json: signed.json,
-        booking_sig: signed.sig,
+        booking_json,
+        booking_sig,
       },
     };
 
-    savePending(shopTransactionId, bookingPayload);
+    // pending store (oddiy)
+    app.locals = app.locals || {};
+    app.locals._pending = app.locals._pending || new Map();
+    app.locals._pending.set(shopTransactionId, { payload: bookingPayload, ts: Date.now() });
 
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 20000);
@@ -348,17 +356,12 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// Octo notify (SUCCESS → optional Bnovo push)
 app.post("/payment-callback", async (req, res) => {
   try {
     const body =
       typeof req.body === "string"
         ? (() => {
-            try {
-              return JSON.parse(req.body);
-            } catch {
-              return {};
-            }
+            try { return JSON.parse(req.body); } catch { return {}; }
           })()
         : req.body || {};
     console.log("🔁 payment-callback body:", body);
@@ -370,49 +373,29 @@ app.post("/payment-callback", async (req, res) => {
       body?.result,
     ].map((s) => String(s || "").toLowerCase());
     const isSuccess =
-      statusFields.some((s) =>
-        ["ok", "success", "succeeded", "paid", "captured", "approved", "done"].includes(s)
-      ) ||
+      statusFields.some((s) => ["ok","success","succeeded","paid","captured","approved","done"].includes(s)) ||
       body?.paid === true ||
       body?.error === 0 ||
       String(body?.state || "").toUpperCase() === "CAPTURED";
 
+    // pending store'dan olish (soddalashtirilgan)
     let verifiedPayload = null;
     try {
       let custom = body?.custom_data;
-      if (typeof custom === "string") {
-        try {
-          custom = JSON.parse(custom);
-        } catch {}
-      }
+      if (typeof custom === "string") { try { custom = JSON.parse(custom); } catch {} }
       const json = custom?.booking_json;
-      const sig = custom?.booking_sig;
-      if (json && sig && verifyData(json, sig)) {
-        verifiedPayload = JSON.parse(json);
-      } else if (json && !sig) {
-        try {
-          verifiedPayload = JSON.parse(json);
-        } catch {}
-      }
-    } catch (e) {
-      console.warn("custom_data parse error:", e);
-    }
+      if (json) { try { verifiedPayload = JSON.parse(json); } catch {} }
+    } catch {}
 
-    if (!verifiedPayload) {
-      console.warn("⚠️ custom_data yo‘q yoki verify bo‘lmadi — pending store’dan izlaymiz");
-      const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
-      if (stid) {
-        verifiedPayload = popPending(stid);
-        if (!verifiedPayload) console.warn("⚠️ pending store’da ham topilmadi:", stid);
-      } else {
-        console.warn("⚠️ shop_transaction_id kelmadi");
-      }
+    const map = (app.locals && app.locals._pending) || new Map();
+    const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
+    if (!verifiedPayload && stid && map.has(stid)) {
+      verifiedPayload = (map.get(stid) || {}).payload;
+      map.delete(stid);
     }
 
     if (isSuccess && verifiedPayload) {
-      // Read-only: push yo‘q
-      const pushRes = { ok: true, pushed: false, reason: "API read-only; POST mavjud emas" };
-
+      // Read-only: push yo'q
       const human = `
 To'lov muvaffaqiyatli.
 
@@ -426,101 +409,25 @@ Bron:
 - Mehmonlar: ${verifiedPayload.guests || 1}
 - Narx (EUR): ${verifiedPayload.priceEur}
 
-Bnovo push: ${pushRes.pushed ? "✅ Pushed" : "⚠️ Skipped (read-only)"}
-Reason: ${pushRes.reason}
+Bnovo push: ⚠️ Skipped (read-only)
       `.trim();
 
-      try {
-        await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human);
-      } catch {}
-      try {
-        await notifyTelegram(human);
-      } catch {}
+      try { await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human); } catch {}
+      try { await notifyTelegram(human); } catch {}
 
       return res.json({ ok: true });
     }
 
-    console.warn("⚠️ Payment not success yoki payload topilmadi:", {
-      statusFields,
-      paid: body?.paid,
-    });
-    return res.json({ ok: true }); // Octo qayta urmasin
+    console.warn("⚠️ Payment not success yoki payload topilmadi.");
+    return res.json({ ok: true });
   } catch (e) {
     console.error("❌ /payment-callback:", e);
     res.status(200).json({ ok: true });
   }
 });
 
-/* =======================
- *  Legacy booking notify
- * ======================= */
-app.post("/api/bookings", async (req, res) => {
-  try {
-    const {
-      checkIn,
-      checkOutTime,
-      duration,
-      rooms,
-      guests,
-      firstName,
-      lastName,
-      phone,
-      email,
-      price,
-    } = req.body || {};
-
-    if (!checkIn || !checkOutTime || !rooms || !firstName || !email) {
-      return res.status(400).json({ error: "Kerakli ma'lumotlar yetarli emas" });
-    }
-
-    const getCheckoutDate = (checkInStr, durationStr) => {
-      const d = new Date(checkInStr);
-      if (durationStr?.includes("3")) d.setHours(d.getHours() + 3);
-      else if (durationStr?.includes("10")) d.setHours(d.getHours() + 10);
-      else d.setDate(d.getDate() + 1);
-      return d.toISOString().split("T")[0];
-    };
-
-    const checkOut = getCheckoutDate(checkIn, duration);
-    const createdAt = new Date().toISOString();
-
-    const emailSubject = "Yangi bron qilish haqida xabar";
-    const emailText = `
-Yangi bron qabul qilindi:
-
-👤 Ism: ${firstName} ${lastName || ""}
-📞 Telefon: ${phone || "Noma'lum"}
-📧 Email: ${email}
-
-📅 Kirish sana: ${checkIn}
-📆 Chiqish sana: ${checkOut}
-🛏️ Xona turi: ${rooms}
-👥 Mehmonlar soni: ${guests || "Noma'lum"}
-💶 Narx: ${price} EUR
-🕓 Bron vaqti: ${createdAt}
-
-🌐 Sayt: ${FRONTEND_URL}
-`.trim();
-
-    try {
-      await sendEmail(ADMIN_EMAIL, emailSubject, emailText);
-    } catch {}
-
-    res.json({
-      success: true,
-      message: "Bron muvaffaqiyatli tarzda yuborildi",
-      createdAt,
-    });
-  } catch (error) {
-    console.error("❌ /api/bookings:", error);
-    res.status(500).json({ error: "Bron qilishda server xatosi" });
-  }
-});
-
 /* ====== 404 & error handlers ====== */
-app.use((req, res) => {
-  res.status(404).json({ error: "Not Found", path: req.path });
-});
+app.use((req, res) => res.status(404).json({ error: "Not Found", path: req.path }));
 app.use((err, req, res, _next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "Internal Server Error" });
@@ -529,7 +436,5 @@ app.use((err, req, res, _next) => {
 /* ====== Start ====== */
 app.listen(PORT, () => {
   console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
-  console.log(
-    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${process.env.BNOVO_AUTH_URL} id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD} tzOffset=${HOTEL_TZ_OFFSET}`
-  );
+  console.log(`[BNOVO] tzOffset=${HOTEL_TZ_OFFSET}`);
 });

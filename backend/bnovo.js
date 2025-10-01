@@ -1,6 +1,6 @@
-// bnovo.js — Bnovo api/v1 bilan availability tekshirish
-import "dotenv/config";
-import fetch from "node-fetch";
+// bnovo.js — CommonJS, global.fetch (Node 18+)
+const dotenv = require("dotenv");
+dotenv.config();
 
 /* ========= ENV ========= */
 const BASE = (process.env.BNOVO_API_BASE_URL || "https://api.pms.bnovo.ru/api/v1").replace(/\/+$/, "");
@@ -8,7 +8,7 @@ const AUTH_URL = process.env.BNOVO_AUTH_URL || "https://api.pms.bnovo.ru/api/v1/
 const TOKEN_TTL = Number(process.env.BNOVO_TOKEN_TTL || 300);
 
 // Hotel timezone (Asia/Tashkent = UTC+5)
-export const HOTEL_TZ_OFFSET = Number(process.env.HOTEL_TZ_OFFSET || 5); // soat
+const HOTEL_TZ_OFFSET = Number(process.env.HOTEL_TZ_OFFSET || 5); // soat
 
 // Inventory
 const STANDARD_STOCK = Number(process.env.STANDARD_STOCK || 23);
@@ -27,7 +27,7 @@ const FAMILY_CODES = (process.env.BNOVO_FAMILY_CODES || "FAMILY,FAM")
 const FAMILY_NAMES = (process.env.BNOVO_FAMILY_NAMES || "FAMILY,СЕМЕЙ")
   .split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
 
-// room_name(lar): masalan "1" (Bnovo “Family Room” qatordagi nom/raqam)
+// room_name(lar): masalan "1"
 const FAMILY_ROOM_NAMES = (process.env.BNOVO_FAMILY_ROOM_NAMES || "")
   .split(",").map(s => s.trim()).filter(Boolean);
 
@@ -56,30 +56,25 @@ const qs = (o = {}) => {
 // Bnovo datetime string → ms
 function parseBnovoDate(s) {
   if (!s) return NaN;
-  // "2025-10-01 23:00:00+03" → ISO
   const norm = String(s).replace(" ", "T");
   const t = Date.parse(norm);
   return Number.isNaN(t) ? NaN : t;
 }
 
-/**
- * Mahalliy (Tashkent) kun diapazonini UTC ms ga konvert:
- * fromISO/toISO — YYYY-MM-DD (mahalliy), tzOffset — soat
- */
+/** Mahalliy (Tashkent) kun diapazonini UTC ms ga konvert */
 function localDayRangeMs(fromISO, toISO, tzOffsetHours = HOTEL_TZ_OFFSET) {
-  const offsetMs = tzOffsetHours * 3600_000; // +5h → 18000000ms
-  const d1 = Date.parse(fromISO + "T00:00:00Z") - offsetMs; // local 00:00 → UTC
-  const d2 = Date.parse(toISO   + "T23:59:59Z") - offsetMs; // local 23:59:59 → UTC
+  const offsetMs = tzOffsetHours * 3600_000;
+  const d1 = Date.parse(fromISO + "T00:00:00Z") - offsetMs;
+  const d2 = Date.parse(toISO   + "T23:59:59Z") - offsetMs;
   return [d1, d2];
 }
 
-/** Sana kesishishi (Bnovo arr/dep ms bilan) — local-kun bo‘yicha */
+/** Sana kesishishi — local kun bo‘yicha */
 function overlapsLocalDays(fromISO, toISO, arrStr, depStr) {
   const [L1, L2] = localDayRangeMs(fromISO, toISO);
   const arr = parseBnovoDate(arrStr);
   const dep = parseBnovoDate(depStr);
   if (Number.isNaN(arr) || Number.isNaN(dep)) return false;
-  // yarim-ochiq emas, balki lokal kunni to‘liq qamrab olamiz
   return !(dep < L1 || arr > L2);
 }
 
@@ -182,12 +177,7 @@ async function listBookingsPaged(params) {
 
 /* ========= Public API ========= */
 
-/**
- * checkAvailability:
- *   - Family: agar mahalliy-kun oralig‘ida bitta ham Family bron topilsa → available:false.
- *   - Standard: STANDARD_STOCK’ga qarab real hisob. Bitta bron bir nechta xona band qilgan bo‘lishi mumkin (roomsCount/rooms/qty).
- */
-export async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1 }) {
+async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1 }) {
   const rt = String(roomType || "").toUpperCase();
   const from = toISO(checkIn);
   const to   = toISO(checkOut);
@@ -197,11 +187,7 @@ export async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1
     return { ok: false, roomType: rt, available: false, warning: "invalid dates" };
   }
 
-  // /bookings parametrlari
-  const params = {
-    date_from: from,
-    date_to: to,
-  };
+  const params = { date_from: from, date_to: to };
   if (BNOVO_HOTEL_ID) params.hotel_id = BNOVO_HOTEL_ID;
 
   try {
@@ -217,34 +203,27 @@ export async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1
         const dep = String(d.real_departure || d.departure || "");
         if (!arr || !dep) continue;
 
-        // Sizning qoida: “bir xil sana bo‘lsa ham band”
         const sameArrival = from === (arr.replace(" ", "T").slice(0, 10));
         const overlap = overlapsLocalDays(from, to, arr, dep);
 
-        if (sameArrival || overlap) {
-          taken = true;
-          break;
-        }
+        if (sameArrival || overlap) { taken = true; break; }
       }
-      const available = !taken && FAMILY_STOCK >= reqRooms; // inventory=1
+      const available = !taken && FAMILY_STOCK >= reqRooms;
       return {
         ok: true,
         roomType: rt,
         available,
         totalRooms: FAMILY_STOCK,
         occupiedRooms: taken ? 1 : 0,
-        freeRooms: available ? (FAMILY_STOCK - reqRooms >= 0 ? FAMILY_STOCK - reqRooms : 0) : 0,
+        freeRooms: available ? Math.max(0, FAMILY_STOCK - reqRooms) : 0,
         source: "bnovo-api-v1",
       };
     }
 
-    // STANDARD — real hisob (endi “har doim true” emas)
+    // STANDARD — real hisob
     let occupied = 0;
     for (const b of items) {
-      // Family bo‘lsa, standard hisobiga qo‘shmaymiz:
-      if (isFamilyBooking(b)) continue;
-
-      // status bo‘yicha bekor qilingan/no-show larni chiqarib tashlamoqchi bo‘lsangiz:
+      if (isFamilyBooking(b)) continue; // family'larni standardga qo‘shmaymiz
       const s = (b?.status?.name || b?.status || "").toString().toLowerCase();
       const canceled = s.includes("cancel") || s.includes("отмена") || s.includes("no_show");
       if (canceled) continue;
@@ -279,8 +258,7 @@ export async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1
   }
 }
 
-/** Diagnostika: ko‘rsatilgan oralig‘ida Family bronlar ro‘yxati (mahalliy kunlarga mos) */
-export async function findFamilyBookings({ from, to }) {
+async function findFamilyBookings({ from, to }) {
   const f = toISO(from);
   const t = toISO(to);
   if (!f || !t) return { ok: false, items: [], warning: "invalid dates" };
@@ -310,15 +288,16 @@ export async function findFamilyBookings({ from, to }) {
   return { ok: true, items: hits };
 }
 
-/* POST yo‘q — faqat o‘qish (read-only) */
-export async function createBookingInBnovo() {
+/* POST yo‘q — read-only */
+async function createBookingInBnovo() {
   return { ok: true, pushed: false, reason: "API read-only; POST mavjud emas" };
 }
 
-// Ichki util’lar (test/diagnostika uchun)
-export const _internals = {
-  isFamilyBooking,
-  parseBnovoDate,
-  overlapsLocalDays,
-  localDayRangeMs,
+module.exports = {
+  HOTEL_TZ_OFFSET,
+  checkAvailability,
+  findFamilyBookings,
+  createBookingInBnovo,
+  // test utils:
+  _internals: { parseBnovoDate, overlapsLocalDays, localDayRangeMs }
 };
