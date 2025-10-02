@@ -530,7 +530,7 @@ app.get("/api/bnovo/env", (_req, res) => {
     BNOVO_AUTH_URL: process.env.BNOVO_AUTH_URL,
     BNOVO_ID: process.env.BNOVO_ID,
     BNOVO_PASSWORD: mask(process.env.BNOVO_PASSWORD),
-    BNOVO_HOTEL_ID: process.env.BNOVO_HOTEL_ID || null,
+    BNOVO_HOTEL_ID: process.env.BNOVO_HOTEL_ID || null, // << keraklisi shu
     BNOVO_PAGE_LIMIT: process.env.BNOVO_PAGE_LIMIT || 20,
     HOTEL_TZ_OFFSET: process.env.HOTEL_TZ_OFFSET || 5,
     FAMILY_STOCK: process.env.FAMILY_STOCK,
