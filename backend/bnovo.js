@@ -3,8 +3,11 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 /* ========= ENV ========= */
-const BASE = (process.env.BNOVO_API_BASE_URL || "https://api.pms.bnovo.ru/api/v1").replace(/\/+$/, "");
-const AUTH_URL = process.env.BNOVO_AUTH_URL || "https://api.pms.bnovo.ru/api/v1/auth";
+const BASE = (
+  process.env.BNOVO_API_BASE_URL || "https://api.pms.bnovo.ru/api/v1"
+).replace(/\/+$/, "");
+const AUTH_URL =
+  process.env.BNOVO_AUTH_URL || "https://api.pms.bnovo.ru/api/v1/auth";
 const TOKEN_TTL = Number(process.env.BNOVO_TOKEN_TTL || 300);
 
 // Hotel timezone (Asia/Tashkent = UTC+5)
@@ -12,9 +15,9 @@ const HOTEL_TZ_OFFSET = Number(process.env.HOTEL_TZ_OFFSET || 5); // soat
 
 // Inventory
 const STANDARD_STOCK = Number(process.env.STANDARD_STOCK || 23);
-const FAMILY_STOCK   = Number(process.env.FAMILY_STOCK || 1);
+const FAMILY_STOCK = Number(process.env.FAMILY_STOCK || 1);
 
-const BNOVO_ID       = process.env.BNOVO_ID;
+const BNOVO_ID = process.env.BNOVO_ID;
 const BNOVO_PASSWORD = process.env.BNOVO_PASSWORD;
 const BNOVO_HOTEL_ID = process.env.BNOVO_HOTEL_ID || "";
 
@@ -22,14 +25,20 @@ const DEBUG = /^1|true|yes$/i.test(process.env.BNOVO_DEBUG || "");
 
 // Family aniqlash sozlamalari
 const FAMILY_CODES = (process.env.BNOVO_FAMILY_CODES || "FAMILY,FAM")
-  .split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
+  .split(",")
+  .map((s) => s.trim().toUpperCase())
+  .filter(Boolean);
 
 const FAMILY_NAMES = (process.env.BNOVO_FAMILY_NAMES || "FAMILY,СЕМЕЙ")
-  .split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
+  .split(",")
+  .map((s) => s.trim().toUpperCase())
+  .filter(Boolean);
 
 // room_name(lar): masalan "1"
 const FAMILY_ROOM_NAMES = (process.env.BNOVO_FAMILY_ROOM_NAMES || "")
-  .split(",").map(s => s.trim()).filter(Boolean);
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 /* ========= Helpers ========= */
 const toISO = (d) => {
@@ -42,7 +51,11 @@ async function safeParse(res) {
   const ct = (res.headers.get("content-type") || "").toLowerCase();
   if (ct.includes("application/json")) return res.json();
   const txt = await res.text();
-  try { return JSON.parse(txt); } catch { return { _raw: txt }; }
+  try {
+    return JSON.parse(txt);
+  } catch {
+    return { _raw: txt };
+  }
 }
 
 const qs = (o = {}) => {
@@ -65,7 +78,7 @@ function parseBnovoDate(s) {
 function localDayRangeMs(fromISO, toISO, tzOffsetHours = HOTEL_TZ_OFFSET) {
   const offsetMs = tzOffsetHours * 3600_000;
   const d1 = Date.parse(fromISO + "T00:00:00Z") - offsetMs;
-  const d2 = Date.parse(toISO   + "T23:59:59Z") - offsetMs;
+  const d2 = Date.parse(toISO + "T23:59:59Z") - offsetMs;
   return [d1, d2];
 }
 
@@ -83,7 +96,9 @@ let cached = { token: null, exp: 0 };
 
 async function auth(force = false) {
   if (!AUTH_URL || !BNOVO_ID || !BNOVO_PASSWORD) {
-    throw new Error("Bnovo auth envs missing: BNOVO_AUTH_URL/BNOVO_ID/BNOVO_PASSWORD");
+    throw new Error(
+      "Bnovo auth envs missing: BNOVO_AUTH_URL/BNOVO_ID/BNOVO_PASSWORD"
+    );
   }
   const now = Math.floor(Date.now() / 1000);
   if (!force && cached.token && cached.exp > now + 30) {
@@ -92,7 +107,10 @@ async function auth(force = false) {
 
   const r = await fetch(AUTH_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json, */*;q=0.1" },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, */*;q=0.1",
+    },
     body: JSON.stringify({ id: Number(BNOVO_ID), password: BNOVO_PASSWORD }),
   });
 
@@ -101,7 +119,7 @@ async function auth(force = false) {
 
   const payload = j?.data ?? j;
   const token = payload?.access_token || payload?.token;
-  const ttl   = Number(payload?.expires_in || TOKEN_TTL || 300);
+  const ttl = Number(payload?.expires_in || TOKEN_TTL || 300);
   if (!token) throw new Error(`Auth token missing: ${JSON.stringify(j)}`);
 
   cached = { token, exp: now + ttl };
@@ -110,7 +128,9 @@ async function auth(force = false) {
 }
 
 async function bnovoFetch(path, init = {}, retry401 = true) {
-  const url = path.startsWith("http") ? path : `${BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+  const url = path.startsWith("http")
+    ? path
+    : `${BASE}${path.startsWith("/") ? "" : "/"}${path}`;
   let headers = {
     Accept: "application/json, */*;q=0.1",
     ...(init.headers || {}),
@@ -127,18 +147,49 @@ async function bnovoFetch(path, init = {}, retry401 = true) {
 
 /* ========= Core family-matching ========= */
 function isFamilyBooking(b) {
-  const rn = String(b?.room_name ?? "").trim();
+  // 0) Bekor qilingan/no-show bronlarni hisoblamaymiz
+  const s = (b?.status?.name || b?.status || "").toString().toLowerCase();
+  const canceled =
+    s.includes("cancel") || s.includes("отмена") || s.includes("no_show");
+  if (canceled) return false;
+
+  // 1) room_name (aniq raqam) bo‘yicha:
+  const rnRaw = b?.room_name ?? b?.room?.name ?? b?.room?.number ?? "";
+  const rn = String(rnRaw).trim();
   const isByRoomName = FAMILY_ROOM_NAMES.length
-    ? FAMILY_ROOM_NAMES.some(x => x === rn)
+    ? FAMILY_ROOM_NAMES.includes(rn)
     : false;
 
-  const plan = String(b?.plan_name ?? "").toUpperCase();
-  const isByName = plan && FAMILY_NAMES.some(n => plan.includes(n));
+  // 2) Token bo‘yicha: plan/rate/room type nomlarida FAMILY/OILAVIY/СЕМЕЙ* ko‘rinishlari
+  const plan = String(b?.plan_name ?? b?.rate_plan?.name ?? "").toUpperCase();
+  const rtname = String(
+    b?.room_type?.name ?? b?.roomTypeName ?? ""
+  ).toUpperCase();
+  const rnameU = String(rnRaw).toUpperCase();
 
-  const rcode = String(b?.room_type_code || b?.roomType || "").toUpperCase();
+  // Default tokenlar + sizdagi ENV dagilar
+  const NAME_TOKENS = new Set([
+    ...FAMILY_NAMES, // ENV: FAMILY,СЕМЕЙ, ...
+    "FAMILY",
+    "СЕМЕЙ",
+    "СЕМЕЙНЫЙ",
+    "СЕМЕЙНАЯ",
+    "СЕМЕЙНОЙ",
+    "OILAVIY",
+    "OILA",
+    "FAM", // uzbekcha/shortcuts
+  ]);
+
+  const text = `${plan} ${rtname} ${rnameU}`;
+  const isByToken = Array.from(NAME_TOKENS).some((t) => t && text.includes(t));
+
+  // 3) Code bo‘yicha: room_type_code va o‘xshash maydonlar
+  const rcode = String(
+    b?.room_type_code || b?.roomType || b?.room_category_code || ""
+  ).toUpperCase();
   const isByCode = !!rcode && FAMILY_CODES.includes(rcode);
 
-  return isByRoomName || isByName || isByCode;
+  return isByRoomName || isByToken || isByCode;
 }
 
 /** /bookings’dan sahifalab ro‘yxat olish */
@@ -156,10 +207,13 @@ async function listBookingsPaged(params) {
     if (!res.ok) throw new Error(`Bnovo ${res.status} ${JSON.stringify(data)}`);
 
     const payload = data?.data ?? data;
-    const items = Array.isArray(payload?.bookings) ? payload.bookings
-                : Array.isArray(payload?.items)    ? payload.items
-                : Array.isArray(payload)           ? payload
-                : [];
+    const items = Array.isArray(payload?.bookings)
+      ? payload.bookings
+      : Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload)
+      ? payload
+      : [];
 
     all.push(...items);
 
@@ -176,17 +230,21 @@ async function listBookingsPaged(params) {
   return all;
 }
 
-
 /* ========= Public API ========= */
 
 async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1 }) {
   const rt = String(roomType || "").toUpperCase();
   const from = toISO(checkIn);
-  const to   = toISO(checkOut);
+  const to = toISO(checkOut);
   const reqRooms = Math.max(1, Number(rooms || 1));
 
   if (!from || !to) {
-    return { ok: false, roomType: rt, available: false, warning: "invalid dates" };
+    return {
+      ok: false,
+      roomType: rt,
+      available: false,
+      warning: "invalid dates",
+    };
   }
 
   const params = { date_from: from, date_to: to };
@@ -197,6 +255,7 @@ async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1 }) {
 
     if (rt === "FAMILY") {
       let taken = false;
+
       for (const b of items) {
         if (!isFamilyBooking(b)) continue;
 
@@ -205,19 +264,27 @@ async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1 }) {
         const dep = String(d.real_departure || d.departure || "");
         if (!arr || !dep) continue;
 
-        const sameArrival = from === (arr.replace(" ", "T").slice(0, 10));
+        // Check-in sanasi aynan bir xil bo‘lsa ham band deymiz
+        const sameArrival = from === arr.replace(" ", "T").slice(0, 10);
         const overlap = overlapsLocalDays(from, to, arr, dep);
 
-        if (sameArrival || overlap) { taken = true; break; }
+        if (sameArrival || overlap) {
+          taken = true;
+          break;
+        }
       }
-      const available = !taken && FAMILY_STOCK >= reqRooms;
+
+      const occupied = taken ? Math.min(FAMILY_STOCK, 1) : 0;
+      const free = Math.max(0, FAMILY_STOCK - occupied);
+      const available = free >= reqRooms;
+
       return {
         ok: true,
         roomType: rt,
         available,
         totalRooms: FAMILY_STOCK,
-        occupiedRooms: taken ? 1 : 0,
-        freeRooms: available ? Math.max(0, FAMILY_STOCK - reqRooms) : 0,
+        occupiedRooms: occupied,
+        freeRooms: free,
         source: "bnovo-api-v1",
       };
     }
@@ -227,7 +294,8 @@ async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1 }) {
     for (const b of items) {
       if (isFamilyBooking(b)) continue; // family'larni standardga qo‘shmaymiz
       const s = (b?.status?.name || b?.status || "").toString().toLowerCase();
-      const canceled = s.includes("cancel") || s.includes("отмена") || s.includes("no_show");
+      const canceled =
+        s.includes("cancel") || s.includes("отмена") || s.includes("no_show");
       if (canceled) continue;
 
       const d = b?.dates || {};
@@ -256,7 +324,12 @@ async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1 }) {
     };
   } catch (e) {
     if (DEBUG) console.error("Bnovo availability exception:", e);
-    return { ok: false, roomType: rt, available: false, warning: `exception: ${e?.message || e}` };
+    return {
+      ok: false,
+      roomType: rt,
+      available: false,
+      warning: `exception: ${e?.message || e}`,
+    };
   }
 }
 
@@ -292,7 +365,11 @@ async function findFamilyBookings({ from, to }) {
 
 /* POST yo‘q — read-only */
 async function createBookingInBnovo() {
-  return { ok: true, pushed: false, reason: "API read-only; POST mavjud emas yoki ishlamayapti" };
+  return {
+    ok: true,
+    pushed: false,
+    reason: "API read-only; POST mavjud emas yoki ishlamayapti",
+  };
 }
 
 module.exports = {
@@ -301,5 +378,5 @@ module.exports = {
   findFamilyBookings,
   createBookingInBnovo,
   // test utils:
-  _internals: { parseBnovoDate, overlapsLocalDays, localDayRangeMs }
+  _internals: { parseBnovoDate, overlapsLocalDays, localDayRangeMs },
 };
