@@ -10,7 +10,7 @@ if (typeof fetch !== "function") {
   throw new Error("This server requires Node 18+ (global.fetch is missing).");
 }
 
-const { checkAvailability, findFamilyBookings, HOTEL_TZ_OFFSET } = require("./bnovo.js");
+const { checkAvailability, findFamilyBookings, HOTEL_TZ_OFFSET, _listForRaw } = require("./bnovo.js");
 
 dotenv.config();
 
@@ -219,14 +219,40 @@ app.get("/api/bnovo/availability", async (req, res) => {
   }
 });
 
-/** Diagnostika: family bronlar (debug) */
+/** Diagnostika: family bronlar (auto +1 kun) */
 app.get("/api/bnovo/debug-family", async (req, res) => {
   try {
     const { from, to } = req.query || {};
     const f = (from || "").slice(0, 10);
-    const t = (to || "").slice(0, 10) || f;
+    let t = (to || "").slice(0, 10);
+    if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
+    // Bnovo: date_from < date_to bo'lishi shart — teng kelsa +1 kun qo'shamiz
+    if (!t || t <= f) {
+      const base = new Date(f + "T00:00:00Z");
+      base.setUTCDate(base.getUTCDate() + 1);
+      t = base.toISOString().slice(0, 10);
+    }
     const data = await findFamilyBookings({ from: f, to: t });
     res.json(data);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
+/** Diagnostika: xom ro‘yxat (family tokenlarini aniqlashga yordam beradi) */
+app.get("/api/bnovo/raw", async (req, res) => {
+  try {
+    const { from, to } = req.query || {};
+    const f = (from || "").slice(0, 10);
+    let t = (to || "").slice(0, 10);
+    if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
+    if (!t || t <= f) {
+      const d = new Date(f + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + 1);
+      t = d.toISOString().slice(0, 10);
+    }
+    const items = await _listForRaw(f, t);
+    res.json({ ok: true, from: f, to: t, items });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
   }

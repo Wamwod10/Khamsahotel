@@ -334,6 +334,23 @@ async function findFamilyBookings({ from, to }) {
   return { ok: true, items: hits };
 }
 
+/* Diagnostika uchun — xom ro‘yxatni qaytaruvchi helper */
+async function _listForRaw(from, to) {
+  const params = { date_from: from, date_to: to };
+  if (BNOVO_HOTEL_ID) params.hotel_id = BNOVO_HOTEL_ID;
+  const items = await listBookingsPaged(params);
+  return items.map(b => ({
+    number: b?.number,
+    room_name: b?.room_name,
+    plan_name: b?.plan_name,
+    room_type: b?.room_type?.name,
+    room_type_code: b?.room_type_code,
+    status: b?.status?.name || b?.status,
+    arrival: b?.dates?.arrival,
+    departure: b?.dates?.departure
+  }));
+}
+
 /* POST yo‘q — read-only */
 async function createBookingInBnovo() {
   return { ok: true, pushed: false, reason: "API read-only; POST mavjud emas yoki ishlamayapti" };
@@ -344,6 +361,7 @@ module.exports = {
   checkAvailability,
   findFamilyBookings,
   createBookingInBnovo,
+  _listForRaw, // diagnostika
   // test utils:
   _internals: { parseBnovoDate, overlapsLocalDays, localDayRangeMs }
 };
