@@ -1,4 +1,4 @@
-// index.js — CommonJS (Render bilan muammosiz)
+// index.js — CommonJS (Render va Node 18+ bilan muammosiz)
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -30,7 +30,7 @@ const {
   TELEGRAM_CHAT_ID,
 } = process.env;
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "shamshodochilov160@gmail.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@example.com";
 
 const missing = [];
 if (!OCTO_SHOP_ID) missing.push("OCTO_SHOP_ID");
@@ -123,11 +123,7 @@ async function safeParseResponse(res) {
   const ct = (res.headers.get("content-type") || "").toLowerCase();
   if (ct.includes("application/json")) return res.json();
   const txt = await res.text();
-  try {
-    return JSON.parse(txt);
-  } catch {
-    return { _raw: txt };
-  }
+  try { return JSON.parse(txt); } catch { return { _raw: txt }; }
 }
 
 const SIGN_SECRET = crypto
@@ -142,27 +138,23 @@ function signData(obj) {
 }
 function verifyData(json, sig) {
   const h = crypto.createHmac("sha256", SIGN_SECRET).update(json).digest("hex");
-  try {
-    return crypto.timingSafeEqual(Buffer.from(h), Buffer.from(sig || ""));
-  } catch {
-    return false;
-  }
+  try { return crypto.timingSafeEqual(Buffer.from(h), Buffer.from(sig || "")); } catch { return false; }
 }
 
 /* ====== Pending store (server-side) ====== */
-const PENDING = new Map(); // key: shop_transaction_id
+app.locals._pending = new Map(); // key: shop_transaction_id
 function savePending(id, payload) {
-  PENDING.set(String(id), { payload, ts: Date.now() });
+  app.locals._pending.set(String(id), { payload, ts: Date.now() });
 }
 function popPending(id) {
-  const rec = PENDING.get(String(id));
-  if (rec) PENDING.delete(String(id));
+  const rec = app.locals._pending.get(String(id));
+  if (rec) app.locals._pending.delete(String(id));
   return rec?.payload || null;
 }
 setInterval(() => {
   const now = Date.now();
-  for (const [k, v] of PENDING.entries()) {
-    if (now - (v?.ts || 0) > 24 * 60 * 60 * 1000) PENDING.delete(k);
+  for (const [k, v] of app.locals._pending.entries()) {
+    if (now - (v?.ts || 0) > 24 * 60 * 60 * 1000) app.locals._pending.delete(k);
   }
 }, 60 * 60 * 1000);
 
@@ -181,14 +173,7 @@ setInterval(() => {
  */
 app.get("/api/bnovo/availability", async (req, res) => {
   try {
-    const {
-      checkIn,
-      duration,
-      rooms = 1,
-      roomType = "STANDARD",
-      nights,
-    } = req.query || {};
-
+    const { checkIn, duration, rooms = 1, roomType = "STANDARD", nights } = req.query || {};
     if (!checkIn) return res.status(400).json({ ok: false, error: "checkIn required" });
 
     const ciISO = String(checkIn).slice(0, 10);
@@ -248,7 +233,7 @@ app.get("/api/bnovo/debug-family", async (req, res) => {
 });
 
 /* =======================
- *  PAYMENTS (Octo) — qisqartirmagan holda
+ *  PAYMENTS (Octo)
  * ======================= */
 
 app.post("/create-payment", async (req, res) => {
@@ -257,13 +242,7 @@ app.post("/create-payment", async (req, res) => {
       return res.status(500).json({ error: "Payment sozlanmagan (env yo'q)" });
     }
 
-    const {
-      amount,
-      description = "Mehmonxona to'lovi",
-      email,
-      booking = {},
-    } = req.body || {};
-
+    const { amount, description = "Mehmonxona to'lovi", email, booking = {} } = req.body || {};
     const amt = Number(amount);
     if (!Number.isFinite(amt) || amt <= 0 || !email) {
       return res.status(400).json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
@@ -284,7 +263,7 @@ app.post("/create-payment", async (req, res) => {
       checkIn: booking.checkIn,
       checkOut,
       duration: booking.duration,
-      roomType: booking.rooms,
+      roomType: booking.rooms, // "STANDARD" | "FAMILY"
       guests: booking.guests,
       firstName: booking.firstName,
       lastName: booking.lastName,
@@ -297,10 +276,7 @@ app.post("/create-payment", async (req, res) => {
     const { json: booking_json, sig: booking_sig } = (function sign(obj) {
       const json = JSON.stringify(obj);
       const h = crypto
-        .createHmac(
-          "sha256",
-          crypto.createHash("sha256").update(String(process.env.OCTO_SECRET || "octo")).digest()
-        )
+        .createHmac("sha256", crypto.createHash("sha256").update(String(process.env.OCTO_SECRET || "octo")).digest())
         .update(json)
         .digest("hex");
       return { json, sig: h };
@@ -321,17 +297,10 @@ app.post("/create-payment", async (req, res) => {
       return_url: `${FRONTEND_URL}/success`,
       notify_url: `${BASE_URL}/payment-callback`,
       language: "uz",
-      custom_data: {
-        email,
-        booking_json,
-        booking_sig,
-      },
+      custom_data: { email, booking_json, booking_sig },
     };
 
-    // pending store (oddiy)
-    app.locals = app.locals || {};
-    app.locals._pending = app.locals._pending || new Map();
-    app.locals._pending.set(shopTransactionId, { payload: bookingPayload, ts: Date.now() });
+    savePending(shopTransactionId, bookingPayload);
 
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 20000);
@@ -341,9 +310,7 @@ app.post("/create-payment", async (req, res) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       signal: controller.signal,
-    }).catch((e) => {
-      throw new Error(`Octo fetch failed: ${e?.message || e}`);
-    });
+    }).catch((e) => { throw new Error(`Octo fetch failed: ${e?.message || e}`); });
     clearTimeout(t);
 
     const data = await safeParseResponse(octoRes);
@@ -353,8 +320,7 @@ app.post("/create-payment", async (req, res) => {
     }
 
     console.error("Octo error:", { status: octoRes.status, data });
-    const msg =
-      (data && (data.errMessage || data.message)) || `Octo error (status ${octoRes.status})`;
+    const msg = (data && (data.errMessage || data.message)) || `Octo error (status ${octoRes.status})`;
     return res.status(400).json({ error: msg });
   } catch (err) {
     console.error("❌ create-payment:", err);
@@ -364,27 +330,17 @@ app.post("/create-payment", async (req, res) => {
 
 app.post("/payment-callback", async (req, res) => {
   try {
-    const body =
-      typeof req.body === "string"
-        ? (() => {
-            try { return JSON.parse(req.body); } catch { return {}; }
-          })()
-        : req.body || {};
+    const body = typeof req.body === "string" ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })() : req.body || {};
     console.log("🔁 payment-callback body:", body);
 
-    const statusFields = [
-      body?.status,
-      body?.payment_status,
-      body?.transaction_status,
-      body?.result,
-    ].map((s) => String(s || "").toLowerCase());
+    const statusFields = [body?.status, body?.payment_status, body?.transaction_status, body?.result]
+      .map((s) => String(s || "").toLowerCase());
     const isSuccess =
-      statusFields.some((s) => ["ok","success","succeeded","paid","captured","approved","done"].includes(s)) ||
+      statusFields.some((s) => ["ok", "success", "succeeded", "paid", "captured", "approved", "done"].includes(s)) ||
       body?.paid === true ||
       body?.error === 0 ||
       String(body?.state || "").toUpperCase() === "CAPTURED";
 
-    // pending store'dan olish (soddalashtirilgan)
     let verifiedPayload = null;
     try {
       let custom = body?.custom_data;
@@ -393,11 +349,9 @@ app.post("/payment-callback", async (req, res) => {
       if (json) { try { verifiedPayload = JSON.parse(json); } catch {} }
     } catch {}
 
-    const map = (app.locals && app.locals._pending) || new Map();
-    const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
-    if (!verifiedPayload && stid && map.has(stid)) {
-      verifiedPayload = (map.get(stid) || {}).payload;
-      map.delete(stid);
+    if (!verifiedPayload) {
+      const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
+      if (stid) verifiedPayload = popPending(stid);
     }
 
     if (isSuccess && verifiedPayload) {
