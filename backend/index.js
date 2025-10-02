@@ -14,8 +14,7 @@ const {
   checkAvailability,
   findFamilyBookings,
   HOTEL_TZ_OFFSET,
-  _listForRaw,
-  setHotelFilterEnabled, // <-- diagnostika uchun
+  _listForRaw, // diagnostika uchun xom ro‘yxat
 } = require("./bnovo.js");
 
 dotenv.config();
@@ -225,39 +224,10 @@ app.get("/api/bnovo/availability", async (req, res) => {
   }
 });
 
-/** Diagnostika: family bronlar (auto +1 kun) + noHotel rejim */
+/** Diagnostika: family bronlar ro‘yxati (from/to — agar to <= from bo‘lsa +1 kun) */
 app.get("/api/bnovo/debug-family", async (req, res) => {
   try {
-    const { from, to, noHotel } = req.query || {};
-    const f = (from || "").slice(0, 10);
-    let t = (to || "").slice(0, 10);
-    if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
-    // Bnovo: date_from < date_to bo'lishi shart
-    if (!t || t <= f) {
-      const base = new Date(f + "T00:00:00Z");
-      base.setUTCDate(base.getUTCDate() + 1);
-      t = base.toISOString().slice(0, 10);
-    }
-
-    // noHotel=1 bo‘lsa hotel_id filtrini vaqtincha o‘chiramiz
-    const disableFilter = String(noHotel || "") === "1";
-    const prev = setHotelFilterEnabled(!disableFilter);
-    try {
-      const data = await findFamilyBookings({ from: f, to: t });
-      res.json({ ok: true, from: f, to: t, noHotel: !!disableFilter, ...data });
-    } finally {
-      // holatni qaytarib qo'yamiz
-      setHotelFilterEnabled(prev);
-    }
-  } catch (e) {
-    res.status(500).json({ ok: false, error: String(e?.message || e) });
-  }
-});
-
-/** Diagnostika: xom ro‘yxat (family tokenlarini aniqlashga yordam beradi) + noHotel */
-app.get("/api/bnovo/raw", async (req, res) => {
-  try {
-    const { from, to, noHotel } = req.query || {};
+    const { from, to } = req.query || {};
     const f = (from || "").slice(0, 10);
     let t = (to || "").slice(0, 10);
     if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
@@ -266,15 +236,27 @@ app.get("/api/bnovo/raw", async (req, res) => {
       d.setUTCDate(d.getUTCDate() + 1);
       t = d.toISOString().slice(0, 10);
     }
+    const data = await findFamilyBookings({ from: f, to: t });
+    res.json({ ok: true, from: f, to: t, count: (data.items || []).length, ...data });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
+});
 
-    const disableFilter = String(noHotel || "") === "1";
-    const prev = setHotelFilterEnabled(!disableFilter);
-    try {
-      const raw = await _listForRaw(f, t); // { applied_params, url, count, items }
-      res.json({ ok: true, from: f, to: t, noHotel: !!disableFilter, ...raw });
-    } finally {
-      setHotelFilterEnabled(prev);
+/** Diagnostika: xom ro‘yxat (smart strategiya) */
+app.get("/api/bnovo/raw", async (req, res) => {
+  try {
+    const { from, to } = req.query || {};
+    const f = (from || "").slice(0, 10);
+    let t = (to || "").slice(0, 10);
+    if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
+    if (!t || t <= f) {
+      const d = new Date(f + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + 1);
+      t = d.toISOString().slice(0, 10);
     }
+    const raw = await _listForRaw(f, t);
+    res.json({ ok: true, from: f, to: t, ...raw });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
