@@ -74,6 +74,23 @@ function parseBnovoDate(s) {
   return Number.isNaN(t) ? NaN : t;
 }
 
+function dateOnly10(s) {
+  if (!s) return "";
+  return String(s).replace(" ", "T").slice(0, 10);
+}
+function overlapsByCalendarDays(fromISO, toISO, arrStr, depStr) {
+  // kalendar kun bilan (inclusive), dep kuni yotish kuni emas deb hisoblasak ham,
+  // sizning talab bo‘yicha same-arrival bo'lsa baribir band
+  const f = fromISO;
+  const t = toISO;
+  const a = dateOnly10(arrStr);
+  const d = dateOnly10(depStr);
+  if (!a || !d) return false;
+
+  // [a, d) bilan [f, t) kesishadimi? — departure kuni chiqib ketadi
+  return a < t && d > f;
+}
+
 /** Mahalliy (Tashkent) kun diapazonini UTC ms ga konvert */
 function localDayRangeMs(fromISO, toISO, tzOffsetHours = HOTEL_TZ_OFFSET) {
   const offsetMs = tzOffsetHours * 3600_000;
@@ -147,49 +164,67 @@ async function bnovoFetch(path, init = {}, retry401 = true) {
 
 /* ========= Core family-matching ========= */
 function isFamilyBooking(b) {
-  // 0) Bekor qilingan/no-show bronlarni hisoblamaymiz
-  const s = (b?.status?.name || b?.status || "").toString().toLowerCase();
-  const canceled =
-    s.includes("cancel") || s.includes("отмена") || s.includes("no_show");
-  if (canceled) return false;
+  // bekor/no-show ni hisoblamaymiz
+  const st = (b?.status?.name || b?.status || "").toString().toLowerCase();
+  if (st.includes("cancel") || st.includes("отмена") || st.includes("no_show"))
+    return false;
 
-  // 1) room_name (aniq raqam) bo‘yicha:
+  // nomlar
   const rnRaw = b?.room_name ?? b?.room?.name ?? b?.room?.number ?? "";
   const rn = String(rnRaw).trim();
-  const isByRoomName = FAMILY_ROOM_NAMES.length
-    ? FAMILY_ROOM_NAMES.includes(rn)
-    : false;
-
-  // 2) Token bo‘yicha: plan/rate/room type nomlarida FAMILY/OILAVIY/СЕМЕЙ* ko‘rinishlari
   const plan = String(b?.plan_name ?? b?.rate_plan?.name ?? "").toUpperCase();
   const rtname = String(
     b?.room_type?.name ?? b?.roomTypeName ?? ""
   ).toUpperCase();
-  const rnameU = String(rnRaw).toUpperCase();
-
-  // Default tokenlar + sizdagi ENV dagilar
-  const NAME_TOKENS = new Set([
-    ...FAMILY_NAMES, // ENV: FAMILY,СЕМЕЙ, ...
-    "FAMILY",
-    "СЕМЕЙ",
-    "СЕМЕЙНЫЙ",
-    "СЕМЕЙНАЯ",
-    "СЕМЕЙНОЙ",
-    "OILAVIY",
-    "OILA",
-    "FAM", // uzbekcha/shortcuts
-  ]);
-
-  const text = `${plan} ${rtname} ${rnameU}`;
-  const isByToken = Array.from(NAME_TOKENS).some((t) => t && text.includes(t));
-
-  // 3) Code bo‘yicha: room_type_code va o‘xshash maydonlar
   const rcode = String(
     b?.room_type_code || b?.roomType || b?.room_category_code || ""
   ).toUpperCase();
-  const isByCode = !!rcode && FAMILY_CODES.includes(rcode);
 
-  return isByRoomName || isByToken || isByCode;
+  // ENV lar
+  const byRoomName = FAMILY_ROOM_NAMES.length
+    ? FAMILY_ROOM_NAMES.includes(rn)
+    : false;
+  const byCode = !!rcode && FAMILY_CODES.includes(rcode);
+
+  // Tokenlar (keng)
+  const NAME_TOKENS = new Set([
+    ...FAMILY_NAMES,
+    "FAMILY",
+    "FAMILY ROOM",
+    "FAM",
+    "СЕМЕЙ",
+    "СЕМЕЙНЫЙ",
+    "СЕМЕЙНАЯ",
+    "OILAVIY",
+    "OILA",
+    "OILAVIY ROOM",
+  ]);
+  const bigText = `${plan} ${rtname} ${String(rnRaw).toUpperCase()}`;
+  const byToken = Array.from(NAME_TOKENS).some((t) => t && bigText.includes(t));
+
+  // Agar bookingda rooms[] bo'lsa, ichida family nomi bormi?
+  let byRoomsArray = false;
+  if (Array.isArray(b?.rooms)) {
+    for (const r of b.rooms) {
+      const nm = (r?.name || r?.number || r?.title || "")
+        .toString()
+        .toUpperCase();
+      if (!nm) continue;
+      if (Array.from(NAME_TOKENS).some((t) => t && nm.includes(t))) {
+        byRoomsArray = true;
+        break;
+      }
+      if (
+        FAMILY_ROOM_NAMES.length &&
+        FAMILY_ROOM_NAMES.includes(String(r?.name || r?.number || "").trim())
+      ) {
+        byRoomsArray = true;
+        break;
+      }
+    }
+  }
+
+  return byRoomName || byCode || byToken || byRoomsArray;
 }
 
 /** /bookings’dan sahifalab ro‘yxat olish */
@@ -264,11 +299,16 @@ async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1 }) {
         const dep = String(d.real_departure || d.departure || "");
         if (!arr || !dep) continue;
 
-        // Check-in sanasi aynan bir xil bo‘lsa ham band deymiz
-        const sameArrival = from === arr.replace(" ", "T").slice(0, 10);
-        const overlap = overlapsLocalDays(from, to, arr, dep);
+        // 1) aynan shu kunda check-in bo'lsa → band
+        const sameArrival = from === dateOnly10(arr);
 
-        if (sameArrival || overlap) {
+        // 2) yoki kalendar kunlar kesishsa → band
+        const overlapCal = overlapsByCalendarDays(from, to, arr, dep);
+
+        // 3) yoki avvalgi (timezone aware) funksiya ham rost desa
+        const overlapTZ = overlapsLocalDays(from, to, arr, dep);
+
+        if (sameArrival || overlapCal || overlapTZ) {
           taken = true;
           break;
         }
