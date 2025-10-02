@@ -14,7 +14,8 @@ const {
   checkAvailability,
   findFamilyBookings,
   HOTEL_TZ_OFFSET,
-  _listForRaw, // diagnostika uchun xom ro‘yxat
+  _listForRaw,
+  debugFamilyMatch, // <-- qo‘shildi
 } = require("./bnovo.js");
 
 dotenv.config();
@@ -22,8 +23,13 @@ dotenv.config();
 /* ====== App & Config ====== */
 const app = express();
 const PORT = Number(process.env.PORT || 5002);
-const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/+$/, "");
-const FRONTEND_URL = (process.env.FRONTEND_URL || "https://khamsahotel.uz").replace(/\/+$/, "");
+const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(
+  /\/+$/,
+  ""
+);
+const FRONTEND_URL = (
+  process.env.FRONTEND_URL || "https://khamsahotel.uz"
+).replace(/\/+$/, "");
 const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
 
 const {
@@ -115,7 +121,8 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendEmail(to, subject, text) {
-  if (!EMAIL_USER || !EMAIL_PASS) throw new Error("email transport is not configured");
+  if (!EMAIL_USER || !EMAIL_PASS)
+    throw new Error("email transport is not configured");
   if (!to || !subject || !text) throw new Error("email: invalid payload");
   const info = await transporter.sendMail({
     from: `"Khamsa Hotel" <${EMAIL_USER}>`,
@@ -130,11 +137,14 @@ async function sendEmail(to, subject, text) {
 async function notifyTelegram(text) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
   try {
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
-    });
+    await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
+      }
+    );
   } catch (e) {
     console.error("Telegram error:", e);
   }
@@ -203,16 +213,25 @@ setInterval(() => {
  */
 app.get("/api/bnovo/availability", async (req, res) => {
   try {
-    const { checkIn, duration, rooms = 1, roomType = "STANDARD", nights } = req.query || {};
-    if (!checkIn) return res.status(400).json({ ok: false, error: "checkIn required" });
+    const {
+      checkIn,
+      duration,
+      rooms = 1,
+      roomType = "STANDARD",
+      nights,
+    } = req.query || {};
+    if (!checkIn)
+      return res.status(400).json({ ok: false, error: "checkIn required" });
 
     const ciISO = String(checkIn).slice(0, 10);
 
     function computeCheckOut(checkInStr, durationStr, nightsStr) {
       const base = new Date(checkInStr + "T00:00:00Z");
       if (durationStr) {
-        if (String(durationStr).includes("3")) base.setUTCHours(base.getUTCHours() + 3);
-        else if (String(durationStr).includes("10")) base.setUTCHours(base.getUTCHours() + 10);
+        if (String(durationStr).includes("3"))
+          base.setUTCHours(base.getUTCHours() + 3);
+        else if (String(durationStr).includes("10"))
+          base.setUTCHours(base.getUTCHours() + 10);
         else base.setUTCDate(base.getUTCDate() + 1);
       } else if (nightsStr) {
         base.setUTCDate(base.getUTCDate() + Number(nightsStr || 1));
@@ -237,15 +256,23 @@ app.get("/api/bnovo/availability", async (req, res) => {
       available: Boolean(result?.available),
       checkIn: ciISO,
       checkOut: coISO,
-      ...(result?.freeRooms !== undefined ? { freeRooms: result.freeRooms } : {}),
-      ...(result?.occupiedRooms !== undefined ? { occupiedRooms: result.occupiedRooms } : {}),
-      ...(result?.totalRooms !== undefined ? { totalRooms: result.totalRooms } : {}),
+      ...(result?.freeRooms !== undefined
+        ? { freeRooms: result.freeRooms }
+        : {}),
+      ...(result?.occupiedRooms !== undefined
+        ? { occupiedRooms: result.occupiedRooms }
+        : {}),
+      ...(result?.totalRooms !== undefined
+        ? { totalRooms: result.totalRooms }
+        : {}),
       ...(result?.source ? { source: result.source } : {}),
       ...(result?.warning ? { warning: result.warning } : {}),
     });
   } catch (e) {
     console.error("/api/bnovo/availability error:", e);
-    res.status(500).json({ ok: false, available: false, error: "availability failed" });
+    res
+      .status(500)
+      .json({ ok: false, available: false, error: "availability failed" });
   }
 });
 
@@ -255,14 +282,23 @@ app.get("/api/bnovo/debug-family", async (req, res) => {
     const { from, to } = req.query || {};
     const f = (from || "").slice(0, 10);
     let t = (to || "").slice(0, 10);
-    if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
+    if (!f)
+      return res
+        .status(400)
+        .json({ ok: false, error: "from required (YYYY-MM-DD)" });
     if (!t || t <= f) {
       const d = new Date(f + "T00:00:00Z");
       d.setUTCDate(d.getUTCDate() + 1);
       t = d.toISOString().slice(0, 10);
     }
     const data = await findFamilyBookings({ from: f, to: t });
-    res.json({ ok: true, from: f, to: t, count: (data.items || []).length, ...data });
+    res.json({
+      ok: true,
+      from: f,
+      to: t,
+      count: (data.items || []).length,
+      ...data,
+    });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
@@ -274,7 +310,10 @@ app.get("/api/bnovo/raw", async (req, res) => {
     const { from, to } = req.query || {};
     const f = (from || "").slice(0, 10);
     let t = (to || "").slice(0, 10);
-    if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
+    if (!f)
+      return res
+        .status(400)
+        .json({ ok: false, error: "from required (YYYY-MM-DD)" });
     if (!t || t <= f) {
       const d = new Date(f + "T00:00:00Z");
       d.setUTCDate(d.getUTCDate() + 1);
@@ -282,6 +321,28 @@ app.get("/api/bnovo/raw", async (req, res) => {
     }
     const raw = await _listForRaw(f, t);
     res.json({ ok: true, from: f, to: t, ...raw });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
+// Diagnostika: matcher qanday qaror qilyapti (family/no-family va bayroqlar)
+app.get("/api/bnovo/match", async (req, res) => {
+  try {
+    const { from, to } = req.query || {};
+    const f = (from || "").slice(0, 10);
+    let t = (to || "").slice(0, 10);
+    if (!f)
+      return res
+        .status(400)
+        .json({ ok: false, error: "from required (YYYY-MM-DD)" });
+    if (!t || t <= f) {
+      const d = new Date(f + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + 1);
+      t = d.toISOString().slice(0, 10);
+    }
+    const data = await debugFamilyMatch(f, t);
+    res.json(data);
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
@@ -297,10 +358,17 @@ app.post("/create-payment", async (req, res) => {
       return res.status(500).json({ error: "Payment sozlanmagan (env yo'q)" });
     }
 
-    const { amount, description = "Mehmonxona to'lovi", email, booking = {} } = req.body || {};
+    const {
+      amount,
+      description = "Mehmonxona to'lovi",
+      email,
+      booking = {},
+    } = req.body || {};
     const amt = Number(amount);
     if (!Number.isFinite(amt) || amt <= 0 || !email) {
-      return res.status(400).json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
+      return res
+        .status(400)
+        .json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
     }
 
     const computeCheckOut = (checkInStr, durationStr) => {
@@ -331,7 +399,13 @@ app.post("/create-payment", async (req, res) => {
     const { json: booking_json, sig: booking_sig } = (function sign(obj) {
       const json = JSON.stringify(obj);
       const h = crypto
-        .createHmac("sha256", crypto.createHash("sha256").update(String(process.env.OCTO_SECRET || "octo")).digest())
+        .createHmac(
+          "sha256",
+          crypto
+            .createHash("sha256")
+            .update(String(process.env.OCTO_SECRET || "octo"))
+            .digest()
+        )
         .update(json)
         .digest("hex");
       return { json, sig: h };
@@ -365,7 +439,9 @@ app.post("/create-payment", async (req, res) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       signal: controller.signal,
-    }).catch((e) => { throw new Error(`Octo fetch failed: ${e?.message || e}`); });
+    }).catch((e) => {
+      throw new Error(`Octo fetch failed: ${e?.message || e}`);
+    });
     clearTimeout(t);
 
     const data = await safeParseResponse(octoRes);
@@ -375,7 +451,9 @@ app.post("/create-payment", async (req, res) => {
     }
 
     console.error("Octo error:", { status: octoRes.status, data });
-    const msg = (data && (data.errMessage || data.message)) || `Octo error (status ${octoRes.status})`;
+    const msg =
+      (data && (data.errMessage || data.message)) ||
+      `Octo error (status ${octoRes.status})`;
     return res.status(400).json({ error: msg });
   } catch (err) {
     console.error("❌ create-payment:", err);
@@ -385,13 +463,36 @@ app.post("/create-payment", async (req, res) => {
 
 app.post("/payment-callback", async (req, res) => {
   try {
-    const body = typeof req.body === "string" ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })() : req.body || {};
+    const body =
+      typeof req.body === "string"
+        ? (() => {
+            try {
+              return JSON.parse(req.body);
+            } catch {
+              return {};
+            }
+          })()
+        : req.body || {};
     console.log("🔁 payment-callback body:", body);
 
-    const statusFields = [body?.status, body?.payment_status, body?.transaction_status, body?.result]
-      .map((s) => String(s || "").toLowerCase());
+    const statusFields = [
+      body?.status,
+      body?.payment_status,
+      body?.transaction_status,
+      body?.result,
+    ].map((s) => String(s || "").toLowerCase());
     const isSuccess =
-      statusFields.some((s) => ["ok", "success", "succeeded", "paid", "captured", "approved", "done"].includes(s)) ||
+      statusFields.some((s) =>
+        [
+          "ok",
+          "success",
+          "succeeded",
+          "paid",
+          "captured",
+          "approved",
+          "done",
+        ].includes(s)
+      ) ||
       body?.paid === true ||
       body?.error === 0 ||
       String(body?.state || "").toUpperCase() === "CAPTURED";
@@ -399,9 +500,17 @@ app.post("/payment-callback", async (req, res) => {
     let verifiedPayload = null;
     try {
       let custom = body?.custom_data;
-      if (typeof custom === "string") { try { custom = JSON.parse(custom); } catch {} }
+      if (typeof custom === "string") {
+        try {
+          custom = JSON.parse(custom);
+        } catch {}
+      }
       const json = custom?.booking_json;
-      if (json) { try { verifiedPayload = JSON.parse(json); } catch {} }
+      if (json) {
+        try {
+          verifiedPayload = JSON.parse(json);
+        } catch {}
+      }
     } catch {}
 
     if (!verifiedPayload) {
@@ -427,8 +536,12 @@ Bron:
 Bnovo push: ⚠️ Skipped (read-only)
       `.trim();
 
-      try { await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human); } catch {}
-      try { await notifyTelegram(human); } catch {}
+      try {
+        await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human);
+      } catch {}
+      try {
+        await notifyTelegram(human);
+      } catch {}
 
       return res.json({ ok: true });
     }
@@ -442,7 +555,9 @@ Bnovo push: ⚠️ Skipped (read-only)
 });
 
 /* ====== 404 & error handlers ====== */
-app.use((req, res) => res.status(404).json({ error: "Not Found", path: req.path }));
+app.use((req, res) =>
+  res.status(404).json({ error: "Not Found", path: req.path })
+);
 app.use((err, req, res, _next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "Internal Server Error" });
