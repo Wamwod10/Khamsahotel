@@ -1,31 +1,13 @@
-// index.js — CommonJS (Node 18+, Render-friendly, FULL)
-// ----------------------------------------------------
-// Barcha bo‘limlar saqlangan: CORS, health, email/telegram, Octo to'lovlari,
-// legacy /api/bookings, BNOVO diagnostika/availability endpointlari.
-// Node 18+ talab etiladi (global.fetch uchun).
-
-const express = require("express");
-const cors = require("cors");
-const fetch = global.fetch || require("node-fetch"); // Node 18+ bo'lmasa fallback
-const dotenv = require("dotenv");
-const nodemailer = require("nodemailer");
-const crypto = require("crypto");
+// index.js — Khamsa backend (Express + Bnovo + Octo)
+import express from "express";
+import cors from "cors";
+import fetch from "node-fetch";
+import dotenv from "dotenv";
+import nodemailer from "nodemailer";
+import crypto from "crypto";
+import { checkAvailability, createBookingInBnovo } from "./bnovo.js";
 
 dotenv.config();
-
-// Node 18+ check
-if (typeof fetch !== "function") {
-  throw new Error("This server requires Node 18+ (global.fetch is missing).");
-}
-
-// Bnovo helperlari (o‘zgarmagan nomlar)
-const {
-  HOTEL_TZ_OFFSET,
-  checkAvailability,
-  findFamilyBookings,
-  _listForRaw,
-  debugFamilyMatch,
-} = require("./bnovo.js");
 
 /* ====== App & Config ====== */
 const app = express();
@@ -60,7 +42,6 @@ app.set("trust proxy", 1);
 const ALLOWED_ORIGINS = [
   FRONTEND_URL,
   "https://www.khamsahotel.uz",
-  "https://khamsa-backend.onrender.com",
   "http://localhost:5173",
   "http://localhost:3000",
 ].filter(Boolean);
@@ -92,27 +73,9 @@ app.get("/", (_req, res) => {
     name: "Khamsa backend",
     time: new Date().toISOString(),
     port: PORT,
-    tzOffset: HOTEL_TZ_OFFSET,
   });
 });
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
-
-/* ====== Diagnostic: ENV snapshot (masked) ====== */
-app.get("/api/bnovo/env", (_req, res) => {
-  const mask = (v) => (v ? String(v).slice(0, 4) + "•••" : null);
-  res.json({
-    BNOVO_API_BASE_URL: process.env.BNOVO_API_BASE_URL,
-    BNOVO_AUTH_URL: process.env.BNOVO_AUTH_URL,
-    BNOVO_ID: process.env.BNOVO_ID,
-    BNOVO_PASSWORD: mask(process.env.BNOVO_PASSWORD),
-    BNOVO_HOTEL_ID: process.env.BNOVO_HOTEL_ID || null,
-    BNOVO_FORCE_HOTEL_FILTER: process.env.BNOVO_FORCE_HOTEL_FILTER || "0",
-    BNOVO_PAGE_LIMIT: process.env.BNOVO_PAGE_LIMIT || "20",
-    HOTEL_TZ_OFFSET: process.env.HOTEL_TZ_OFFSET || "5",
-    FAMILY_STOCK: process.env.FAMILY_STOCK || "1",
-    STANDARD_STOCK: process.env.STANDARD_STOCK || "23",
-  });
-});
 
 /* ====== Email ====== */
 const transporter = nodemailer.createTransport({
@@ -123,25 +86,15 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendEmail(to, subject, text) {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    console.warn("email transport is not configured");
-    return;
-  }
-  if (!to || !subject || !text) {
-    console.warn("email: invalid payload");
-    return;
-  }
-  try {
-    const info = await transporter.sendMail({
-      from: `"Khamsa Hotel" <${EMAIL_USER}>`,
-      to,
-      subject,
-      text,
-    });
-    return info;
-  } catch (e) {
-    console.error("sendEmail error:", e);
-  }
+  if (!EMAIL_USER || !EMAIL_PASS) throw new Error("email transport is not configured");
+  if (!to || !subject || !text) throw new Error("email: invalid payload");
+  const info = await transporter.sendMail({
+    from: `"Khamsa Hotel" <${EMAIL_USER}>`,
+    to,
+    subject,
+    text,
+  });
+  return info;
 }
 
 /* ====== Telegram ====== */
@@ -190,19 +143,19 @@ function verifyData(json, sig) {
 }
 
 /* ====== Pending store (server-side) ====== */
-app.locals._pending = new Map(); // key: shop_transaction_id
+const PENDING = new Map(); // key: shop_transaction_id
 function savePending(id, payload) {
-  app.locals._pending.set(String(id), { payload, ts: Date.now() });
+  PENDING.set(String(id), { payload, ts: Date.now() });
 }
 function popPending(id) {
-  const rec = app.locals._pending.get(String(id));
-  if (rec) app.locals._pending.delete(String(id));
+  const rec = PENDING.get(String(id));
+  if (rec) PENDING.delete(String(id));
   return rec?.payload || null;
 }
 setInterval(() => {
   const now = Date.now();
-  for (const [k, v] of app.locals._pending.entries()) {
-    if (now - (v?.ts || 0) > 24 * 60 * 60 * 1000) app.locals._pending.delete(k);
+  for (const [k, v] of PENDING.entries()) {
+    if (now - (v?.ts || 0) > 24 * 60 * 60 * 1000) PENDING.delete(k);
   }
 }, 60 * 60 * 1000);
 
@@ -210,117 +163,42 @@ setInterval(() => {
  *  BNOVO ROUTES
  * ======================= */
 
-/**
- * GET /api/bnovo/availability
- * Query:
- *   checkIn=YYYY-MM-DD (required)
- *   duration=1|3h|10h|...  (yo‘q bo‘lsa 1 kecha)
- *   rooms=1..N
- *   roomType=STANDARD|FAMILY (default STANDARD)
- *   nights=... (back-compat)
- */
+/** GET /api/bnovo/availability?checkIn=YYYY-MM-DD&nights=1&roomType=STANDARD|FAMILY */
 app.get("/api/bnovo/availability", async (req, res) => {
   try {
-    const {
-      checkIn,
-      duration,
-      rooms = 1,
-      roomType = "STANDARD",
-      nights,
-    } = req.query || {};
+    const { checkIn, nights = 1, roomType = "STANDARD" } = req.query || {};
     if (!checkIn) return res.status(400).json({ ok: false, error: "checkIn required" });
 
-    const ciISO = String(checkIn).slice(0, 10);
-
-    function computeCheckOut(checkInStr, durationStr, nightsStr) {
-      const base = new Date(checkInStr + "T00:00:00Z");
-      if (durationStr) {
-        if (String(durationStr).includes("3")) base.setUTCHours(base.getUTCHours() + 3);
-        else if (String(durationStr).includes("10")) base.setUTCHours(base.getUTCHours() + 10);
-        else base.setUTCDate(base.getUTCDate() + 1);
-      } else if (nightsStr) {
-        base.setUTCDate(base.getUTCDate() + Number(nightsStr || 1));
-      } else {
-        base.setUTCDate(base.getUTCDate() + 1);
-      }
-      return base.toISOString().slice(0, 10);
+    const ci = String(checkIn).slice(0, 10);
+    const n = Math.max(1, Number(nights || 1));
+    const checkInDate = new Date(ci + "T00:00:00Z");
+    if (Number.isNaN(checkInDate.getTime())) {
+      return res.status(400).json({ ok: false, error: "checkIn invalid" });
     }
 
-    const coISO = computeCheckOut(ciISO, duration, nights);
+    const checkOut = new Date(checkInDate.getTime() + n * 86400000).toISOString().slice(0, 10);
 
-    const result = await checkAvailability({
-      checkIn: ciISO,
-      checkOut: coISO,
+    // Bnovo
+    const avail = await checkAvailability({
+      checkIn: ci,
+      checkOut,
       roomType: String(roomType).toUpperCase(),
-      rooms: Math.max(1, Number(rooms || 1)),
     });
 
+    // Frontend uchun soddalashtirilgan, ammo to‘liq javob:
+    // { ok, roomType, available, checkIn, checkOut, [source|warning] }
     return res.json({
-      ok: Boolean(result?.ok),
-      roomType: String(result?.roomType || roomType).toUpperCase(),
-      available: Boolean(result?.available),
-      checkIn: ciISO,
-      checkOut: coISO,
-      ...(result?.freeRooms !== undefined ? { freeRooms: result.freeRooms } : {}),
-      ...(result?.occupiedRooms !== undefined ? { occupiedRooms: result.occupiedRooms } : {}),
-      ...(result?.totalRooms !== undefined ? { totalRooms: result.totalRooms } : {}),
-      ...(result?.source ? { source: result.source } : {}),
-      ...(result?.warning ? { warning: result.warning } : {}),
+      ok: Boolean(avail?.ok),
+      roomType: String(avail?.roomType || roomType).toUpperCase(),
+      available: Boolean(avail?.available),
+      checkIn: ci,
+      checkOut,
+      ...(avail?.source ? { source: avail.source } : {}),
+      ...(avail?.warning ? { warning: avail.warning } : {}),
     });
   } catch (e) {
     console.error("/api/bnovo/availability error:", e);
     res.status(500).json({ ok: false, available: false, error: "availability failed" });
-  }
-});
-
-/** Diagnostika: family bronlar (summary) */
-app.get("/api/bnovo/debug-family", async (req, res) => {
-  try {
-    const { from, to } = req.query || {};
-    const f = (from || "").slice(0, 10);
-    const t = (to || f).slice(0, 10) || f;
-    const data = await findFamilyBookings({ from: f, to: t });
-    res.json({ ok: true, from: f, to: t, count: (data.items || []).length, ...data });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: String(e?.message || e) });
-  }
-});
-
-/** Diagnostika: xom ro‘yxat (smart strategiya) */
-app.get("/api/bnovo/raw", async (req, res) => {
-  try {
-    const { from, to } = req.query || {};
-    const f = (from || "").slice(0, 10);
-    let t = (to || "").slice(0, 10);
-    if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
-    if (!t || t <= f) {
-      const d = new Date(f + "T00:00:00Z");
-      d.setUTCDate(d.getUTCDate() + 1);
-      t = d.toISOString().slice(0, 10);
-    }
-    const raw = await _listForRaw(f, t);
-    res.json({ ok: true, from: f, to: t, ...raw });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: String(e?.message || e) });
-  }
-});
-
-/** Diagnostika: matcher qanday qaror qilyapti */
-app.get("/api/bnovo/match", async (req, res) => {
-  try {
-    const { from, to } = req.query || {};
-    const f = (from || "").slice(0, 10);
-    let t = (to || "").slice(0, 10);
-    if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
-    if (!t || t <= f) {
-      const d = new Date(f + "T00:00:00Z");
-      d.setUTCDate(d.getUTCDate() + 1);
-      t = d.toISOString().slice(0, 10);
-    }
-    const data = await debugFamilyMatch(f, t);
-    res.json(data);
-  } catch (e) {
-    res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 });
 
@@ -477,12 +355,19 @@ app.post("/payment-callback", async (req, res) => {
     }
 
     if (!verifiedPayload) {
+      console.warn("⚠️ custom_data yo‘q yoki verify bo‘lmadi — pending store’dan izlaymiz");
       const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
-      if (stid) verifiedPayload = popPending(stid);
+      if (stid) {
+        verifiedPayload = popPending(stid);
+        if (!verifiedPayload) console.warn("⚠️ pending store’da ham topilmadi:", stid);
+      } else {
+        console.warn("⚠️ shop_transaction_id kelmadi");
+      }
     }
 
     if (isSuccess && verifiedPayload) {
-      // Read-only: push yo'q (bnovo.js createBookingInBnovo() read-only)
+      const pushRes = await createBookingInBnovo(verifiedPayload);
+
       const human = `
 To'lov muvaffaqiyatli.
 
@@ -496,16 +381,32 @@ Bron:
 - Mehmonlar: ${verifiedPayload.guests || 1}
 - Narx (EUR): ${verifiedPayload.priceEur}
 
-Bnovo push: ⚠️ Skipped (read-only)
+Bnovo push: ${
+        pushRes.pushed ? "✅ Pushed" : pushRes.ok ? "⚠️ Skipped (cheklov)" : "❌ Fail"
+      }
+${
+  pushRes.ok
+    ? pushRes.pushed
+      ? ""
+      : `Reason: ${pushRes.reason || ""}`
+    : `Reason: ${JSON.stringify(pushRes.error || pushRes.status || pushRes.data || {}, null, 2)}`
+}
       `.trim();
 
-      try { await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human); } catch {}
-      try { await notifyTelegram(human); } catch {}
+      try {
+        await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human);
+      } catch {}
+      try {
+        await notifyTelegram(human);
+      } catch {}
 
       return res.json({ ok: true });
     }
 
-    console.warn("⚠️ Payment not success yoki payload topilmadi.");
+    console.warn("⚠️ Payment not success yoki payload topilmadi:", {
+      statusFields,
+      paid: body?.paid,
+    });
     return res.json({ ok: true }); // Octo qayta urmasin
   } catch (e) {
     console.error("❌ /payment-callback:", e);
@@ -589,9 +490,9 @@ app.use((err, req, res, _next) => {
 });
 
 /* ====== Start ====== */
-console.log("[ENV] BNOVO_HOTEL_ID =", process.env.BNOVO_HOTEL_ID || "(unset)");
-console.log("[ENV] BNOVO_FORCE_HOTEL_FILTER =", process.env.BNOVO_FORCE_HOTEL_FILTER || "0");
 app.listen(PORT, () => {
   console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
-  console.log(`[BNOVO] tzOffset=${HOTEL_TZ_OFFSET}`);
+  console.log(
+    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${process.env.BNOVO_AUTH_URL} id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD}`
+  );
 });
