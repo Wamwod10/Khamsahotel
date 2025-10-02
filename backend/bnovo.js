@@ -143,7 +143,8 @@ function isFamilyBooking(b) {
 
 /** /bookings’dan sahifalab ro‘yxat olish */
 async function listBookingsPaged(params) {
-  const LIMIT = 50;
+  // Bnovo limit <= 20 bo'lishi shart
+  const LIMIT = Math.min(20, Number(process.env.BNOVO_PAGE_LIMIT || 20));
   let offset = 0;
   let total = null;
   const all = [];
@@ -174,6 +175,7 @@ async function listBookingsPaged(params) {
   }
   return all;
 }
+
 
 /* ========= Public API ========= */
 
