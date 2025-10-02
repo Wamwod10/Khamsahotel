@@ -20,6 +20,14 @@ const BNOVO_HOTEL_ID = process.env.BNOVO_HOTEL_ID || "";
 
 const DEBUG = /^1|true|yes$/i.test(process.env.BNOVO_DEBUG || "");
 
+/* Hotel filter holati (diagnostika uchun yoqib/o'chirish) */
+let HOTEL_FILTER_ENABLED = true;
+function setHotelFilterEnabled(enabled) {
+  const prev = HOTEL_FILTER_ENABLED;
+  HOTEL_FILTER_ENABLED = !!enabled;
+  return prev;
+}
+
 // Family aniqlash sozlamalari
 const FAMILY_CODES = (process.env.BNOVO_FAMILY_CODES || "FAMILY,FAM")
   .split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
@@ -130,6 +138,8 @@ async function bnovoFetch(path, init = {}, retry401 = true) {
     ...(await auth()),
   };
 
+  if (DEBUG) console.log("[BNOVO GET]", url);
+
   let res = await fetch(url, { ...init, headers });
   if (retry401 && res.status === 401) {
     headers = { ...headers, ...(await auth(true)) };
@@ -190,7 +200,11 @@ async function listBookingsPaged(params) {
 
   while (true) {
     const q = { ...params, limit: LIMIT, offset };
-    const res = await bnovoFetch(`/bookings?${qs(q)}`);
+    if (BNOVO_HOTEL_ID && HOTEL_FILTER_ENABLED) {
+      q.hotel_id = BNOVO_HOTEL_ID;
+    }
+    const url = `/bookings?${qs(q)}`;
+    const res = await bnovoFetch(url);
     const data = await safeParse(res);
     if (!res.ok) throw new Error(`Bnovo ${res.status} ${JSON.stringify(data)}`);
 
@@ -228,7 +242,6 @@ async function checkAvailability({ checkIn, checkOut, roomType, rooms = 1 }) {
   }
 
   const params = { date_from: from, date_to: to };
-  if (BNOVO_HOTEL_ID) params.hotel_id = BNOVO_HOTEL_ID;
 
   try {
     const items = await listBookingsPaged(params);
@@ -310,8 +323,6 @@ async function findFamilyBookings({ from, to }) {
   if (!f || !t) return { ok: false, items: [], warning: "invalid dates" };
 
   const params = { date_from: f, date_to: t };
-  if (BNOVO_HOTEL_ID) params.hotel_id = BNOVO_HOTEL_ID;
-
   const items = await listBookingsPaged(params);
   const hits = [];
 
@@ -334,12 +345,16 @@ async function findFamilyBookings({ from, to }) {
   return { ok: true, items: hits };
 }
 
-/* Diagnostika uchun — xom ro‘yxatni qaytaruvchi helper */
+/* Diagnostika — xom ro‘yxat + qo'llanilgan paramlar va so'rov URL */
 async function _listForRaw(from, to) {
-  const params = { date_from: from, date_to: to };
-  if (BNOVO_HOTEL_ID) params.hotel_id = BNOVO_HOTEL_ID;
-  const items = await listBookingsPaged(params);
-  return items.map(b => ({
+  const baseParams = { date_from: from, date_to: to };
+  const q = { ...baseParams };
+  if (BNOVO_HOTEL_ID && HOTEL_FILTER_ENABLED) q.hotel_id = BNOVO_HOTEL_ID;
+
+  // bir martalik chaqiriqda hammasini paginate qilib olamiz
+  const itemsFull = await listBookingsPaged(baseParams);
+
+  const preview = itemsFull.map(b => ({
     number: b?.number,
     room_name: b?.room_name,
     plan_name: b?.plan_name,
@@ -349,6 +364,13 @@ async function _listForRaw(from, to) {
     arrival: b?.dates?.arrival,
     departure: b?.dates?.departure
   }));
+
+  return {
+    applied_params: q,
+    url: `${BASE}/bookings?${qs(q)}`,
+    count: preview.length,
+    items: preview
+  };
 }
 
 /* POST yo‘q — read-only */
@@ -361,7 +383,8 @@ module.exports = {
   checkAvailability,
   findFamilyBookings,
   createBookingInBnovo,
-  _listForRaw, // diagnostika
+  _listForRaw,
+  setHotelFilterEnabled, // diagnostika
   // test utils:
   _internals: { parseBnovoDate, overlapsLocalDays, localDayRangeMs }
 };

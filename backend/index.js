@@ -1,16 +1,22 @@
-// index.js — CommonJS (Render va Node 18+ bilan muammosiz)
+// index.js — CommonJS (Render va Node 18+ bilan mos)
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 
-// Node 18+: fetch global. Agar eski Node bo'lsa xabar beradi.
+// Node 18+: fetch global bo‘lishi kerak
 if (typeof fetch !== "function") {
   throw new Error("This server requires Node 18+ (global.fetch is missing).");
 }
 
-const { checkAvailability, findFamilyBookings, HOTEL_TZ_OFFSET, _listForRaw } = require("./bnovo.js");
+const {
+  checkAvailability,
+  findFamilyBookings,
+  HOTEL_TZ_OFFSET,
+  _listForRaw,
+  setHotelFilterEnabled, // <-- diagnostika uchun
+} = require("./bnovo.js");
 
 dotenv.config();
 
@@ -219,30 +225,39 @@ app.get("/api/bnovo/availability", async (req, res) => {
   }
 });
 
-/** Diagnostika: family bronlar (auto +1 kun) */
+/** Diagnostika: family bronlar (auto +1 kun) + noHotel rejim */
 app.get("/api/bnovo/debug-family", async (req, res) => {
   try {
-    const { from, to } = req.query || {};
+    const { from, to, noHotel } = req.query || {};
     const f = (from || "").slice(0, 10);
     let t = (to || "").slice(0, 10);
     if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
-    // Bnovo: date_from < date_to bo'lishi shart — teng kelsa +1 kun qo'shamiz
+    // Bnovo: date_from < date_to bo'lishi shart
     if (!t || t <= f) {
       const base = new Date(f + "T00:00:00Z");
       base.setUTCDate(base.getUTCDate() + 1);
       t = base.toISOString().slice(0, 10);
     }
-    const data = await findFamilyBookings({ from: f, to: t });
-    res.json(data);
+
+    // noHotel=1 bo‘lsa hotel_id filtrini vaqtincha o‘chiramiz
+    const disableFilter = String(noHotel || "") === "1";
+    const prev = setHotelFilterEnabled(!disableFilter);
+    try {
+      const data = await findFamilyBookings({ from: f, to: t });
+      res.json({ ok: true, from: f, to: t, noHotel: !!disableFilter, ...data });
+    } finally {
+      // holatni qaytarib qo'yamiz
+      setHotelFilterEnabled(prev);
+    }
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 });
 
-/** Diagnostika: xom ro‘yxat (family tokenlarini aniqlashga yordam beradi) */
+/** Diagnostika: xom ro‘yxat (family tokenlarini aniqlashga yordam beradi) + noHotel */
 app.get("/api/bnovo/raw", async (req, res) => {
   try {
-    const { from, to } = req.query || {};
+    const { from, to, noHotel } = req.query || {};
     const f = (from || "").slice(0, 10);
     let t = (to || "").slice(0, 10);
     if (!f) return res.status(400).json({ ok: false, error: "from required (YYYY-MM-DD)" });
@@ -251,8 +266,15 @@ app.get("/api/bnovo/raw", async (req, res) => {
       d.setUTCDate(d.getUTCDate() + 1);
       t = d.toISOString().slice(0, 10);
     }
-    const items = await _listForRaw(f, t);
-    res.json({ ok: true, from: f, to: t, items });
+
+    const disableFilter = String(noHotel || "") === "1";
+    const prev = setHotelFilterEnabled(!disableFilter);
+    try {
+      const raw = await _listForRaw(f, t); // { applied_params, url, count, items }
+      res.json({ ok: true, from: f, to: t, noHotel: !!disableFilter, ...raw });
+    } finally {
+      setHotelFilterEnabled(prev);
+    }
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
