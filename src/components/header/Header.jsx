@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import "./header.scss";
 import "./headerMedia.scss";
 import { FaWifi, FaChevronDown } from "react-icons/fa";
@@ -13,7 +13,7 @@ import { RiDrinks2Fill } from "react-icons/ri";
 
 /* ===== Helpers ===== */
 function getApiBase() {
-  // Localda bo‘lsak localhost:5002 ga majburan yo‘naltiramiz (xohlasangiz o‘chirmang)
+
   const isLocal = typeof window !== "undefined" && (
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
