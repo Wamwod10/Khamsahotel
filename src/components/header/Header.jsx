@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "./header.scss";
 import "./headerMedia.scss";
 import { FaWifi, FaChevronDown } from "react-icons/fa";
@@ -13,6 +13,13 @@ import { RiDrinks2Fill } from "react-icons/ri";
 
 /* ===== Helpers ===== */
 function getApiBase() {
+  // Localda bo‘lsak localhost:5002 ga majburan yo‘naltiramiz (xohlasangiz o‘chirmang)
+  const isLocal = typeof window !== "undefined" && (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  );
+  if (isLocal) return "http://localhost:5002";
+
   const env =
     (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
     (process.env && process.env.REACT_APP_API_BASE_URL) ||
@@ -22,7 +29,14 @@ function getApiBase() {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// URL orqali test qilish: ?forceFamilyBusy=1 => majburan band deb ko‘rsatadi
+// Sana ko‘rinishi: YYYY-MM-DD -> DD.MM.YYYY
+function fmtHuman(ymd) {
+  if (!ymd) return "-";
+  const [y, m, d] = String(ymd).split("-");
+  return `${d}.${m}.${y}`;
+}
+
+// URL orqali test: ?forceFamilyBusy=1 => majburan band deb ko‘rsatadi
 const isForceFamilyBusy = () => {
   try {
     const sp = new URLSearchParams(window.location.search);
@@ -46,7 +60,7 @@ async function checkFamilyAvailability({ checkIn, nights = 1 }) {
 
     if (!res.ok) {
       console.warn("availability http error:", res.status, data);
-      // API yiqilsa UXni to‘xtatmaslik uchun available=true deb olamiz (navigate bo‘lsin)
+      // API yiqilsa UX to‘xtamasin — available=true deb ketamiz
       return { ok: false, available: true, reason: `HTTP ${res.status}` };
     }
     if (typeof data?.available === "boolean") {
@@ -56,6 +70,28 @@ async function checkFamilyAvailability({ checkIn, nights = 1 }) {
   } catch (e) {
     console.warn("availability fetch exception:", e);
     return { ok: false, available: true, reason: "exception" };
+  }
+}
+
+// ⬇️ YANGI: Postgres’dagi blackoutni tekshirish (biz yozib bergan backend endpointi)
+async function postgresFamilyBusy(checkIn) {
+  const base = getApiBase();
+  const url = `${base}/api/checkins/next-block?roomType=FAMILY&start=${encodeURIComponent(checkIn)}`;
+  try {
+    const res = await fetch(url);
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    const data = ct.includes("application/json") ? await res.json() : { _raw: await res.text() };
+
+    // backend: { ok:true, block:null | {id,start_date,end_date} }
+    if (!res.ok) {
+      console.warn("postgres check http error:", res.status, data);
+      // API xato bo‘lsa “bo‘sh deb” o‘tkazib yuboramiz (UX to‘xtamasin)
+      return { busy: false, block: null };
+    }
+    return { busy: !!data?.block, block: data?.block || null };
+  } catch (e) {
+    console.warn("postgres check exception:", e);
+    return { busy: false, block: null };
   }
 }
 
@@ -106,7 +142,7 @@ const Header = () => {
     document.body.style.overflow = "";
   }, []);
 
-  // Avail uchun 3/10 soat/1 kunni 1 kecha deb olamiz
+  // Avail uchun 3/10 soat/1 kunni hozircha 1 kecha deb olamiz
   const getNightsFromDuration = useCallback((d) => {
     if (!d) return 1;
     const s = String(d).toLowerCase();
@@ -125,17 +161,28 @@ const Header = () => {
       return;
     }
 
-    // 2) Agar FAMILY bo‘lsa — 3s kutish + Bnovo’dan availability
+    // 2) FAMILY bo‘lsa — avval Postgres blackout tekshiruvi
     if (rooms === "FAMILY") {
+      // test rejimi: URL ?forceFamilyBusy=1 bo‘lsa darrov modal chiqaramiz
+      if (isForceFamilyBusy()) {
+        openModal(t("familyNotAvailable") || "Bu xona band qilingan");
+        return;
+      }
+
+      // Postgres’da shu checkIn kuni bandmi? (10–12 eski bron, 11 kiritilsa ham band chiqadi)
+      const pg = await postgresFamilyBusy(checkIn);
+      if (pg.busy && pg.block) {
+        openModal(
+          `${t("familyNotAvailable") || "Bu xona band qilingan"} — ` +
+          `${fmtHuman(pg.block.start_date)} — ${fmtHuman(pg.block.end_date)}`
+        );
+        return; // to‘xtaymiz
+      }
+
+      // 3) Keyin Bnovo availability (hozirgi logikangizni saqladik)
       setChecking(true);
       try {
         await sleep(3000); // sun’iy kutish
-
-        // test uchun majburiy band rejimi
-        if (isForceFamilyBusy()) {
-          openModal(t("familyNotAvailable") || "Bu xona band qilingan");
-          return; // navigatsiyani to‘xtatamiz
-        }
 
         const nights = getNightsFromDuration(duration);
         const avail = await checkFamilyAvailability({ checkIn, nights });
@@ -149,7 +196,7 @@ const Header = () => {
       }
     }
 
-    // 3) STANDARD yoki FAMILY available:true bo‘lsa — davom
+    // 4) STANDARD yoki FAMILY (bo‘sh) — davom
     const formattedCheckOut = `${checkIn}T${checkOutTime}`;
     const bookingInfo = {
       checkIn,
