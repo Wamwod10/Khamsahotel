@@ -109,7 +109,7 @@ app.get("/api/checkins", async (req, res) => {
   }
 });
 
-// Sana bandmi? (yarim-ochiq [start,end)) — biz bir kunlik tekshiruvda faqat 'start'ni olamiz
+// Sana mavjud blokni topish (eski endpoint saqlanadi)
 app.get("/api/checkins/next-block", async (req, res) => {
   const { roomType = "", start = "" } = req.query;
   if (!roomType || !isISO(start)) return res.status(400).json({ ok: false, error: "roomType,start required YYYY-MM-DD" });
@@ -128,6 +128,38 @@ app.get("/api/checkins/next-block", async (req, res) => {
     `;
     const r = await pool.query(sql, [start, roomType]);
     res.json({ ok: true, block: r.rows[0] || null });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * 🔧 YANGI: Frontend mosligi uchun
+ * GET /api/checkins/day?start=YYYY-MM-DD&roomType=FAMILY
+ * => { ok, free: boolean, block: {...} | null }
+ */
+app.get("/api/checkins/day", async (req, res) => {
+  const { start = "", date = "", roomType = "" } = req.query;
+  const d = start || date; // har ikkala nomni qollab-quvvatlash
+  if (!roomType || !isISO(d)) return res.status(400).json({ ok: false, error: "roomType,start (YYYY-MM-DD) required" });
+
+  try {
+    const sql = `
+      WITH s AS (SELECT $1::date AS d)
+      SELECT k.id,
+             k.rooms,
+             k.check_in AS start_date,
+             COALESCE(k.check_out,(k.check_in + (COALESCE(k.duration,0) * INTERVAL '1 day')))::date AS end_date
+      FROM public.khamsachekin k, s
+      WHERE k.rooms = $2
+        AND k.check_in <= s.d
+        AND COALESCE(k.check_out,(k.check_in + (COALESCE(k.duration,0) * INTERVAL '1 day')))::date > s.d
+      ORDER BY k.check_in DESC
+      LIMIT 1;
+    `;
+    const r = await pool.query(sql, [d, roomType]);
+    const block = r.rows[0] || null;
+    res.json({ ok: true, free: !block, block });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
