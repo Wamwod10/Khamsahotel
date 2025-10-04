@@ -15,8 +15,13 @@ dotenv.config();
 /* ====== App & Config ====== */
 const app = express();
 const PORT = Number(process.env.PORT || 5004);
-const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/+$/, "");
-const FRONTEND_URL = (process.env.FRONTEND_URL || "https://khamsahotel.uz").replace(/\/+$/, "");
+const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(
+  /\/+$/,
+  ""
+);
+const FRONTEND_URL = (
+  process.env.FRONTEND_URL || "https://khamsahotel.uz"
+).replace(/\/+$/, "");
 const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
 
 const {
@@ -89,7 +94,8 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendEmail(to, subject, text) {
-  if (!EMAIL_USER || !EMAIL_PASS) throw new Error("email transport is not configured");
+  if (!EMAIL_USER || !EMAIL_PASS)
+    throw new Error("email transport is not configured");
   if (!to || !subject || !text) throw new Error("email: invalid payload");
   const info = await transporter.sendMail({
     from: `"Khamsa Hotel" <${EMAIL_USER}>`,
@@ -104,11 +110,14 @@ async function sendEmail(to, subject, text) {
 async function notifyTelegram(text) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
   try {
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
-    });
+    await fetch(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
+      }
+    );
   } catch (e) {
     console.error("Telegram error:", e);
   }
@@ -197,6 +206,105 @@ app.get("/db/health", async (_req, res) => {
   }
 });
 
+/* ====== Checkins helpers & schema ====== */
+const isISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
+const addDaysISO = (ymd, n) => {
+  const d = new Date(ymd);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+async function ensureSchema() {
+  // jadval bo‘lmasa yaratamiz
+  await pgPool.query(
+    `CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`
+  );
+
+  // kerakli ustunlarni bor/yo‘qligiga qarab qo‘shamiz
+  await pgPool.query(`
+  DO $$
+  DECLARE _t text := 'khamsachekin';
+  BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='created_at') THEN
+      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN created_at TIMESTAMPTZ DEFAULT now()';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='check_in') THEN
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name=_t AND column_name='start_at') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' RENAME COLUMN start_at TO check_in';
+      ELSE
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_in DATE';
+      END IF;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='check_out') THEN
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name=_t AND column_name='end_at') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' RENAME COLUMN end_at TO check_out';
+      ELSE
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_out DATE';
+      END IF;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='rooms') THEN
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name=_t AND column_name='room_type') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' RENAME COLUMN room_type TO rooms';
+      ELSE
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN rooms TEXT';
+      END IF;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='duration') THEN
+      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN duration INTEGER';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='check_in_time') THEN
+      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_in_time TEXT';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='price') THEN
+      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN price NUMERIC(12,2)';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='first_name') THEN
+      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN first_name TEXT';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='last_name') THEN
+      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN last_name TEXT';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='phone') THEN
+      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN phone TEXT';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='email') THEN
+      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN email TEXT';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes
+      WHERE schemaname='public' AND indexname='khamsachekin_time_idx') THEN
+      EXECUTE 'CREATE INDEX khamsachekin_time_idx ON public.'||_t||'(rooms, check_in, check_out)';
+    END IF;
+  END $$;`);
+}
+
+// server start bo‘lishidan oldin bir marta chaqiramiz
+ensureSchema().catch((e) => console.error("ensureSchema error:", e));
+
 /* =======================
  *  BNOVO ROUTES
  * ======================= */
@@ -205,7 +313,8 @@ app.get("/db/health", async (_req, res) => {
 app.get("/api/bnovo/availability", async (req, res) => {
   try {
     const { checkIn, nights = 1, roomType = "STANDARD" } = req.query || {};
-    if (!checkIn) return res.status(400).json({ ok: false, error: "checkIn required" });
+    if (!checkIn)
+      return res.status(400).json({ ok: false, error: "checkIn required" });
 
     const ci = String(checkIn).slice(0, 10);
     const n = Math.max(1, Number(nights || 1));
@@ -214,7 +323,9 @@ app.get("/api/bnovo/availability", async (req, res) => {
       return res.status(400).json({ ok: false, error: "checkIn invalid" });
     }
 
-    const checkOut = new Date(checkInDate.getTime() + n * 86400000).toISOString().slice(0, 10);
+    const checkOut = new Date(checkInDate.getTime() + n * 86400000)
+      .toISOString()
+      .slice(0, 10);
 
     // Bnovo
     const avail = await checkAvailability({
@@ -235,7 +346,9 @@ app.get("/api/bnovo/availability", async (req, res) => {
     });
   } catch (e) {
     console.error("/api/bnovo/availability error:", e);
-    res.status(500).json({ ok: false, available: false, error: "availability failed" });
+    res
+      .status(500)
+      .json({ ok: false, available: false, error: "availability failed" });
   }
 });
 
@@ -259,7 +372,9 @@ app.post("/create-payment", async (req, res) => {
 
     const amt = Number(amount);
     if (!Number.isFinite(amt) || amt <= 0 || !email) {
-      return res.status(400).json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
+      return res
+        .status(400)
+        .json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
     }
 
     const computeCheckOut = (checkInStr, durationStr) => {
@@ -333,7 +448,8 @@ app.post("/create-payment", async (req, res) => {
 
     console.error("Octo error:", { status: octoRes.status, data });
     const msg =
-      (data && (data.errMessage || data.message)) || `Octo error (status ${octoRes.status})`;
+      (data && (data.errMessage || data.message)) ||
+      `Octo error (status ${octoRes.status})`;
     return res.status(400).json({ error: msg });
   } catch (err) {
     console.error("❌ create-payment:", err);
@@ -364,7 +480,15 @@ app.post("/payment-callback", async (req, res) => {
     ].map((s) => String(s || "").toLowerCase());
     const isSuccess =
       statusFields.some((s) =>
-        ["ok", "success", "succeeded", "paid", "captured", "approved", "done"].includes(s)
+        [
+          "ok",
+          "success",
+          "succeeded",
+          "paid",
+          "captured",
+          "approved",
+          "done",
+        ].includes(s)
       ) ||
       body?.paid === true ||
       body?.error === 0 ||
@@ -392,11 +516,14 @@ app.post("/payment-callback", async (req, res) => {
     }
 
     if (!verifiedPayload) {
-      console.warn("⚠️ custom_data yo‘q yoki verify bo‘lmadi — pending store’dan izlaymiz");
+      console.warn(
+        "⚠️ custom_data yo‘q yoki verify bo‘lmadi — pending store’dan izlaymiz"
+      );
       const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
       if (stid) {
         verifiedPayload = popPending(stid);
-        if (!verifiedPayload) console.warn("⚠️ pending store’da ham topilmadi:", stid);
+        if (!verifiedPayload)
+          console.warn("⚠️ pending store’da ham topilmadi:", stid);
       } else {
         console.warn("⚠️ shop_transaction_id kelmadi");
       }
@@ -419,14 +546,22 @@ Bron:
 - Narx (EUR): ${verifiedPayload.priceEur}
 
 Bnovo push: ${
-        pushRes.pushed ? "✅ Pushed" : pushRes.ok ? "⚠️ Skipped (cheklov)" : "❌ Fail"
+        pushRes.pushed
+          ? "✅ Pushed"
+          : pushRes.ok
+          ? "⚠️ Skipped (cheklov)"
+          : "❌ Fail"
       }
 ${
   pushRes.ok
     ? pushRes.pushed
       ? ""
       : `Reason: ${pushRes.reason || ""}`
-    : `Reason: ${JSON.stringify(pushRes.error || pushRes.status || pushRes.data || {}, null, 2)}`
+    : `Reason: ${JSON.stringify(
+        pushRes.error || pushRes.status || pushRes.data || {},
+        null,
+        2
+      )}`
 }
       `.trim();
 
@@ -470,7 +605,9 @@ app.post("/api/bookings", async (req, res) => {
     } = req.body || {};
 
     if (!checkIn || !checkOutTime || !rooms || !firstName || !email) {
-      return res.status(400).json({ error: "Kerakli ma'lumotlar yetarli emas" });
+      return res
+        .status(400)
+        .json({ error: "Kerakli ma'lumotlar yetarli emas" });
     }
 
     const getCheckoutDate = (checkInStr, durationStr) => {
@@ -526,10 +663,160 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: "Internal Server Error" });
 });
 
+/* ====== CHECKINS ROUTES (frontend chaqiradi) ====== */
+
+/** Ro‘yxat */
+app.get("/api/checkins", async (req, res) => {
+  const { roomType = "", limit = "300" } = req.query;
+  try {
+    const params = [];
+    const where = [];
+    if (roomType) {
+      params.push(roomType);
+      where.push(`rooms = $${params.length}`);
+    }
+    params.push(+limit || 300);
+    const sql = `
+      SELECT id, rooms,
+            check_in, check_out, duration, price,
+            first_name, last_name, phone, email,
+            check_in_time, created_at
+      FROM public.khamsachekin
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY check_in ASC
+      LIMIT $${params.length};`;
+    const r = await pgPool.query(sql, params);
+    res.json({ ok: true, items: r.rows });
+  } catch (e) {
+    console.error("LIST ERR:", e.stack || e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/** Kun bandmi? (modal tekshiruvchi) */
+app.get("/api/checkins/day", async (req, res) => {
+  const { start = "", date = "", roomType = "" } = req.query;
+  const d = start || date;
+  if (!roomType || !isISO(d))
+    return res
+      .status(400)
+      .json({ ok: false, error: "roomType,start YYYY-MM-DD" });
+  try {
+    const r = await pgPool.query(
+      `
+      WITH s AS (SELECT $1::date AS d)
+      SELECT k.id, k.rooms,
+            k.check_in AS start_date,
+            COALESCE(
+              k.check_out,
+              (k.check_in + (COALESCE(k.duration,0) * INTERVAL '1 day'))
+            )::date AS end_date
+      FROM public.khamsachekin k, s
+      WHERE k.rooms = $2
+        AND k.check_in <= s.d
+        AND COALESCE(k.check_out,(k.check_in + (COALESCE(k.duration,0) * INTERVAL '1 day')))::date > s.d
+      ORDER BY k.check_in DESC
+      LIMIT 1;`,
+      [d, roomType]
+    );
+    res.json({ ok: true, free: !r.rows[0], block: r.rows[0] || null });
+  } catch (e) {
+    console.error("DAY ERR:", e.stack || e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/** Range overlap tekshiruv */
+app.get("/api/checkins/range/check", async (req, res) => {
+  const { roomType = "", start = "", end = "" } = req.query;
+  if (!roomType || !isISO(start) || !isISO(end))
+    return res
+      .status(400)
+      .json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
+  try {
+    const r = await pgPool.query(
+      `
+      SELECT id, rooms, check_in AS start_date, check_out AS end_date
+      FROM public.khamsachekin
+      WHERE rooms = $1
+        AND check_in < $3::date
+        AND check_out > $2::date
+      ORDER BY check_in ASC
+      LIMIT 1;`,
+      [roomType, start, end]
+    );
+    res.json({ ok: true, conflict: !!r.rows[0], block: r.rows[0] || null });
+  } catch (e) {
+    console.error("RANGE CHECK ERR:", e.stack || e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/** Range insert [start, end) — frontenddagi “Save” tugmasi shu yerga POST qiladi */
+app.post("/api/checkins/range", async (req, res) => {
+  const { roomType, start, end, note } = req.body || {};
+  if (!roomType || !isISO(start) || !isISO(end))
+    return res
+      .status(400)
+      .json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
+  try {
+    const q = await pgPool.query(
+      `
+      SELECT 1 FROM public.khamsachekin
+      WHERE rooms=$1 AND check_in < $3::date AND check_out > $2::date
+      LIMIT 1;`,
+      [roomType, start, end]
+    );
+    if (q.rowCount) return res.status(409).json({ ok: false, error: "BUSY" });
+
+    const r = await pgPool.query(
+      `
+      INSERT INTO public.khamsachekin (check_in, check_out, rooms, duration, check_in_time)
+      VALUES ($1::date, $2::date, $3, GREATEST(1, ($2::date - $1::date)), $4)
+      RETURNING id, check_in, check_out, rooms, duration;`,
+      [start, end, roomType, note || null]
+    );
+    res.status(201).json({ ok: true, item: r.rows[0] });
+  } catch (e) {
+    console.error("RANGE INSERT ERR:", e.stack || e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/** Header.jsx uchun: berilgan kundan boshlab mos eng yaqin blok */
+app.get("/api/checkins/next-block", async (req, res) => {
+  const { roomType = "", start = "" } = req.query;
+  if (!roomType || !isISO(start))
+    return res
+      .status(400)
+      .json({ ok: false, error: "roomType,start YYYY-MM-DD" });
+  try {
+    const r = await pgPool.query(
+      `
+      SELECT id, rooms,
+            check_in  AS start_date,
+            check_out AS end_date
+      FROM public.khamsachekin
+      WHERE rooms = $1
+        AND check_in <= $2::date
+        AND check_out >  $2::date
+      ORDER BY check_in DESC
+      LIMIT 1;`,
+      [roomType, start]
+    );
+    res.json({ ok: true, block: r.rows[0] || null });
+  } catch (e) {
+    console.error("NEXT-BLOCK ERR:", e.stack || e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 /* ====== Start ====== */
 app.listen(PORT, () => {
   console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
-    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${process.env.BNOVO_AUTH_URL} id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD}`
+    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
+      process.env.BNOVO_AUTH_URL
+    } id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD}`
   );
 });
