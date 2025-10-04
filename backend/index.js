@@ -1,14 +1,12 @@
-// index.js — Khamsa backend (Express + Bnovo + Octo)
+// backend/index.js — Khamsa backend (Express + Bnovo + Octo + Postgres)
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
-import { checkAvailability, createBookingInBnovo } from "./bnovo.js";
-
-/* === Qo'shildi: Postgres === */
 import { Pool } from "pg";
+import { checkAvailability, createBookingInBnovo } from "./bnovo.js";
 
 dotenv.config();
 
@@ -31,18 +29,16 @@ const {
   EMAIL_PASS,
   TELEGRAM_BOT_TOKEN,
   TELEGRAM_CHAT_ID,
+  ADMIN_EMAIL = "shamshodochilov160@gmail.com",
 } = process.env;
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "shamshodochilov160@gmail.com";
 
 const missing = [];
 if (!OCTO_SHOP_ID) missing.push("OCTO_SHOP_ID");
 if (!OCTO_SECRET) missing.push("OCTO_SECRET");
 if (!EMAIL_USER) missing.push("EMAIL_USER");
 if (!EMAIL_PASS) missing.push("EMAIL_PASS");
-if (missing.length) {
+if (missing.length)
   console.warn("⚠️ .env dagi quyidagi maydonlar yo'q:", missing.join(", "));
-}
 
 app.set("trust proxy", 1);
 
@@ -57,8 +53,7 @@ const ALLOWED_ORIGINS = [
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin) return cb(null, true);
-      if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
       console.warn("CORS block:", origin);
       return cb(new Error("Not allowed by CORS"));
     },
@@ -69,20 +64,20 @@ app.use(
 );
 app.options("*", cors());
 
-/* ====== Body parsers ====== */
+/* ====== Parsers ====== */
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(express.text({ type: ["text/*"], limit: "512kb" }));
 
-/* ====== Health ====== */
-app.get("/", (_req, res) => {
+/* ====== Health (basic) ====== */
+app.get("/", (_req, res) =>
   res.json({
     ok: true,
     name: "Khamsa backend",
     time: new Date().toISOString(),
     port: PORT,
-  });
-});
+  })
+);
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
 /* ====== Email ====== */
@@ -92,18 +87,16 @@ const transporter = nodemailer.createTransport({
   secure: true,
   auth: { user: EMAIL_USER, pass: EMAIL_PASS },
 });
-
 async function sendEmail(to, subject, text) {
   if (!EMAIL_USER || !EMAIL_PASS)
     throw new Error("email transport is not configured");
   if (!to || !subject || !text) throw new Error("email: invalid payload");
-  const info = await transporter.sendMail({
+  return transporter.sendMail({
     from: `"Khamsa Hotel" <${EMAIL_USER}>`,
     to,
     subject,
     text,
   });
-  return info;
 }
 
 /* ====== Telegram ====== */
@@ -123,7 +116,7 @@ async function notifyTelegram(text) {
   }
 }
 
-/* ====== Utils ====== */
+/* ====== Helpers ====== */
 async function safeParseResponse(res) {
   const ct = (res.headers.get("content-type") || "").toLowerCase();
   if (ct.includes("application/json")) return res.json();
@@ -134,16 +127,17 @@ async function safeParseResponse(res) {
     return { _raw: txt };
   }
 }
-
 const SIGN_SECRET = crypto
   .createHash("sha256")
   .update(String(process.env.OCTO_SECRET || "octo"))
   .digest();
-
 function signData(obj) {
   const json = JSON.stringify(obj);
-  const h = crypto.createHmac("sha256", SIGN_SECRET).update(json).digest("hex");
-  return { json, sig: h };
+  const sig = crypto
+    .createHmac("sha256", SIGN_SECRET)
+    .update(json)
+    .digest("hex");
+  return { json, sig };
 }
 function verifyData(json, sig) {
   const h = crypto.createHmac("sha256", SIGN_SECRET).update(json).digest("hex");
@@ -154,49 +148,39 @@ function verifyData(json, sig) {
   }
 }
 
-/* ====== Pending store (server-side) ====== */
+/* ====== Pending store (Octo) ====== */
 const PENDING = new Map(); // key: shop_transaction_id
-function savePending(id, payload) {
+const savePending = (id, payload) =>
   PENDING.set(String(id), { payload, ts: Date.now() });
-}
-function popPending(id) {
-  const rec = PENDING.get(String(id));
-  if (rec) PENDING.delete(String(id));
-  return rec?.payload || null;
-}
+const popPending = (id) => {
+  const r = PENDING.get(String(id));
+  if (r) PENDING.delete(String(id));
+  return r?.payload || null;
+};
 setInterval(() => {
   const now = Date.now();
-  for (const [k, v] of PENDING.entries()) {
-    if (now - (v?.ts || 0) > 24 * 60 * 60 * 1000) PENDING.delete(k);
-  }
-}, 60 * 60 * 1000);
+  for (const [k, v] of PENDING)
+    if (now - (v?.ts || 0) > 86400000) PENDING.delete(k);
+}, 3600000);
 
 /* =========================================================
- *  Qo'shildi: Postgres ulanishi + /db/health endpoint (ESM)
+ *  Postgres (ESM) + /db/health
  * ========================================================= */
-const PGHOST = process.env.PGHOST || "";
-const PGPORT = Number(process.env.PGPORT || 5432);
-const PGDATABASE = process.env.PGDATABASE || "";
-const PGUSER = process.env.PGUSER || "";
-const PGPASSWORD = process.env.PGPASSWORD || "";
-const PGSSLMODE = String(process.env.PGSSLMODE || "disable").toLowerCase();
-
 const pgPool = new Pool({
-  host: PGHOST,
-  port: PGPORT,
-  database: PGDATABASE,
-  user: PGUSER,
-  password: PGPASSWORD,
-  ssl: PGSSLMODE === "require" ? { rejectUnauthorized: false } : undefined,
+  host: process.env.PGHOST || "",
+  port: Number(process.env.PGPORT || 5432),
+  database: process.env.PGDATABASE || "",
+  user: process.env.PGUSER || "",
+  password: process.env.PGPASSWORD || "",
+  ssl:
+    String(process.env.PGSSLMODE || "disable").toLowerCase() === "require"
+      ? { rejectUnauthorized: false }
+      : undefined,
 });
-
-// ishga tushganda ulanish logi
 pgPool
   .query("SELECT now() AS now")
   .then((r) => console.log("[DB] connected:", r.rows[0].now))
   .catch((e) => console.error("[DB] connect error:", e.message));
-
-// DB health
 app.get("/db/health", async (_req, res) => {
   try {
     const r = await pgPool.query("SELECT 1 AS ok");
@@ -206,135 +190,89 @@ app.get("/db/health", async (_req, res) => {
   }
 });
 
-/* ====== Checkins helpers & schema ====== */
+/* ====== DB schema ensure (khamsachekin) ====== */
 const isISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
-const addDaysISO = (ymd, n) => {
-  const d = new Date(ymd);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-};
-
 async function ensureSchema() {
-  // jadval bo‘lmasa yaratamiz
   await pgPool.query(
     `CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`
   );
-
-  // kerakli ustunlarni bor/yo‘qligiga qarab qo‘shamiz
   await pgPool.query(`
-  DO $$
-  DECLARE _t text := 'khamsachekin';
-  BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='created_at') THEN
-      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN created_at TIMESTAMPTZ DEFAULT now()';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='check_in') THEN
-      IF EXISTS (SELECT 1 FROM information_schema.columns
-        WHERE table_schema='public' AND table_name=_t AND column_name='start_at') THEN
-        EXECUTE 'ALTER TABLE public.'||_t||' RENAME COLUMN start_at TO check_in';
-      ELSE
-        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_in DATE';
+    DO $$
+    DECLARE _t text := 'khamsachekin';
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='created_at') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN created_at TIMESTAMPTZ DEFAULT now()';
       END IF;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='check_out') THEN
-      IF EXISTS (SELECT 1 FROM information_schema.columns
-        WHERE table_schema='public' AND table_name=_t AND column_name='end_at') THEN
-        EXECUTE 'ALTER TABLE public.'||_t||' RENAME COLUMN end_at TO check_out';
-      ELSE
-        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_out DATE';
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='check_in') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='start_at') THEN
+          EXECUTE 'ALTER TABLE public.'||_t||' RENAME COLUMN start_at TO check_in';
+        ELSE
+          EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_in DATE';
+        END IF;
       END IF;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='rooms') THEN
-      IF EXISTS (SELECT 1 FROM information_schema.columns
-        WHERE table_schema='public' AND table_name=_t AND column_name='room_type') THEN
-        EXECUTE 'ALTER TABLE public.'||_t||' RENAME COLUMN room_type TO rooms';
-      ELSE
-        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN rooms TEXT';
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='check_out') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='end_at') THEN
+          EXECUTE 'ALTER TABLE public.'||_t||' RENAME COLUMN end_at TO check_out';
+        ELSE
+          EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_out DATE';
+        END IF;
       END IF;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='duration') THEN
-      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN duration INTEGER';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='check_in_time') THEN
-      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_in_time TEXT';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='price') THEN
-      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN price NUMERIC(12,2)';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='first_name') THEN
-      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN first_name TEXT';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='last_name') THEN
-      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN last_name TEXT';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='phone') THEN
-      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN phone TEXT';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-      WHERE table_schema='public' AND table_name=_t AND column_name='email') THEN
-      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN email TEXT';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes
-      WHERE schemaname='public' AND indexname='khamsachekin_time_idx') THEN
-      EXECUTE 'CREATE INDEX khamsachekin_time_idx ON public.'||_t||'(rooms, check_in, check_out)';
-    END IF;
-  END $$;`);
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='rooms') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='room_type') THEN
+          EXECUTE 'ALTER TABLE public.'||_t||' RENAME COLUMN room_type TO rooms';
+        ELSE
+          EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN rooms TEXT';
+        END IF;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='duration') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN duration INTEGER';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='check_in_time') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_in_time TEXT';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='price') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN price NUMERIC(12,2)';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='first_name') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN first_name TEXT';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='last_name') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN last_name TEXT';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='phone') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN phone TEXT';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='email') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN email TEXT';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='khamsachekin_time_idx') THEN
+        EXECUTE 'CREATE INDEX khamsachekin_time_idx ON public.'||_t||'(rooms, check_in, check_out)';
+      END IF;
+    END $$;`);
 }
-
-// server start bo‘lishidan oldin bir marta chaqiramiz
 ensureSchema().catch((e) => console.error("ensureSchema error:", e));
 
 /* =======================
  *  BNOVO ROUTES
  * ======================= */
-
-/** GET /api/bnovo/availability?checkIn=YYYY-MM-DD&nights=1&roomType=STANDARD|FAMILY */
 app.get("/api/bnovo/availability", async (req, res) => {
   try {
     const { checkIn, nights = 1, roomType = "STANDARD" } = req.query || {};
     if (!checkIn)
       return res.status(400).json({ ok: false, error: "checkIn required" });
-
     const ci = String(checkIn).slice(0, 10);
     const n = Math.max(1, Number(nights || 1));
     const checkInDate = new Date(ci + "T00:00:00Z");
-    if (Number.isNaN(checkInDate.getTime())) {
+    if (Number.isNaN(checkInDate.getTime()))
       return res.status(400).json({ ok: false, error: "checkIn invalid" });
-    }
-
     const checkOut = new Date(checkInDate.getTime() + n * 86400000)
       .toISOString()
       .slice(0, 10);
-
-    // Bnovo
     const avail = await checkAvailability({
       checkIn: ci,
       checkOut,
       roomType: String(roomType).toUpperCase(),
     });
-
-    // Frontend uchun soddalashtirilgan, ammo to‘liq javob
     return res.json({
       ok: Boolean(avail?.ok),
       roomType: String(avail?.roomType || roomType).toUpperCase(),
@@ -355,27 +293,21 @@ app.get("/api/bnovo/availability", async (req, res) => {
 /* =======================
  *  PAYMENTS (Octo)
  * ======================= */
-
-// Create payment
 app.post("/create-payment", async (req, res) => {
   try {
-    if (!OCTO_SHOP_ID || !OCTO_SECRET) {
+    if (!OCTO_SHOP_ID || !OCTO_SECRET)
       return res.status(500).json({ error: "Payment sozlanmagan (env yo'q)" });
-    }
-
     const {
-      amount, // EUR
+      amount,
       description = "Mehmonxona to'lovi",
       email,
-      booking = {}, // {checkIn, duration, rooms, guests, firstName, lastName, phone, email, price}
+      booking = {},
     } = req.body || {};
-
     const amt = Number(amount);
-    if (!Number.isFinite(amt) || amt <= 0 || !email) {
+    if (!Number.isFinite(amt) || amt <= 0 || !email)
       return res
         .status(400)
         .json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
-    }
 
     const computeCheckOut = (checkInStr, durationStr) => {
       const d = new Date(checkInStr);
@@ -392,7 +324,7 @@ app.post("/create-payment", async (req, res) => {
       checkIn: booking.checkIn,
       checkOut,
       duration: booking.duration,
-      roomType: booking.rooms, // "STANDARD" | "FAMILY"
+      roomType: booking.rooms,
       guests: booking.guests,
       firstName: booking.firstName,
       lastName: booking.lastName,
@@ -429,7 +361,6 @@ app.post("/create-payment", async (req, res) => {
 
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 20000);
-
     const octoRes = await fetch("https://secure.octo.uz/prepare_payment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -441,10 +372,8 @@ app.post("/create-payment", async (req, res) => {
     clearTimeout(t);
 
     const data = await safeParseResponse(octoRes);
-
-    if (octoRes.ok && data?.error === 0 && data?.data?.octo_pay_url) {
+    if (octoRes.ok && data?.error === 0 && data?.data?.octo_pay_url)
       return res.json({ paymentUrl: data.data.octo_pay_url });
-    }
 
     console.error("Octo error:", { status: octoRes.status, data });
     const msg =
@@ -457,7 +386,6 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// Octo notify (SUCCESS → optional Bnovo push)
 app.post("/payment-callback", async (req, res) => {
   try {
     const body =
@@ -502,11 +430,11 @@ app.post("/payment-callback", async (req, res) => {
           custom = JSON.parse(custom);
         } catch {}
       }
-      const json = custom?.booking_json;
-      const sig = custom?.booking_sig;
-      if (json && sig && verifyData(json, sig)) {
+      const json = custom?.booking_json,
+        sig = custom?.booking_sig;
+      if (json && sig && verifyData(json, sig))
         verifiedPayload = JSON.parse(json);
-      } else if (json && !sig) {
+      else if (json && !sig) {
         try {
           verifiedPayload = JSON.parse(json);
         } catch {}
@@ -516,25 +444,14 @@ app.post("/payment-callback", async (req, res) => {
     }
 
     if (!verifiedPayload) {
-      console.warn(
-        "⚠️ custom_data yo‘q yoki verify bo‘lmadi — pending store’dan izlaymiz"
-      );
       const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
-      if (stid) {
-        verifiedPayload = popPending(stid);
-        if (!verifiedPayload)
-          console.warn("⚠️ pending store’da ham topilmadi:", stid);
-      } else {
-        console.warn("⚠️ shop_transaction_id kelmadi");
-      }
+      if (stid) verifiedPayload = popPending(stid);
     }
 
     if (isSuccess && verifiedPayload) {
       const pushRes = await createBookingInBnovo(verifiedPayload);
-
       const human = `
 To'lov muvaffaqiyatli.
-
 Bron:
 - Ism: ${verifiedPayload.firstName} ${verifiedPayload.lastName || ""}
 - Tel: ${verifiedPayload.phone || "-"}
@@ -544,7 +461,6 @@ Bron:
 - Check-out: ${verifiedPayload.checkOut}
 - Mehmonlar: ${verifiedPayload.guests || 1}
 - Narx (EUR): ${verifiedPayload.priceEur}
-
 Bnovo push: ${
         pushRes.pushed
           ? "✅ Pushed"
@@ -564,21 +480,16 @@ ${
       )}`
 }
       `.trim();
-
       try {
         await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human);
       } catch {}
       try {
         await notifyTelegram(human);
       } catch {}
-
       return res.json({ ok: true });
     }
 
-    console.warn("⚠️ Payment not success yoki payload topilmadi:", {
-      statusFields,
-      paid: body?.paid,
-    });
+    console.warn("⚠️ Payment not success yoki payload topilmadi");
     return res.json({ ok: true }); // Octo qayta urmasin
   } catch (e) {
     console.error("❌ /payment-callback:", e);
@@ -587,77 +498,8 @@ ${
 });
 
 /* =======================
- *  Legacy booking notify
+ *  CHECKINS (DB) — frontend chaqiradi
  * ======================= */
-app.post("/api/bookings", async (req, res) => {
-  try {
-    const {
-      checkIn,
-      checkOutTime,
-      duration,
-      rooms,
-      guests,
-      firstName,
-      lastName,
-      phone,
-      email,
-      price,
-    } = req.body || {};
-
-    if (!checkIn || !checkOutTime || !rooms || !firstName || !email) {
-      return res
-        .status(400)
-        .json({ error: "Kerakli ma'lumotlar yetarli emas" });
-    }
-
-    const getCheckoutDate = (checkInStr, durationStr) => {
-      const d = new Date(checkInStr);
-      if (durationStr?.includes("3")) d.setHours(d.getHours() + 3);
-      else if (durationStr?.includes("10")) d.setHours(d.getHours() + 10);
-      else d.setDate(d.getDate() + 1);
-      return d.toISOString().split("T")[0];
-    };
-
-    const checkOut = getCheckoutDate(checkIn, duration);
-    const createdAt = new Date().toISOString();
-
-    const emailSubject = "Yangi bron qilish haqida xabar";
-    const emailText = `
-Yangi bron qabul qilindi:
-
-👤 Ism: ${firstName} ${lastName || ""}
-📞 Telefon: ${phone || "Noma'lum"}
-📧 Email: ${email}
-
-📅 Kirish sana: ${checkIn}
-📆 Chiqish sana: ${checkOut}
-🛏️ Xona turi: ${rooms}
-👥 Mehmonlar soni: ${guests || "Noma'lum"}
-💶 Narx: ${price} EUR
-🕓 Bron vaqti: ${createdAt}
-
-🌐 Sayt: ${FRONTEND_URL}
-`.trim();
-
-    try {
-      await sendEmail(ADMIN_EMAIL, emailSubject, emailText);
-    } catch {}
-
-    res.json({
-      success: true,
-      message: "Bron muvaffaqiyatli tarzda yuborildi",
-      createdAt,
-    });
-  } catch (error) {
-    console.error("❌ /api/bookings:", error);
-    res.status(500).json({ error: "Bron qilishda server xatosi" });
-  }
-});
-
-/* ====== CHECKINS (DB) ====== */
-const isISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
-
-// Ro'yxat
 app.get("/api/checkins", async (req, res) => {
   const { roomType = "", limit = "300" } = req.query;
   try {
@@ -682,7 +524,6 @@ app.get("/api/checkins", async (req, res) => {
   }
 });
 
-// Kun bandmi?
 app.get("/api/checkins/day", async (req, res) => {
   const { start = "", date = "", roomType = "" } = req.query;
   const d = start || date;
@@ -710,134 +551,6 @@ app.get("/api/checkins/day", async (req, res) => {
   }
 });
 
-// Interval overlap tekshiruv — ikkala path ham ishlaydi
-app.get(
-  ["/api/checkins/range/check", "/api/checkins/range"],
-  async (req, res) => {
-    const { roomType = "", start = "", end = "" } = req.query;
-    if (!roomType || !isISO(start) || !isISO(end))
-      return res
-        .status(400)
-        .json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
-    try {
-      const r = await pgPool.query(
-        `
-      SELECT id, rooms, check_in AS start_date, check_out AS end_date
-      FROM public.khamsachekin
-      WHERE rooms=$1 AND check_in < $3::date AND check_out > $2::date
-      ORDER BY check_in ASC LIMIT 1;`,
-        [roomType, start, end]
-      );
-      res.json({ ok: true, conflict: !!r.rows[0], block: r.rows[0] || null });
-    } catch (e) {
-      res.status(500).json({ ok: false, error: e.message });
-    }
-  }
-);
-
-// Interval insert [start, end)
-app.post("/api/checkins/range", async (req, res) => {
-  const { roomType, start, end, note } = req.body || {};
-  if (!roomType || !isISO(start) || !isISO(end))
-    return res
-      .status(400)
-      .json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
-  try {
-    const q = await pgPool.query(
-      `
-      SELECT 1 FROM public.khamsachekin
-      WHERE rooms=$1 AND check_in < $3::date AND check_out > $2::date
-      LIMIT 1;`,
-      [roomType, start, end]
-    );
-    if (q.rowCount) return res.status(409).json({ ok: false, error: "BUSY" });
-
-    const ins = await pgPool.query(
-      `
-      INSERT INTO public.khamsachekin (check_in, check_out, rooms, duration, check_in_time)
-      VALUES ($1::date, $2::date, $3, GREATEST(1, ($2::date - $1::date)), $4)
-      RETURNING id, check_in, check_out, rooms, duration;`,
-      [start, end, roomType, note || null]
-    );
-    res.status(201).json({ ok: true, item: ins.rows[0] });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-
-/* ====== 404 & error handlers ====== */
-app.use((req, res) => {
-  res.status(404).json({ error: "Not Found", path: req.path });
-});
-app.use((err, req, res, _next) => {
-  console.error("Unhandled error:", err);
-  res.status(500).json({ error: "Internal Server Error" });
-});
-
-/* ====== CHECKINS ROUTES (frontend chaqiradi) ====== */
-
-/** Ro‘yxat */
-app.get("/api/checkins", async (req, res) => {
-  const { roomType = "", limit = "300" } = req.query;
-  try {
-    const params = [];
-    const where = [];
-    if (roomType) {
-      params.push(roomType);
-      where.push(`rooms = $${params.length}`);
-    }
-    params.push(+limit || 300);
-    const sql = `
-      SELECT id, rooms,
-            check_in, check_out, duration, price,
-            first_name, last_name, phone, email,
-            check_in_time, created_at
-      FROM public.khamsachekin
-      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-      ORDER BY check_in ASC
-      LIMIT $${params.length};`;
-    const r = await pgPool.query(sql, params);
-    res.json({ ok: true, items: r.rows });
-  } catch (e) {
-    console.error("LIST ERR:", e.stack || e.message);
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-
-/** Kun bandmi? (modal tekshiruvchi) */
-app.get("/api/checkins/day", async (req, res) => {
-  const { start = "", date = "", roomType = "" } = req.query;
-  const d = start || date;
-  if (!roomType || !isISO(d))
-    return res
-      .status(400)
-      .json({ ok: false, error: "roomType,start YYYY-MM-DD" });
-  try {
-    const r = await pgPool.query(
-      `
-      WITH s AS (SELECT $1::date AS d)
-      SELECT k.id, k.rooms,
-            k.check_in AS start_date,
-            COALESCE(
-              k.check_out,
-              (k.check_in + (COALESCE(k.duration,0) * INTERVAL '1 day'))
-            )::date AS end_date
-      FROM public.khamsachekin k, s
-      WHERE k.rooms = $2
-        AND k.check_in <= s.d
-        AND COALESCE(k.check_out,(k.check_in + (COALESCE(k.duration,0) * INTERVAL '1 day')))::date > s.d
-      ORDER BY k.check_in DESC
-      LIMIT 1;`,
-      [d, roomType]
-    );
-    res.json({ ok: true, free: !r.rows[0], block: r.rows[0] || null });
-  } catch (e) {
-    console.error("DAY ERR:", e.stack || e.message);
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-
-/** Range overlap tekshiruv */
 app.get("/api/checkins/range/check", async (req, res) => {
   const { roomType = "", start = "", end = "" } = req.query;
   if (!roomType || !isISO(start) || !isISO(end))
@@ -858,12 +571,10 @@ app.get("/api/checkins/range/check", async (req, res) => {
     );
     res.json({ ok: true, conflict: !!r.rows[0], block: r.rows[0] || null });
   } catch (e) {
-    console.error("RANGE CHECK ERR:", e.stack || e.message);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
 
-/** Range insert [start, end) — frontenddagi “Save” tugmasi shu yerga POST qiladi */
 app.post("/api/checkins/range", async (req, res) => {
   const { roomType, start, end, note } = req.body || {};
   if (!roomType || !isISO(start) || !isISO(end))
@@ -889,12 +600,10 @@ app.post("/api/checkins/range", async (req, res) => {
     );
     res.status(201).json({ ok: true, item: r.rows[0] });
   } catch (e) {
-    console.error("RANGE INSERT ERR:", e.stack || e.message);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
 
-/** Header.jsx uchun: berilgan kundan boshlab mos eng yaqin blok */
 app.get("/api/checkins/next-block", async (req, res) => {
   const { roomType = "", start = "" } = req.query;
   if (!roomType || !isISO(start))
@@ -917,9 +626,17 @@ app.get("/api/checkins/next-block", async (req, res) => {
     );
     res.json({ ok: true, block: r.rows[0] || null });
   } catch (e) {
-    console.error("NEXT-BLOCK ERR:", e.stack || e.message);
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+/* ====== 404 & error handlers (ENG PASTDA!) ====== */
+app.use((req, res) =>
+  res.status(404).json({ error: "Not Found", path: req.path })
+);
+app.use((err, req, res, _next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal Server Error" });
 });
 
 /* ====== Start ====== */
