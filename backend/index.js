@@ -654,6 +654,117 @@ Yangi bron qabul qilindi:
   }
 });
 
+/* ====== CHECKINS (DB) ====== */
+const isISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
+
+// Ro'yxat
+app.get("/api/checkins", async (req, res) => {
+  const { roomType = "", limit = "300" } = req.query;
+  try {
+    const params = [];
+    const where = [];
+    if (roomType) {
+      params.push(roomType);
+      where.push(`rooms = $${params.length}`);
+    }
+    params.push(+limit || 300);
+    const sql = `
+      SELECT id, rooms, check_in, check_out, duration, price,
+             first_name, last_name, phone, email, check_in_time, created_at
+      FROM public.khamsachekin
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY check_in ASC
+      LIMIT $${params.length};`;
+    const r = await pgPool.query(sql, params);
+    res.json({ ok: true, items: r.rows });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Kun bandmi?
+app.get("/api/checkins/day", async (req, res) => {
+  const { start = "", date = "", roomType = "" } = req.query;
+  const d = start || date;
+  if (!roomType || !isISO(d))
+    return res
+      .status(400)
+      .json({ ok: false, error: "roomType,start YYYY-MM-DD" });
+  try {
+    const r = await pgPool.query(
+      `
+      WITH s AS (SELECT $1::date AS d)
+      SELECT k.id, k.rooms,
+             k.check_in AS start_date,
+             COALESCE(k.check_out,(k.check_in + (COALESCE(k.duration,0) * INTERVAL '1 day')))::date AS end_date
+      FROM public.khamsachekin k, s
+      WHERE k.rooms=$2 AND k.check_in<=s.d
+        AND COALESCE(k.check_out,(k.check_in + (COALESCE(k.duration,0) * INTERVAL '1 day')))::date > s.d
+      ORDER BY k.check_in DESC
+      LIMIT 1;`,
+      [d, roomType]
+    );
+    res.json({ ok: true, free: !r.rows[0], block: r.rows[0] || null });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Interval overlap tekshiruv — ikkala path ham ishlaydi
+app.get(
+  ["/api/checkins/range/check", "/api/checkins/range"],
+  async (req, res) => {
+    const { roomType = "", start = "", end = "" } = req.query;
+    if (!roomType || !isISO(start) || !isISO(end))
+      return res
+        .status(400)
+        .json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
+    try {
+      const r = await pgPool.query(
+        `
+      SELECT id, rooms, check_in AS start_date, check_out AS end_date
+      FROM public.khamsachekin
+      WHERE rooms=$1 AND check_in < $3::date AND check_out > $2::date
+      ORDER BY check_in ASC LIMIT 1;`,
+        [roomType, start, end]
+      );
+      res.json({ ok: true, conflict: !!r.rows[0], block: r.rows[0] || null });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  }
+);
+
+// Interval insert [start, end)
+app.post("/api/checkins/range", async (req, res) => {
+  const { roomType, start, end, note } = req.body || {};
+  if (!roomType || !isISO(start) || !isISO(end))
+    return res
+      .status(400)
+      .json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
+  try {
+    const q = await pgPool.query(
+      `
+      SELECT 1 FROM public.khamsachekin
+      WHERE rooms=$1 AND check_in < $3::date AND check_out > $2::date
+      LIMIT 1;`,
+      [roomType, start, end]
+    );
+    if (q.rowCount) return res.status(409).json({ ok: false, error: "BUSY" });
+
+    const ins = await pgPool.query(
+      `
+      INSERT INTO public.khamsachekin (check_in, check_out, rooms, duration, check_in_time)
+      VALUES ($1::date, $2::date, $3, GREATEST(1, ($2::date - $1::date)), $4)
+      RETURNING id, check_in, check_out, rooms, duration;`,
+      [start, end, roomType, note || null]
+    );
+    res.status(201).json({ ok: true, item: ins.rows[0] });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 /* ====== 404 & error handlers ====== */
 app.use((req, res) => {
   res.status(404).json({ error: "Not Found", path: req.path });
