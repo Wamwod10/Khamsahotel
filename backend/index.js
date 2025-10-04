@@ -11,7 +11,7 @@ dotenv.config();
 
 /* ====== App & Config ====== */
 const app = express();
-const PORT = Number(process.env.PORT || 5002);
+const PORT = Number(process.env.PORT || 5004);
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/+$/, "");
 const FRONTEND_URL = (process.env.FRONTEND_URL || "https://khamsahotel.uz").replace(/\/+$/, "");
 const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
