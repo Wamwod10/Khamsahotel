@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "./header.scss";
 import "./headerMedia.scss";
 import { FaWifi, FaChevronDown } from "react-icons/fa";
@@ -13,67 +13,49 @@ import { RiDrinks2Fill } from "react-icons/ri";
 
 /* ===== Helpers ===== */
 function getApiBase() {
-
-  const isLocal = typeof window !== "undefined" && (
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1"
-  );
-  if (isLocal) return "http://localhost:5002";
+  // DEV: pgAdmin.cjs 5004
+  const isLocal =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+  if (isLocal) return "http://127.0.0.1:5004";
 
   const env =
     (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
-    (process.env && process.env.REACT_APP_API_BASE_URL) ||
+    (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||
     "";
-  const cleaned = (env || "").replace(/\/+$/, "");
-  return cleaned || window.location.origin;
+  const cleaned = String(env || "").replace(/\/+$/, "");
+  return cleaned || (typeof window !== "undefined" ? window.location.origin : "");
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Sana ko‘rinishi: YYYY-MM-DD -> DD.MM.YYYY
 function fmtHuman(ymd) {
   if (!ymd) return "-";
   const [y, m, d] = String(ymd).split("-");
   return `${d}.${m}.${y}`;
 }
-
-// URL orqali test: ?forceFamilyBusy=1 => majburan band deb ko‘rsatadi
 const isForceFamilyBusy = () => {
   try {
     const sp = new URLSearchParams(window.location.search);
     return sp.get("forceFamilyBusy") === "1";
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 };
 
 async function checkFamilyAvailability({ checkIn, nights = 1 }) {
   const base = getApiBase();
-  const url = `${base}/api/bnovo/availability?checkIn=${encodeURIComponent(
-    checkIn
-  )}&nights=${encodeURIComponent(nights)}&roomType=FAMILY`;
+  const url = `${base}/api/bnovo/availability?checkIn=${encodeURIComponent(checkIn)}&nights=${encodeURIComponent(nights)}&roomType=FAMILY`;
   try {
     const res = await fetch(url, { credentials: "omit" });
     const ct = (res.headers.get("content-type") || "").toLowerCase();
-    const data = ct.includes("application/json")
-      ? await res.json()
-      : { _raw: await res.text() };
-
-    if (!res.ok) {
-      console.warn("availability http error:", res.status, data);
-      // API yiqilsa UX to‘xtamasin — available=true deb ketamiz
-      return { ok: false, available: true, reason: `HTTP ${res.status}` };
-    }
-    if (typeof data?.available === "boolean") {
-      return { ok: true, available: data.available, reason: data.source || "bnovo" };
-    }
+    const data = ct.includes("application/json") ? await res.json() : { _raw: await res.text() };
+    if (!res.ok) return { ok: false, available: true, reason: `HTTP ${res.status}` };
+    if (typeof data?.available === "boolean") return { ok: true, available: data.available, reason: data.source || "bnovo" };
     return { ok: false, available: true, reason: "unknown-shape" };
-  } catch (e) {
-    console.warn("availability fetch exception:", e);
+  } catch {
     return { ok: false, available: true, reason: "exception" };
   }
 }
 
-// ⬇️ YANGI: Postgres’dagi blackoutni tekshirish (biz yozib bergan backend endpointi)
 async function postgresFamilyBusy(checkIn) {
   const base = getApiBase();
   const url = `${base}/api/checkins/next-block?roomType=FAMILY&start=${encodeURIComponent(checkIn)}`;
@@ -81,16 +63,10 @@ async function postgresFamilyBusy(checkIn) {
     const res = await fetch(url);
     const ct = (res.headers.get("content-type") || "").toLowerCase();
     const data = ct.includes("application/json") ? await res.json() : { _raw: await res.text() };
-
-    // backend: { ok:true, block:null | {id,start_date,end_date} }
-    if (!res.ok) {
-      console.warn("postgres check http error:", res.status, data);
-      // API xato bo‘lsa “bo‘sh deb” o‘tkazib yuboramiz (UX to‘xtamasin)
-      return { busy: false, block: null };
-    }
+    // { ok:true, block: null | {...} }
+    if (!res.ok) return { busy: false, block: null };
     return { busy: !!data?.block, block: data?.block || null };
-  } catch (e) {
-    console.warn("postgres check exception:", e);
+  } catch {
     return { busy: false, block: null };
   }
 }
@@ -128,21 +104,18 @@ const Header = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, [isModalOpen]);
 
-  const openModal = useCallback(
-    (message) => {
-      setModalMsg(message || t("familyNotAvailable") || "Bu xona band qilingan");
-      setIsModalOpen(true);
-      document.body.style.overflow = "hidden";
-    },
-    [t]
-  );
+  const openModal = useCallback((message) => {
+    setModalMsg(message || t("familyNotAvailable") || "Bu xona band qilingan");
+    setIsModalOpen(true);
+    document.body.style.overflow = "hidden";
+  }, [t]);
+
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
     setModalMsg("");
     document.body.style.overflow = "";
   }, []);
 
-  // Avail uchun 3/10 soat/1 kunni hozircha 1 kecha deb olamiz
   const getNightsFromDuration = useCallback((d) => {
     if (!d) return 1;
     const s = String(d).toLowerCase();
@@ -154,49 +127,31 @@ const Header = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // 1) Form validatsiya
     if (!checkIn || !checkOutTime || !duration || !rooms) {
       alert(t("fillAllFields") || "Please fill in all fields!");
       return;
     }
 
-    // 2) FAMILY bo‘lsa — avval Postgres blackout tekshiruvi
     if (rooms === "FAMILY") {
-      // test rejimi: URL ?forceFamilyBusy=1 bo‘lsa darrov modal chiqaramiz
-      if (isForceFamilyBusy()) {
-        openModal(t("familyNotAvailable") || "Bu xona band qilingan");
+      if (isForceFamilyBusy()) { openModal(); return; }
+
+      // 1) PG blackout check
+      const pg = await postgresFamilyBusy(checkIn);
+      if (pg.busy && pg.block) {
+        openModal(`${t("familyNotAvailable") || "Bu xona band qilingan"}`);
         return;
       }
 
-      // Postgres’da shu checkIn kuni bandmi? (10–12 eski bron, 11 kiritilsa ham band chiqadi)
-      const pg = await postgresFamilyBusy(checkIn);
-      if (pg.busy && pg.block) {
-        openModal(
-          `${t("familyNotAvailable") || "Bu xona band qilingan"} — ` +
-          `${fmtHuman(pg.block.start_date)} — ${fmtHuman(pg.block.end_date)}`
-        );
-        return; // to‘xtaymiz
-      }
-
-      // 3) Keyin Bnovo availability (hozirgi logikangizni saqladik)
+      // 2) Bnovo availability
       setChecking(true);
       try {
-        await sleep(3000); // sun’iy kutish
-
+        await sleep(3000);
         const nights = getNightsFromDuration(duration);
         const avail = await checkFamilyAvailability({ checkIn, nights });
-
-        if (!avail.available) {
-          openModal(t("familyNotAvailable") || "Bu xona band qilingan");
-          return; // band bo‘lsa — to‘xtash
-        }
-      } finally {
-        setChecking(false);
-      }
+        if (!avail.available) { openModal(); return; }
+      } finally { setChecking(false); }
     }
 
-    // 4) STANDARD yoki FAMILY (bo‘sh) — davom
     const formattedCheckOut = `${checkIn}T${checkOutTime}`;
     const bookingInfo = {
       checkIn,
@@ -213,8 +168,7 @@ const Header = () => {
 
   return (
     <>
-      {/* Modal */}
-      {isModalOpen && (
+            {isModalOpen && (
         <div className="kh-modal__overlay" role="dialog" aria-modal="true" onClick={closeModal}>
           <div className="kh-modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="kh-modal__title">{t("attention") || "Diqqat!"}</h3>
@@ -234,7 +188,6 @@ const Header = () => {
         </div>
       )}
 
-      {/* Header */}
       <header className="header">
         <div className="container">
           <div className="header__big-box">
@@ -285,11 +238,7 @@ const Header = () => {
                 <div className="header__form-group">
                   <label htmlFor="duration">{t("duration")}</label>
                   <div className="custom-select">
-                    <select
-                      id="duration"
-                      value={duration}
-                      onChange={(e) => setDuration(e.target.value)}
-                    >
+                    <select id="duration" value={duration} onChange={(e) => setDuration(e.target.value)}>
                       <option>{t("upTo3Hours")}</option>
                       <option>{t("upTo10Hours")}</option>
                       <option>{t("oneDay")}</option>
@@ -301,11 +250,7 @@ const Header = () => {
                 <div className="header__form-group">
                   <label htmlFor="rooms">{t("rooms")}</label>
                   <div className="custom-select">
-                    <select
-                      id="rooms"
-                      value={rooms}
-                      onChange={(e) => setRooms(e.target.value)}
-                    >
+                    <select id="rooms" value={rooms} onChange={(e) => setRooms(e.target.value)}>
                       <option value="STANDARD">{t("standard")}</option>
                       <option value="FAMILY">{t("family")}</option>
                     </select>
@@ -319,11 +264,7 @@ const Header = () => {
                 <input id="hotel" value={t("TashkentAirportHotel")} disabled />
               </div>
 
-              <button
-                type="submit"
-                className="header__form-button"
-                disabled={checking || !checkIn || !checkOutTime}
-              >
+              <button type="submit" className="header__form-button" disabled={checking || !checkIn || !checkOutTime}>
                 {checking ? (t("searchrooms") || "Searching Room...") : (t("checkavailable") || "Check availability")}
               </button>
 

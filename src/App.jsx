@@ -41,7 +41,7 @@ function App() {
         <Route path="/offer" element={<Offer />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/mybooking" element={<MyBooking />} />
-        <Route path="/admin" element={<Login />} />
+        <Route path="/ad2007" element={<Login />} />
         <Route path="/success" element={<PaymentSuccess />} />
       </Routes>
       <Footer />

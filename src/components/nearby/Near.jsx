@@ -1,3 +1,4 @@
+import React from "react";
 import "./near.scss";
 import './nearMedia.scss'
 import { FaBookOpen, FaStar } from "react-icons/fa";

@@ -1,3 +1,4 @@
+import React from "react";
 import "./bookingform.scss";
 import "./bookingMedia.scss"
 import { IoMdTime } from "react-icons/io";
