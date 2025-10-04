@@ -7,6 +7,9 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { checkAvailability, createBookingInBnovo } from "./bnovo.js";
 
+/* === Qo'shildi: Postgres === */
+import { Pool } from "pg";
+
 dotenv.config();
 
 /* ====== App & Config ====== */
@@ -159,6 +162,41 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
+/* =========================================================
+ *  Qo'shildi: Postgres ulanishi + /db/health endpoint (ESM)
+ * ========================================================= */
+const PGHOST = process.env.PGHOST || "";
+const PGPORT = Number(process.env.PGPORT || 5432);
+const PGDATABASE = process.env.PGDATABASE || "";
+const PGUSER = process.env.PGUSER || "";
+const PGPASSWORD = process.env.PGPASSWORD || "";
+const PGSSLMODE = String(process.env.PGSSLMODE || "disable").toLowerCase();
+
+const pgPool = new Pool({
+  host: PGHOST,
+  port: PGPORT,
+  database: PGDATABASE,
+  user: PGUSER,
+  password: PGPASSWORD,
+  ssl: PGSSLMODE === "require" ? { rejectUnauthorized: false } : undefined,
+});
+
+// ishga tushganda ulanish logi
+pgPool
+  .query("SELECT now() AS now")
+  .then((r) => console.log("[DB] connected:", r.rows[0].now))
+  .catch((e) => console.error("[DB] connect error:", e.message));
+
+// DB health
+app.get("/db/health", async (_req, res) => {
+  try {
+    const r = await pgPool.query("SELECT 1 AS ok");
+    res.json({ ok: true, db: r.rows[0].ok });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 /* =======================
  *  BNOVO ROUTES
  * ======================= */
@@ -185,8 +223,7 @@ app.get("/api/bnovo/availability", async (req, res) => {
       roomType: String(roomType).toUpperCase(),
     });
 
-    // Frontend uchun soddalashtirilgan, ammo to‘liq javob:
-    // { ok, roomType, available, checkIn, checkOut, [source|warning] }
+    // Frontend uchun soddalashtirilgan, ammo to‘liq javob
     return res.json({
       ok: Boolean(avail?.ok),
       roomType: String(avail?.roomType || roomType).toUpperCase(),
