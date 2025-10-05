@@ -69,6 +69,27 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(express.text({ type: ["text/*"], limit: "512kb" }));
 
+// STRICT CORS for khamsahotel.uz (preflight ham)
+const ALLOWED_ORIGINS = [
+  (process.env.CLIENT_ORIGIN || "").trim(),
+  (process.env.FRONTEND_URL || "").trim(),
+  "https://khamsahotel.uz",
+].filter(Boolean);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  // Agar cookie kerak bo'lsa: res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
 /* ====== Health (basic) ====== */
 app.get("/", (_req, res) =>
   res.json({
