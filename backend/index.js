@@ -50,6 +50,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
 ].filter(Boolean);
 
+// Asl CORS (qoldirdik), lekin DELETE va Authorization’ni ruxsat qildik
 app.use(
   cors({
     origin(origin, cb) {
@@ -57,25 +58,14 @@ app.use(
       console.warn("CORS block:", origin);
       return cb(new Error("Not allowed by CORS"));
     },
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Accept"],
+    methods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Accept", "Authorization"],
     credentials: false,
   })
 );
 app.options("*", cors());
 
-/* ====== Parsers ====== */
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true, limit: "2mb" }));
-app.use(express.text({ type: ["text/*"], limit: "512kb" }));
-
-// STRICT CORS for khamsahotel.uz (preflight ham)
-const ALLOWED_ORIGINS = [
-  (process.env.CLIENT_ORIGIN || "").trim(),
-  (process.env.FRONTEND_URL || "").trim(),
-  "https://khamsahotel.uz",
-].filter(Boolean);
-
+// --- Qo‘shimcha yupqa preflight middleware (har ehtimolga qarshi) ---
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
@@ -83,12 +73,18 @@ app.use((req, res, next) => {
   }
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  // Agar cookie kerak bo'lsa: res.setHeader("Access-Control-Allow-Credentials", "true");
-  if (req.method === "OPTIONS") return res.sendStatus(204); // preflight
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Accept, Authorization"
+  );
+  if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
 
+/* ====== Parsers ====== */
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+app.use(express.text({ type: ["text/*"], limit: "512kb" }));
 
 /* ====== Health (basic) ====== */
 app.get("/", (_req, res) =>
@@ -646,6 +642,24 @@ app.get("/api/checkins/next-block", async (req, res) => {
       [roomType, start]
     );
     res.json({ ok: true, block: r.rows[0] || null });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/* === YANGI: DELETE by id (frontend dagi Family yonidagi delete uchun) === */
+app.delete("/api/checkins/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0)
+    return res.status(400).json({ ok: false, error: "Invalid id" });
+  try {
+    const r = await pgPool.query(
+      "DELETE FROM public.khamsachekin WHERE id = $1 RETURNING id;",
+      [id]
+    );
+    if (r.rowCount === 0)
+      return res.status(404).json({ ok: false, error: "Not found" });
+    res.json({ ok: true, id: r.rows[0].id });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
