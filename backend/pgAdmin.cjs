@@ -15,11 +15,16 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 // ENV ichidagi inline kommentlarni ( # ... ) tozalash helper
-const clean = (v, def = "") => String(v ?? def).split("#")[0].trim();
+const clean = (v, def = "") =>
+  String(v ?? def)
+    .split("#")[0]
+    .trim();
 
 /* ================== Server cfg ================== */
 const HOST = clean(process.env.HOST, "0.0.0.0");
-const PORT = Number(clean(process.env.PGADMIN_PORT, "") || clean(process.env.PORT, "") || 5004);
+const PORT = Number(
+  clean(process.env.PGADMIN_PORT, "") || clean(process.env.PORT, "") || 5004
+);
 
 // CORS
 const app = express();
@@ -30,6 +35,31 @@ app.use(
     credentials: false,
   })
 );
+
+/* === CORS (khamsahotel.uz + preflight) === */
+const ALLOWED_ORIGINS = [
+  (process.env.CLIENT_ORIGIN || "").trim(), // masalan: https://khamsahotel.uz
+  (process.env.FRONTEND_URL || "").trim(), // ehtiyot uchun
+  "https://khamsahotel.uz",
+].filter(Boolean);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  // Agar kerak bo'lsa cookie ishlatmaymiz: credentials=false (default)
+  // res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  if (req.method === "OPTIONS") {
+    // Preflight javobi — hech narsa qaytarmaymiz, faqat 204
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 // PG: DATE (OID 1082) -> 'YYYY-MM-DD' string (default)
 types.setTypeParser(1082, (val) => val);
@@ -59,7 +89,9 @@ const makePool = (db) => new Pool({ ...PG_CONFIG, database: db });
 let pool = makePool(DB_NAME);
 
 console.log(
-  `[BOOT] HOST=${HOST} PORT=${PORT} DB=${DB_NAME} PGHOST=${PG_CONFIG.host} SSL=${PG_CONFIG.ssl ? "on" : "off"}`
+  `[BOOT] HOST=${HOST} PORT=${PORT} DB=${DB_NAME} PGHOST=${
+    PG_CONFIG.host
+  } SSL=${PG_CONFIG.ssl ? "on" : "off"}`
 );
 
 /* ================== DB ensure ================== */
@@ -81,7 +113,9 @@ async function ensureDatabase() {
       // local — yaratib yuboramiz
       const admin = makePool("postgres");
       console.log(`Database "${DB_NAME}" topilmadi, yaratamiz...`);
-      await admin.query(`CREATE DATABASE ${DB_NAME} ENCODING 'UTF8' OWNER ${PG_CONFIG.user};`);
+      await admin.query(
+        `CREATE DATABASE ${DB_NAME} ENCODING 'UTF8' OWNER ${PG_CONFIG.user};`
+      );
       await admin.end();
       try {
         await pool.end();
@@ -97,7 +131,9 @@ async function ensureDatabase() {
 /* ================== Schema ensure (+ migratsiya) ================== */
 async function ensureSchema() {
   // minimal marker jadval
-  await pool.query(`CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`);
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`
+  );
 
   // ustunlarni mavjudligiga qarab qo‘shish/rename
   await pool.query(`
@@ -279,7 +315,9 @@ app.get("/api/checkins/day", async (req, res) => {
   const { start = "", date = "", roomType = "" } = req.query;
   const d = start || date;
   if (!roomType || !isISO(d))
-    return res.status(400).json({ ok: false, error: "roomType,start YYYY-MM-DD" });
+    return res
+      .status(400)
+      .json({ ok: false, error: "roomType,start YYYY-MM-DD" });
   try {
     const r = await pool.query(
       `
@@ -310,7 +348,9 @@ app.get("/api/checkins/day", async (req, res) => {
 app.post("/api/checkins/day", async (req, res) => {
   const { date, roomType, note } = req.body || {};
   if (!isISO(date) || !roomType)
-    return res.status(400).json({ ok: false, error: "date YYYY-MM-DD, roomType required" });
+    return res
+      .status(400)
+      .json({ ok: false, error: "date YYYY-MM-DD, roomType required" });
 
   try {
     const conflict = await pool.query(
@@ -322,7 +362,8 @@ app.post("/api/checkins/day", async (req, res) => {
       LIMIT 1;`,
       [date, roomType]
     );
-    if (conflict.rowCount) return res.status(409).json({ ok: false, error: "BUSY" });
+    if (conflict.rowCount)
+      return res.status(409).json({ ok: false, error: "BUSY" });
 
     const end = addDaysISO(date, 1);
     const r = await pool.query(
@@ -343,7 +384,9 @@ app.post("/api/checkins/day", async (req, res) => {
 app.get("/api/checkins/range/check", async (req, res) => {
   const { roomType = "", start = "", end = "" } = req.query;
   if (!roomType || !isISO(start) || !isISO(end))
-    return res.status(400).json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
+    return res
+      .status(400)
+      .json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
   try {
     const r = await pool.query(
       `
@@ -368,7 +411,9 @@ app.get("/api/checkins/range/check", async (req, res) => {
 app.post("/api/checkins/range", async (req, res) => {
   const { roomType, start, end, note } = req.body || {};
   if (!roomType || !isISO(start) || !isISO(end))
-    return res.status(400).json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
+    return res
+      .status(400)
+      .json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
 
   try {
     const q = await pool.query(
@@ -398,7 +443,9 @@ app.post("/api/checkins/range", async (req, res) => {
 app.get("/api/checkins/next-block", async (req, res) => {
   const { roomType = "", start = "" } = req.query;
   if (!roomType || !isISO(start))
-    return res.status(400).json({ ok: false, error: "roomType,start YYYY-MM-DD" });
+    return res
+      .status(400)
+      .json({ ok: false, error: "roomType,start YYYY-MM-DD" });
   try {
     const r = await pool.query(
       `
