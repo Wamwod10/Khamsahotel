@@ -420,6 +420,27 @@ app.get("/api/checkins/next-block", async (req, res) => {
   }
 });
 
+/** === YANGI: delete by id === */
+app.delete("/api/checkins/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ ok: false, error: "Invalid id" });
+  }
+  try {
+    const r = await pool.query(
+      "DELETE FROM public.khamsachekin WHERE id = $1 RETURNING id;",
+      [id]
+    );
+    if (r.rowCount === 0) {
+      return res.status(404).json({ ok: false, error: "Not found" });
+    }
+    res.json({ ok: true, id: r.rows[0].id });
+  } catch (e) {
+    console.error("DELETE ERR:", e.stack || e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 /* 404 */
 app.use((_req, res) => res.status(404).json({ ok: false, error: "Not Found" }));
 
