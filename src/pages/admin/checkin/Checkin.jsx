@@ -113,6 +113,20 @@ export default function Checkin() {
     }
   }
 
+  /* ---- Delete (/api/checkins/:id) ---- */
+  async function deleteItem(it) {
+    if (!it?.id) return;
+    const ok = window.confirm(`Delete ${fmtHuman(it.date)} (${it.roomType})?`);
+    if (!ok) return;
+    try {
+      await fetchJson(`${API}/api/checkins/${encodeURIComponent(it.id)}`, { method: "DELETE" });
+      // Optimistic update:
+      setItems(prev => prev.filter(x => x.id !== it.id));
+    } catch (e) {
+      alert(e.message || "O‘chirishda xatolik");
+    }
+  }
+
   return (
     <div className="ci-page">
       <div className="ci-head">
@@ -132,7 +146,28 @@ export default function Checkin() {
             {items.map(it => (
               <li key={it.id} className="ci-row">
                 <span className="ci-date">{fmtHuman(it.date)}</span>
+
                 <span className={`ci-badge ${it.roomType === "FAMILY" ? "fam" : "std"}`}>
+                  {/* FAMILY bo‘lsa, "Family" so‘zining OLDIGA delete tugmasi */}
+                  {it.roomType === "FAMILY" && (
+                    <button
+                      type="button"
+                      className="ci-del"
+                      title="Delete this date"
+                      aria-label="Delete"
+                      onClick={() => deleteItem(it)}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        marginRight: "8px",
+                        lineHeight: 1
+                      }}
+                    >
+                      🗑
+                    </button>
+                  )}
                   {it.roomType === "FAMILY" ? "Family" : "Standard"}
                 </span>
               </li>
