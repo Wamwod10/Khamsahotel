@@ -4,7 +4,6 @@
 
 /* ================== Imports ================== */
 const express = require("express");
-const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
 const { Pool, types } = require("pg");
@@ -26,17 +25,12 @@ const PORT = Number(
   clean(process.env.PGADMIN_PORT, "") || clean(process.env.PORT, "") || 5004
 );
 
-// CORS
 const app = express();
 app.use(express.json());
-app.use(
-  cors({
-    origin: clean(process.env.CLIENT_ORIGIN, "*"),
-    credentials: false,
-  })
-);
 
-/* === CORS (khamsahotel.uz + preflight) === */
+/* === CORS (khamsahotel.uz + preflight) ===
+   cors() paketini ishlatmaymiz; qo'l bilan to'liq ruxsat beramiz.
+   Muhimi: bu middleware barcha routelardan OLDIN turishi kerak. */
 const ALLOWED_ORIGINS = [
   (process.env.CLIENT_ORIGIN || "").trim(), // masalan: https://khamsahotel.uz
   (process.env.FRONTEND_URL || "").trim(), // ehtiyot uchun
@@ -49,14 +43,13 @@ app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
   res.setHeader("Vary", "Origin");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  // Agar kerak bo'lsa cookie ishlatmaymiz: credentials=false (default)
+  // Cookie kerak bo'lsa yoqing:
   // res.setHeader("Access-Control-Allow-Credentials", "true");
 
   if (req.method === "OPTIONS") {
-    // Preflight javobi — hech narsa qaytarmaymiz, faqat 204
-    return res.sendStatus(204);
+    return res.sendStatus(204); // preflight
   }
   next();
 });
@@ -89,9 +82,7 @@ const makePool = (db) => new Pool({ ...PG_CONFIG, database: db });
 let pool = makePool(DB_NAME);
 
 console.log(
-  `[BOOT] HOST=${HOST} PORT=${PORT} DB=${DB_NAME} PGHOST=${
-    PG_CONFIG.host
-  } SSL=${PG_CONFIG.ssl ? "on" : "off"}`
+  `[BOOT] HOST=${HOST} PORT=${PORT} DB=${DB_NAME} PGHOST=${PG_CONFIG.host} SSL=${PG_CONFIG.ssl ? "on" : "off"}`
 );
 
 /* ================== DB ensure ================== */
@@ -467,7 +458,7 @@ app.get("/api/checkins/next-block", async (req, res) => {
   }
 });
 
-/** === YANGI: delete by id === */
+/** === DELETE by id (Family badge yonidagi tugma uchun) === */
 app.delete("/api/checkins/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
