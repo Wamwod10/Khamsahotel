@@ -1,0 +1,128 @@
+/* ====== Defaults (CSS custom properties) ====== */
+.reklem {
+  /* Global paramlar — breakpointsda yangilanadi */
+  --fly-duration: 15s;                   /* animatsiya davomiyligi */
+  --msg-size: 18px;                      /* matn hajmi */
+  --track-h: 40px;                       /* banner balandligi */
+  --start-x: 105vw;                      /* ekrandan o‘ngda start */
+  --end-x: calc(-100% - 10vw);           /* element to‘liq tashqariga chiqsin */
+}
+
+.reklem {
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  width: 100%;
+  overflow: hidden;
+  background: #ffb143;
+  color: #fff;
+}
+
+.reklem__track {
+  position: relative;
+  min-height: var(--track-h);
+}
+
+/* Ikonka + matn bir blok sifatida uchadi */
+.reklem__fly {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%) translateX(var(--start-x));
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  user-select: none;
+
+  font-weight: 700;
+  font-size: var(--msg-size);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+
+  animation: fly-rtl var(--fly-duration) linear infinite;
+  will-change: transform;
+  pointer-events: none; /* tasodifiy hover/clicklarni bloklaydi */
+}
+
+.reklem__plane {
+  font-size: 1.2em; /* matndan bir “step” kattaroq */
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+  transform: rotate(180deg); /* o‘ngdan chapga uchish */
+}
+
+.reklem__msg {
+  line-height: 1;
+}
+
+/* O‘ngdan → chapga: element o‘z kengligini ham hisobga olib to‘liq chiqadi */
+@keyframes fly-rtl {
+  0%   { transform: translateY(-50%) translateX(var(--start-x)); }
+  100% { transform: translateY(-50%) translateX(var(--end-x)); }
+}
+
+/* ====== Accessibility ====== */
+@media (prefers-reduced-motion: reduce) {
+  .reklem__fly {
+    animation: none;
+    transform: translateY(-50%);
+    left: 16px;
+  }
+}
+
+/* ====== Breakpoints (max-width) ====== */
+/* 1440px va past: ozgina tezlashtiramiz, shrift saqlanadi */
+@media (max-width: 1440px) {
+  .reklem {
+    --fly-duration: 14s;
+    --msg-size: 18px;
+    --track-h: 42px;
+  }
+}
+
+/* 1024px va past */
+@media (max-width: 1024px) {
+  .reklem {
+    --fly-duration: 13s;
+    --msg-size: 16px;
+    --track-h: 42px;
+  }
+}
+
+/* 768px va past (planshet) */
+@media (max-width: 768px) {
+  .reklem {
+    --fly-duration: 12s;
+    --msg-size: 15px;
+    --track-h: 44px;
+  }
+}
+
+/* 425px va past (kichik telefonlar) */
+@media (max-width: 425px) {
+  .reklem {
+    --fly-duration: 11s;
+    --msg-size: 14px;
+    --track-h: 46px;
+    /* tor ekranlarda element kattalashsa ham to‘liq chiqishi uchun biroz ko‘proq chiqib ketsin */
+    --end-x: calc(-100% - 12vw);
+  }
+}
+
+/* 375px va past */
+@media (max-width: 375px) {
+  .reklem {
+    --fly-duration: 10.5s;
+    --msg-size: 13px;
+    --track-h: 46px;
+    --end-x: calc(-100% - 14vw);
+  }
+}
+
+/* 325px va past (juda tor ekranlar) */
+@media (max-width: 325px) {
+  .reklem {
+    --fly-duration: 10s;
+    --msg-size: 12px;
+    --track-h: 48px;
+    --end-x: calc(-100% - 16vw);
+  }
+}

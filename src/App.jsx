@@ -18,10 +18,12 @@ import Footer from "./components/footer/Footer";
 import Contact from "./pages/contact/Contact";
 import MyBooking from "./pages/mybooking/Mybooking";
 import PaymentSuccess from "./pages/mybooking/components/Succes/PaymentSuccess";
+import Reklem from "./components/reklem/Reklem";
 
 function App() {
   return (
     <>
+      <Reklem />
       <Nav />
       <Routes>
         <Route
@@ -55,7 +57,6 @@ function App() {
         draggable={false}
         style={{ zIndex: 99999 }}
       />
-     
     </>
   );
 }
