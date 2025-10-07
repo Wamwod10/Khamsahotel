@@ -3,12 +3,17 @@ import "./mybooking.scss";
 import BookingCard from "./components/BookingCard/BookingCard";
 import EditBookingModal from "./components/Edit/EditBookingModal";
 import { v4 as uuidv4 } from "uuid";
+import { useTranslation } from "react-i18next";
 
 /** API bazasi (Vite/CRA) */
 function getApiBase() {
-  const viteBase = (import.meta?.env && import.meta.env.VITE_API_BASE_URL) || "";
-  const craBase = (typeof process !== "undefined" && process?.env?.REACT_APP_API_BASE_URL) || "";
-  const fallback = (typeof window !== "undefined" && window.location.origin) || "";
+  const viteBase =
+    (import.meta?.env && import.meta.env.VITE_API_BASE_URL) || "";
+  const craBase =
+    (typeof process !== "undefined" && process?.env?.REACT_APP_API_BASE_URL) ||
+    "";
+  const fallback =
+    (typeof window !== "undefined" && window.location.origin) || "";
   return (viteBase || craBase || fallback).replace(/\/+$/, "");
 }
 
@@ -18,16 +23,30 @@ async function fetchWithTimeout(url, options = {}, ms = 15000) {
   const t = setTimeout(() => controller.abort(), ms);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
-  } finally { clearTimeout(t); }
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 /** Duration → key */
 function normalizeDuration(duration) {
   if (!duration || typeof duration !== "string") return "";
   const d = duration.toLowerCase();
-  if (d.includes("3") && (d.includes("hour") || d.includes("soat") || d.includes("saat"))) return "upTo3Hours";
-  if (d.includes("10") && (d.includes("hour") || d.includes("soat") || d.includes("saat"))) return "upTo10Hours";
-  if ((d.includes("1") || d.includes("bir")) && (d.includes("day") || d.includes("kun") || d.includes("день"))) return "oneDay";
+  if (
+    d.includes("3") &&
+    (d.includes("hour") || d.includes("soat") || d.includes("saat"))
+  )
+    return "upTo3Hours";
+  if (
+    d.includes("10") &&
+    (d.includes("hour") || d.includes("soat") || d.includes("saat"))
+  )
+    return "upTo10Hours";
+  if (
+    (d.includes("1") || d.includes("bir")) &&
+    (d.includes("day") || d.includes("kun") || d.includes("день"))
+  )
+    return "oneDay";
   return "";
 }
 
@@ -61,7 +80,9 @@ const MyBooking = () => {
     try {
       saved = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
       if (!Array.isArray(saved)) saved = [];
-    } catch { saved = []; }
+    } catch {
+      saved = [];
+    }
 
     const normalized = saved.map((b) => ({
       id: b.id || uuidv4(),
@@ -69,7 +90,11 @@ const MyBooking = () => {
       rooms: toRoomCode(b.rooms), // "STANDARD" | "FAMILY"
       price:
         typeof b.price === "string"
-          ? Number(String(b.price).replace(/[^\d.,-]/g, "").replace(",", ".")) || 0
+          ? Number(
+              String(b.price)
+                .replace(/[^\d.,-]/g, "")
+                .replace(",", ".")
+            ) || 0
           : Number(b.price) || 0,
     }));
 
@@ -93,7 +118,9 @@ const MyBooking = () => {
   };
 
   const handleSaveBooking = (updatedBooking) => {
-    const updated = bookings.map((b) => (b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b));
+    const updated = bookings.map((b) =>
+      b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
+    );
     setBookings(updated);
     saveBookingsToStorage(updated);
     setIsEditOpen(false);
@@ -105,12 +132,17 @@ const MyBooking = () => {
     saveBookingsToStorage(filtered);
   };
 
-  const totalAmount = bookings.reduce((sum, b) => sum + (Number(b.price) || 0), 0);
+  const totalAmount = bookings.reduce(
+    (sum, b) => sum + (Number(b.price) || 0),
+    0
+  );
 
   /** Pay Now → Octo create-payment (oxirgi booking ma’lumoti bilan) */
   const handlePayment = async () => {
     if (!API_BASE) {
-      alert("API manzili topilmadi. .env dagi VITE_API_BASE_URL/REACT_APP_API_BASE_URL ni tekshiring.");
+      alert(
+        "API manzili topilmadi. .env dagi VITE_API_BASE_URL/REACT_APP_API_BASE_URL ni tekshiring."
+      );
       return;
     }
     if (totalAmount <= 0) {
@@ -125,12 +157,16 @@ const MyBooking = () => {
 
     setPaying(true);
     try {
-      try { await fetch(`${API_BASE}/healthz`, { cache: "no-store" }); } catch {}
+      try {
+        await fetch(`${API_BASE}/healthz`, { cache: "no-store" });
+      } catch {}
 
       const durationKey = normalizeDuration(latestBooking.duration);
       const body = {
         amount: Number(totalAmount), // EUR
-        description: `Booking Payment (${roomCodeToLabel(latestBooking.rooms)} / ${durationKey || latestBooking.duration || ""})`,
+        description: `Booking Payment (${roomCodeToLabel(
+          latestBooking.rooms
+        )} / ${durationKey || latestBooking.duration || ""})`,
         email: latestBooking.email,
         booking: {
           checkIn: latestBooking.checkIn,
@@ -154,7 +190,13 @@ const MyBooking = () => {
       const ct = (res.headers.get("content-type") || "").toLowerCase();
       const data = ct.includes("application/json")
         ? await res.json()
-        : await res.text().then((t) => { try { return JSON.parse(t); } catch { return t; } });
+        : await res.text().then((t) => {
+            try {
+              return JSON.parse(t);
+            } catch {
+              return t;
+            }
+          });
 
       if (res.ok && data && typeof data === "object" && data.paymentUrl) {
         window.location.href = data.paymentUrl;
@@ -168,7 +210,10 @@ const MyBooking = () => {
       alert(`To‘lov yaratishda xatolik: ${msg}`);
       console.error("create-payment error:", { status: res.status, data });
     } catch (err) {
-      const text = err?.name === "AbortError" ? "Server javob bermadi (timeout)" : (err?.message || String(err));
+      const text =
+        err?.name === "AbortError"
+          ? "Server javob bermadi (timeout)"
+          : err?.message || String(err);
       alert(`To‘lov yaratishda xatolik yuz berdi: ${text}`);
       console.error("fetch failure:", err);
     } finally {
@@ -178,17 +223,25 @@ const MyBooking = () => {
 
   const addNewBooking = () => (window.location.href = "/");
 
+  const { t } = useTranslation();
+
   return (
     <div className="my-booking-container">
       <div className="booking-header">
-        <h1>My Bookings</h1>
-        <button className="btn btn-add" onClick={addNewBooking} disabled={paying}>
-          + New Booking
+        <h1>{t("mybookings")}</h1>
+        <button
+          className="btn btn-add"
+          onClick={addNewBooking}
+          disabled={paying}
+        >
+          + {t("newbooking")}
         </button>
       </div>
 
       {bookings.length === 0 ? (
-        <div className="my-booking-empty"><p>No Bookings yet</p></div>
+        <div className="my-booking-empty">
+          <p>{t("nobooking")}</p>
+        </div>
       ) : (
         <>
           {bookings.map((booking) => (
@@ -207,7 +260,13 @@ const MyBooking = () => {
               disabled={totalAmount <= 0 || paying}
               aria-busy={paying ? "true" : "false"}
             >
-              {paying ? "Processing..." : `Pay Now (${totalAmount > 0 ? `${totalAmount.toLocaleString()}€` : "No amount"})`}
+              {paying
+                ? "Processing..."
+                : `Pay Now (${
+                    totalAmount > 0
+                      ? `${totalAmount.toLocaleString()}€`
+                      : "No amount"
+                  })`}
             </button>
           </div>
         </>

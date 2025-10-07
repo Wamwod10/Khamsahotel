@@ -218,13 +218,13 @@
   "servicetime6": "Pullik Xizmat",
   "servicedescription8": "Tez va sifatli dazmollash xizmati",
   "servicedescription9": "Tez va qulay dush xizmati — sizga mos vaqtda",
-  "servicedetail25": "Kunlik yetkazish",
+  "servicedetail25": "Yangilaning va safaringizni tetik davom ettiring",
   "servicedetail26": "Ko‘ylak va shimlar",
   "servicedetail27": "Bug‘ va press",
   "servicedetail28": "Nozik matolar",
-  "servicedetail29": "Toza sochiq va gigiyena vositalari",
-  "servicedetail30": "Issiq va sovuq suv",
-  "servicedetail31": "Maxfiy va toza xona",
+  "servicedetail29": "Sochiq va gigiyena vositalari bilan to‘liq jihozlangan",
+  "servicedetail30": "Sokinku, shinam va gigiyenik joy",
+  "servicedetail31": "Har doim issiq suv tayyor, dam oling",
   "serviceshower": "Yuvinish Xonasi - 15€",
   "learnmore": "Batafsil",
   "showless": "Yopish",
@@ -408,5 +408,8 @@
   "bookingsuccess": "Bronni tasdiqlash uchun Mening Bronlarim sahifasiga o'ting",
   "bookingsucced": "Bron qabul qilindi",
   "stayhere": "Shu yerda qoling",
-  "mybooking1": "Mening bronlarim"
+  "mybooking1": "Mening bronlarim",
+  "mybookings": "Mening bronlarim",
+  "newbooking": "Yangi bron",
+  "nobooking": "Hozircha bron yo‘q"
 }

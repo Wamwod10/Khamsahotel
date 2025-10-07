@@ -218,13 +218,13 @@
   "servicetime6": "Paid Service",
   "servicedescription8": "Quick and spotless ironing service offered at your convenience",
   "servicedescription9": "Quick and refreshing shower service offered at your convenience",
-  "servicedetail25": "Same-day delivery",
+  "servicedetail25": "Refresh yourself and feel renewed",
   "servicedetail26": "Shirts & pants",
   "servicedetail27": "Steam & press",
   "servicedetail28": "Delicate fabrics",
-  "servicedetail29": "Clean towels & toiletries",
-  "servicedetail30": "Hot & cold water",
-  "servicedetail31": "Private and hygienic space",
+  "servicedetail29": "Fully equipped with towels and essentials",
+  "servicedetail30": "Calm, cozy and hygienic space",
+  "servicedetail31": "Hot water always ready — just relax",
   "learnmore": "Learn More",
   "showless": "Show Less",
   "comment_title": "What Our Guests Say",
@@ -405,5 +405,8 @@
   "bookingsuccess": "Go to the My Booking page to confirm your reservation",
   "bookingsucced": "Booking accepted",
   "stayhere": "Stay Here",
-  "mybooking1": "My Booking"
+  "mybooking1": "My Booking",
+  "mybookings": "My Bookings",
+  "newbooking": "New Booking",
+  "nobooking": "No Bookings yet"
 }

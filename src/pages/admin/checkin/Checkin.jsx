@@ -39,9 +39,9 @@ export default function Checkin() {
 
   // UI
   const [open, setOpen] = useState(false);
-  const [checkIn, setCheckIn] = useState("");  // YYYY-MM-DD
-  const [checkOut, setCheckOut] = useState(""); // YYYY-MM-DD
-  const [roomType, setRoomType] = useState("FAMILY"); // FAMILY | STANDARD
+  const [checkIn, setCheckIn] = useState("");  
+  const [checkOut, setCheckOut] = useState(""); 
+  const [roomType, setRoomType] = useState("FAMILY");
 
   // Data
   const [items, setItems] = useState([]);
