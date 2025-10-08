@@ -104,17 +104,16 @@ const DURATIONS = [
   { code: "10h", key: "upTo10Hours" },
   { code: "24h", key: "oneDay" },
 ];
+const ALL_CODES = DURATIONS.map((d) => d.code);
 function labelFromCode(code, t) {
   const item = DURATIONS.find((d) => d.code === code);
   return item ? t(item.key) : code;
 }
 function codeFromLabel(label = "") {
   const s = String(label).toLowerCase();
-  if (s.includes("one day")) return "24h";
-  if (s.includes("24")) return "24h";
+  if (s.includes("one day") || s.includes("24")) return "24h";
   if (s.includes("10")) return "10h";
   if (s.includes("3")) return "3h";
-  // i18n — kalitlar bo‘yicha ham tekshiramiz
   return null;
 }
 
@@ -133,8 +132,8 @@ const Header = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMsg, setModalMsg] = useState("");
 
-  // YANGI: allowed tariffs
-  const [allowed, setAllowed] = useState([]); // ["3h","10h","24h"]
+  // YANGI: allowed tariffs (faqat FAMILY uchun fetch qilamiz)
+  const [allowed, setAllowed] = useState(ALL_CODES); // default — hammasi
   const [tariffLoading, setTariffLoading] = useState(false);
   const [tariffError, setTariffError] = useState("");
 
@@ -176,25 +175,35 @@ const Header = () => {
   const getNightsFromDuration = useCallback((d) => {
     if (!d) return 1;
     const s = String(d).toLowerCase();
-    if (s.includes("one day")) return 1;
+    if (s.includes("one day") || s.includes("24")) return 1;
     if (s.includes("10")) return 1;
     if (s.includes("3")) return 1;
     return 1;
   }, []);
 
-  // YANGI: startAt memo (sana + soat)
+  // startAt (sana + soat)
   const startAt = useMemo(() => {
     if (!checkIn || !checkOutTime) return "";
     return `${checkIn}T${checkOutTime}`;
   }, [checkIn, checkOutTime]);
 
-  // YANGI: allowed-tariffs fetcher
+  /* ===== Allowed-tariffs fetch (faqat FAMILY) ===== */
   useEffect(() => {
     let ac = new AbortController();
+
     async function run() {
+      // STANDARD uchun cheklov yo'q: hammasini yoqamiz va API chaqirmaymiz
+      if (rooms !== "FAMILY") {
+        setTariffError("");
+        setTariffLoading(false);
+        setAllowed(ALL_CODES);
+        return;
+      }
+
       setTariffError("");
-      setAllowed([]);
-      if (!startAt || !rooms) return;
+      setAllowed([]); // FAMILY: boshlashdan oldin bo'shatamiz
+      if (!startAt) return; // vaqt tanlanmagan bo'lsa API chaqirmaymiz
+
       try {
         setTariffLoading(true);
         const base = getApiBase();
@@ -204,7 +213,9 @@ const Header = () => {
         }).toString();
         const res = await fetch(
           `${base}/api/availability/allowed-tariffs?${qs}`,
-          { signal: ac.signal }
+          {
+            signal: ac.signal,
+          }
         );
         const ct = (res.headers.get("content-type") || "").toLowerCase();
         const data = ct.includes("application/json")
@@ -212,27 +223,30 @@ const Header = () => {
           : { _raw: await res.text() };
         if (!res.ok)
           throw new Error((data && (data.error || data._raw)) || "HTTP");
-        const list = Array.isArray(data.allowed) ? data.allowed : [];
-        setAllowed(list);
 
-        // Agar joriy duration ruxsat etilmagan bo‘lsa — birinchi ruxsat etilganga o‘tkazamiz
+        const list = Array.isArray(data.allowed) ? data.allowed : [];
+        setAllowed(list.length ? list : []); // bo'sh bo'lsa — hech biri ruxsat emas
+
+        // Tanlangan duration ruxsat etilmasa, birinchisiga o'tkazamiz
         const curCode = codeFromLabel(duration);
         if (curCode && !list.includes(curCode)) {
-          const next = list[0] || "3h";
-          setDuration(labelFromCode(next, t));
+          const next = list[0] || null;
+          if (next) setDuration(labelFromCode(next, t));
         }
       } catch (e) {
         if (e.name !== "AbortError") {
+          // API xatosida ham serverni qayta urintirmaymiz, UIda xabar ko'rsatamiz
           setTariffError(e.message || "Tariff check failed");
-          setAllowed([]); // konservativ: hammasini block qilmaymiz, lekin disable ko‘rsatamiz
+          setAllowed([]); // FAMILY va xato bo'lsa: konservativ — hammasi disable
         }
       } finally {
         setTariffLoading(false);
       }
     }
+
     run();
     return () => ac.abort();
-  }, [startAt, rooms, t, duration]);
+  }, [rooms, startAt, t, duration]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -241,14 +255,20 @@ const Header = () => {
       return;
     }
 
-    // YANGI: duration allowed-tekshiruvi
-    const pickedCode = codeFromLabel(duration);
-    if (pickedCode && allowed.length > 0 && !allowed.includes(pickedCode)) {
-      alert(
-        t("durationNotAllowed") ||
-          "Tanlangan vaqt davomiyligi ushbu vaqtda ruxsat etilmagan"
-      );
-      return;
+    // FAMILY’da tanlangan duration ruxsat etilganini tekshiramiz
+    if (rooms === "FAMILY") {
+      const pickedCode = codeFromLabel(duration);
+      if (
+        !pickedCode ||
+        allowed.length === 0 ||
+        !allowed.includes(pickedCode)
+      ) {
+        openModal(
+          t("durationNotAllowed") ||
+            "Tanlangan vaqt davomiyligi ushbu vaqtda ruxsat etilmagan"
+        );
+        return;
+      }
     }
 
     const startAtLocal = `${checkIn}T${checkOutTime}`;
@@ -281,7 +301,7 @@ const Header = () => {
       }
     }
 
-    const formattedCheckOut = startAtLocal; // sizning saqlash formatizga mos
+    const formattedCheckOut = startAtLocal; // saqlash formatiga mos
     const bookingInfo = {
       checkIn,
       checkOut: formattedCheckOut,
@@ -301,6 +321,15 @@ const Header = () => {
   const dateFormatText =
     localI18n[currentLangShort]?.dateFormatShort ||
     localI18n.en.dateFormatShort;
+
+  const durationStatusText = useMemo(() => {
+    if (rooms !== "FAMILY") return ""; // STANDARD’da status yozmaymiz
+    if (tariffLoading) return `(${t("searchrooms") || "Checking"}…)`;
+    if (!startAt) return "";
+    return allowed.length > 0
+      ? `(${t("available") || "available"})`
+      : `(${t("notavailable") || "restricted"})`;
+  }, [rooms, tariffLoading, allowed.length, startAt, t]);
 
   return (
     <>
@@ -394,13 +423,7 @@ const Header = () => {
                   <label htmlFor="duration">
                     {t("duration")}{" "}
                     <span className="muted" style={{ fontWeight: 400 }}>
-                      {tariffLoading
-                        ? `(${t("searchrooms") || "Checking"}…)`
-                        : allowed.length > 0
-                        ? `(${t("available") || "available"})`
-                        : startAt
-                        ? `(${t("notavailable") || "restricted"})`
-                        : ""}
+                      {durationStatusText}
                     </span>
                   </label>
                   <div className="custom-select">
@@ -412,12 +435,16 @@ const Header = () => {
                     >
                       {DURATIONS.map((d) => {
                         const label = labelFromCode(d.code, t);
-                        const dis =
-                          startAt && allowed.length > 0
+                        const disableForFamily =
+                          rooms === "FAMILY" && startAt
                             ? !allowed.includes(d.code)
-                            : false; // agar allowed kelmasa, bloklamaymiz
+                            : false; // STANDARD yoki startAt yo'q — disable yo'q
                         return (
-                          <option key={d.code} value={label} disabled={dis}>
+                          <option
+                            key={d.code}
+                            value={label}
+                            disabled={disableForFamily}
+                          >
                             {label}
                           </option>
                         );
@@ -425,7 +452,7 @@ const Header = () => {
                     </select>
                     <FaChevronDown className="select-icon" />
                   </div>
-                  {tariffError && (
+                  {rooms === "FAMILY" && tariffError && (
                     <div
                       className="muted"
                       style={{ color: "#b33", marginTop: 6 }}
