@@ -9,11 +9,11 @@ const path = require("path");
 const { Pool, types } = require("pg");
 
 /* ================== ENV ================== */
-// .env ni 2 joydan ham sinab yuklaymiz (repo ildizi va backend/)
+// .env ni ildiz va backend/ dan yuklaymiz
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
-// ENV ichidagi inline kommentlarni ( # ... ) tozalash helper
+// ENV ichidagi inline kommentlarni tozalash helper
 const clean = (v, def = "") =>
   String(v ?? def)
     .split("#")[0]
@@ -25,6 +25,20 @@ const PORT = Number(
   clean(process.env.PGADMIN_PORT, "") || clean(process.env.PORT, "") || 5004
 );
 
+/* Capacity/buffer defaults (env orqali boshqariladi) */
+const FAMILY_CAPACITY = Number(
+  clean(process.env.FAMILY_CAPACITY, clean(process.env.FAMILY_STOCK, 1))
+);
+const STANDARD_CAPACITY = Number(
+  clean(process.env.STANDARD_CAPACITY, clean(process.env.STANDARD_STOCK, 23))
+);
+const FAMILY_PRE_BUFFER_MIN = Number(
+  clean(process.env.FAMILY_PRE_BUFFER_MIN, 0)
+);
+const FAMILY_POST_BUFFER_MIN = Number(
+  clean(process.env.FAMILY_POST_BUFFER_MIN, 0)
+);
+
 const app = express();
 app.use(express.json());
 
@@ -33,6 +47,9 @@ const ALLOWED_ORIGINS = [
   (process.env.CLIENT_ORIGIN || "").trim(),
   (process.env.FRONTEND_URL || "").trim(),
   "https://khamsahotel.uz",
+  "https://www.khamsahotel.uz",
+  "http://localhost:5173",
+  "http://localhost:3000",
 ].filter(Boolean);
 
 app.use((req, res, next) => {
@@ -42,7 +59,10 @@ app.use((req, res, next) => {
   }
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Accept, Authorization"
+  );
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
@@ -86,7 +106,7 @@ async function ensureDatabase() {
     if (e && e.code === "3D000") {
       if (!isLocalHost) {
         throw new Error(
-          `Database "${DB_NAME}" topilmadi. Bulut/remote Postgresda avval DB’ni provayder panelida yarating. Original: ${e.message}`
+          `Database "${DB_NAME}" topilmadi. Remote Postgresda DB’ni avval yarating. Original: ${e.message}`
         );
       }
       const admin = makePool("postgres");
@@ -113,7 +133,7 @@ async function ensureSchema() {
     `CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`
   );
 
-  // === room_types (YANGI) ===
+  // === room_types (YANGI / env bilan seed) ===
   await pool.query(`
     CREATE TABLE IF NOT EXISTS public.room_types (
       room_type TEXT PRIMARY KEY,
@@ -124,14 +144,26 @@ async function ensureSchema() {
     );
   `);
 
-  // seed defaults agar bo'sh bo'lsa
-  await pool.query(`
-    INSERT INTO public.room_types (room_type, capacity, pre_buffer_minutes, post_buffer_minutes)
-    VALUES
-      ('FAMILY',   1, 0, 0),
-      ('STANDARD', 23, 0, 0)
-    ON CONFLICT (room_type) DO NOTHING;
-  `);
+  // FAMILY
+  await pool.query(
+    `INSERT INTO public.room_types (room_type, capacity, pre_buffer_minutes, post_buffer_minutes)
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT (room_type) DO UPDATE
+       SET capacity = EXCLUDED.capacity,
+           pre_buffer_minutes = EXCLUDED.pre_buffer_minutes,
+           post_buffer_minutes = EXCLUDED.post_buffer_minutes,
+           updated_at = now();`,
+    ["FAMILY", FAMILY_CAPACITY, FAMILY_PRE_BUFFER_MIN, FAMILY_POST_BUFFER_MIN]
+  );
+  // STANDARD
+  await pool.query(
+    `INSERT INTO public.room_types (room_type, capacity, pre_buffer_minutes, post_buffer_minutes)
+     VALUES ($1,$2,0,0)
+     ON CONFLICT (room_type) DO UPDATE
+       SET capacity = EXCLUDED.capacity,
+           updated_at = now();`,
+    ["STANDARD", STANDARD_CAPACITY]
+  );
 
   // khamsachekin ustunlarini moslashtirish
   await pool.query(`
@@ -283,7 +315,7 @@ const toTz = (s) => {
   return null;
 };
 
-/* ==== NEW helpers for tariffs ==== */
+/* ==== Tarif helpers ==== */
 async function getRoomTypeCfg(roomType) {
   const { rows } = await pool.query(
     `SELECT capacity, pre_buffer_minutes, post_buffer_minutes
@@ -291,13 +323,24 @@ async function getRoomTypeCfg(roomType) {
     [roomType]
   );
   if (!rows[0]) {
-    throw new Error(`Unknown room type: ${roomType}`);
+    // fallback (agar jadval bo‘lmasa)
+    if (roomType === "FAMILY") {
+      return {
+        capacity: FAMILY_CAPACITY,
+        pre_buffer_minutes: FAMILY_PRE_BUFFER_MIN,
+        post_buffer_minutes: FAMILY_POST_BUFFER_MIN,
+      };
+    }
+    return {
+      capacity: STANDARD_CAPACITY,
+      pre_buffer_minutes: 0,
+      post_buffer_minutes: 0,
+    };
   }
   return rows[0];
 }
 
 async function getNeighbors(roomType, startISO) {
-  // Oldingi tugagan eng yaqini (<= S) va keyingi boshlanadigan eng yaqini (>= S)
   const qPrev = pool.query(
     `SELECT MAX(COALESCE(check_out_at, check_out::timestamp)) AS p_end
      FROM public.khamsachekin
@@ -318,7 +361,6 @@ async function getNeighbors(roomType, startISO) {
 }
 
 async function getPeakConcurrency(roomType, fromTs, toTs) {
-  // fromTs..toTs oralig'ida overlap qilgan hamma intervalni olib, sweep-line
   const { rows } = await pool.query(
     `SELECT
         GREATEST(COALESCE(check_in_at,  check_in::timestamp), $2::timestamptz)  AS st,
@@ -336,7 +378,6 @@ async function getPeakConcurrency(roomType, fromTs, toTs) {
       events.push({ t: new Date(r.en), d: -1 });
     }
   }
-  // sort (vaqt, keyin d)
   events.sort((a, b) => a.t - b.t || a.d - b.d);
   let cur = 0,
     peak = 0;
@@ -399,7 +440,7 @@ app.get("/api/checkins", async (req, res) => {
   }
 });
 
-/** Kun bandmi? (DATE kesimi — o‘zgarmadi) */
+/** Kun bandmi? (DATE kesimi) */
 app.get("/api/checkins/day", async (req, res) => {
   const { start = "", date = "", roomType = "" } = req.query;
   const d = start || date;
@@ -433,42 +474,7 @@ app.get("/api/checkins/day", async (req, res) => {
   }
 });
 
-/** Bir kun insert [d, d+1) (eski) */
-app.post("/api/checkins/day", async (req, res) => {
-  const { date, roomType, note } = req.body || {};
-  if (!isISO(date) || !roomType)
-    return res
-      .status(400)
-      .json({ ok: false, error: "date YYYY-MM-DD, roomType required" });
-  try {
-    const conflict = await pool.query(
-      `
-      WITH s AS (SELECT $1::date AS d)
-      SELECT 1 FROM public.khamsachekin k, s
-      WHERE k.rooms=$2 AND k.check_in<=s.d
-        AND COALESCE(k.check_out,(k.check_in + (COALESCE(k.duration,0) * INTERVAL '1 day')))::date > s.d
-      LIMIT 1;`,
-      [date, roomType]
-    );
-    if (conflict.rowCount)
-      return res.status(409).json({ ok: false, error: "BUSY" });
-
-    const end = addDaysISO(date, 1);
-    const r = await pool.query(
-      `
-      INSERT INTO public.khamsachekin (check_in, check_out, rooms, duration, check_in_time)
-      VALUES ($1::date, $2::date, $3, 1, $4)
-      RETURNING id, check_in, check_out, rooms, duration;`,
-      [date, end, roomType, note || null]
-    );
-    res.status(201).json({ ok: true, item: r.rows[0] });
-  } catch (e) {
-    console.error("DAY INSERT ERR:", e.stack || e.message);
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-
-/** Interval overlap tekshiruv — datetime qo‘llaydi */
+/** Interval overlap tekshiruv — datetime */
 app.get("/api/checkins/range/check", async (req, res) => {
   const {
     roomType = "",
@@ -547,7 +553,7 @@ app.post("/api/checkins/range", async (req, res) => {
   }
 });
 
-/** Header.jsx uchun: berilgan vaqtda ustida turgan blok (agar ichida bo‘lsa) */
+/** Berilgan vaqtda ichidagi block */
 app.get("/api/checkins/next-block", async (req, res) => {
   const { roomType = "", start = "", startAt = "" } = req.query;
   const A = toTz(startAt || start);
@@ -576,12 +582,12 @@ app.get("/api/checkins/next-block", async (req, res) => {
   }
 });
 
-/* ===== NEW: Allowed tariffs (3h/10h/24h) =====
-   GET /api/availability/allowed-tariffs?roomType=STANDARD&start=2025-10-08T03:00
+/* ===== Allowed tariffs (3h/10h/24h) =====
+   GET /api/availability/allowed-tariffs?roomType=FAMILY&start=2025-10-08T03:00
 */
 app.get("/api/availability/allowed-tariffs", async (req, res) => {
   try {
-    const roomType = String(req.query.roomType || "STANDARD");
+    const roomType = String(req.query.roomType || "STANDARD").toUpperCase();
     const S = toTz(req.query.start);
     if (!S)
       return res.status(400).json({ ok: false, error: "start ISO required" });
@@ -600,7 +606,7 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
           ok: true,
           allowed: [],
           reason: "start_too_early_hits_previous",
-          details: { p_end, requiredEarliestStart: minStart },
+          details: { p_end, requiredEarliestStart: minStart.toISOString() },
         });
       }
     }
@@ -613,23 +619,20 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
 
     const allowed = [];
     for (const t of tariffs) {
-      const Dms = t.hours * 60 * 60 * 1000;
-      const end = new Date(new Date(S).getTime() + Dms);
+      const end = new Date(new Date(S).getTime() + t.hours * 60 * 60 * 1000);
       const endWithPost = new Date(end.getTime() + post * 60 * 1000);
 
       // keyingi bronni bosib o'tmasin
-      if (n_start && endWithPost > new Date(n_start)) {
-        continue;
-      }
+      if (n_start && endWithPost > new Date(n_start)) continue;
 
       // capacity check (bizning bronni ham qo'shib)
-      const fromTs = new Date(S);
-      const toTs = endWithPost;
-      const peakExisting = await getPeakConcurrency(roomType, fromTs, toTs);
+      const peakExisting = await getPeakConcurrency(
+        roomType,
+        new Date(S),
+        endWithPost
+      );
       const peakWithUs = peakExisting + 1;
-      if (peakWithUs <= cfg.capacity) {
-        allowed.push(t.code);
-      }
+      if (peakWithUs <= cfg.capacity) allowed.push(t.code);
     }
 
     res.json({
@@ -642,7 +645,9 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
     });
   } catch (e) {
     console.error("ALLOWED-TARIFFS ERR:", e);
-    res.status(500).json({ ok: false, error: "server_error" });
+    res
+      .status(500)
+      .json({ ok: false, error: "server_error", message: e.message });
   }
 });
 

@@ -22,6 +22,16 @@ const FRONTEND_URL = (
 ).replace(/\/+$/, "");
 const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
 
+// Capacity/buffer defaults (env bilan boshqariladi)
+const FAMILY_CAPACITY = Number(
+  process.env.FAMILY_CAPACITY || process.env.FAMILY_STOCK || 1
+);
+const STANDARD_CAPACITY = Number(
+  process.env.STANDARD_CAPACITY || process.env.STANDARD_STOCK || 23
+);
+const FAMILY_PRE_BUFFER_MIN = Number(process.env.FAMILY_PRE_BUFFER_MIN || 0);
+const FAMILY_POST_BUFFER_MIN = Number(process.env.FAMILY_POST_BUFFER_MIN || 0);
+
 const {
   OCTO_SHOP_ID,
   OCTO_SECRET,
@@ -58,18 +68,17 @@ app.use(
       return cb(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type, Accept, Authorization"],
+    allowedHeaders: ["Content-Type", "Accept", "Authorization"],
     credentials: false,
   })
 );
 app.options("*", cors());
 
-// Qo‘shimcha yupqa preflight
+// Yupqa preflight
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+  if (origin && ALLOWED_ORIGINS.includes(origin))
     res.setHeader("Access-Control-Allow-Origin", origin);
-  }
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader(
@@ -85,7 +94,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(express.text({ type: ["text/*"], limit: "512kb" }));
 
-/* ====== Health (basic) ====== */
+/* ====== Health ====== */
 app.get("/", (_req, res) =>
   res.json({
     ok: true,
@@ -165,7 +174,7 @@ function verifyData(json, sig) {
 }
 
 /* ====== Pending store (Octo) ====== */
-const PENDING = new Map(); // key: shop_transaction_id
+const PENDING = new Map();
 const savePending = (id, payload) =>
   PENDING.set(String(id), { payload, ts: Date.now() });
 const popPending = (id) => {
@@ -180,7 +189,7 @@ setInterval(() => {
 }, 3600000);
 
 /* =========================================================
- *  Postgres (ESM) + /db/health
+ *  Postgres
  * ========================================================= */
 const pgPool = new Pool({
   host: process.env.PGHOST || "",
@@ -206,7 +215,7 @@ app.get("/db/health", async (_req, res) => {
   }
 });
 
-/* ====== DB schema ensure (khamsachekin) ====== */
+/* ====== DB schema ensure ====== */
 const isISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
 const isISODateTime = (s) =>
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?/.test(String(s || ""));
@@ -216,7 +225,9 @@ const toTz = (s) => {
   if (isISO(s)) return `${s}T00:00:00`;
   return null;
 };
+
 async function ensureSchema() {
+  // asosiy jadval
   await pgPool.query(
     `CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`
   );
@@ -272,8 +283,6 @@ async function ensureSchema() {
       IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='khamsachekin_time_idx') THEN
         EXECUTE 'CREATE INDEX khamsachekin_time_idx ON public.'||_t||'(rooms, check_in, check_out)';
       END IF;
-
-      -- soatli band qilish maydonlari
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='check_in_at') THEN
         EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_in_at TIMESTAMPTZ';
       END IF;
@@ -285,16 +294,67 @@ async function ensureSchema() {
       END IF;
     END $$;`);
 }
-ensureSchema().catch((e) => console.error("ensureSchema error:", e));
 
-/* ======= YANGI: Tarif hisoblash uchun helpers (room_types talab qiladi) ======= */
+// YANGI: room_types jadvali (Render’da ham mavjud bo‘lishi uchun)
+async function ensureRoomTypes() {
+  await pgPool.query(`
+    CREATE TABLE IF NOT EXISTS public.room_types (
+      room_type TEXT PRIMARY KEY,
+      capacity  INT  NOT NULL,
+      pre_buffer_minutes  INT NOT NULL DEFAULT 0,
+      post_buffer_minutes INT NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+
+  // FAMILY
+  await pgPool.query(
+    `INSERT INTO public.room_types (room_type, capacity, pre_buffer_minutes, post_buffer_minutes)
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT (room_type) DO UPDATE
+       SET capacity = EXCLUDED.capacity,
+           pre_buffer_minutes = EXCLUDED.pre_buffer_minutes,
+           post_buffer_minutes = EXCLUDED.post_buffer_minutes,
+           updated_at = now();`,
+    ["FAMILY", FAMILY_CAPACITY, FAMILY_PRE_BUFFER_MIN, FAMILY_POST_BUFFER_MIN]
+  );
+
+  // STANDARD (buffer 0/0 default)
+  await pgPool.query(
+    `INSERT INTO public.room_types (room_type, capacity)
+     VALUES ($1,$2)
+     ON CONFLICT (room_type) DO UPDATE
+       SET capacity = EXCLUDED.capacity,
+           updated_at = now();`,
+    ["STANDARD", STANDARD_CAPACITY]
+  );
+}
+
+ensureSchema()
+  .then(ensureRoomTypes)
+  .catch((e) => console.error("ensureSchema/room_types error:", e));
+
+/* ===== Tarif helpers ===== */
 async function getRoomTypeCfg(roomType) {
   const { rows } = await pgPool.query(
-    `SELECT capacity, pre_buffer_minutes, post_buffer_minutes
-     FROM public.room_types WHERE room_type=$1`,
+    `SELECT capacity, pre_buffer_minutes, post_buffer_minutes FROM public.room_types WHERE room_type=$1`,
     [roomType]
   );
-  if (!rows[0]) throw new Error(`Unknown room type: ${roomType}`);
+  if (!rows[0]) {
+    // Fallback: agar jadval bo‘lmasa ham default qaytaramiz
+    if (roomType === "FAMILY") {
+      return {
+        capacity: FAMILY_CAPACITY,
+        pre_buffer_minutes: FAMILY_PRE_BUFFER_MIN,
+        post_buffer_minutes: FAMILY_POST_BUFFER_MIN,
+      };
+    }
+    return {
+      capacity: STANDARD_CAPACITY,
+      pre_buffer_minutes: 0,
+      post_buffer_minutes: 0,
+    };
+  }
   return rows[0];
 }
 async function getNeighbors(roomType, startISO) {
@@ -387,6 +447,7 @@ app.get("/api/bnovo/availability", async (req, res) => {
 /* =======================
  *  PAYMENTS (Octo)
  * ======================= */
+// (o'zgarmadi)
 app.post("/create-payment", async (req, res) => {
   try {
     if (!OCTO_SHOP_ID || !OCTO_SECRET)
@@ -584,7 +645,7 @@ ${
     }
 
     console.warn("⚠️ Payment not success yoki payload topilmadi");
-    return res.json({ ok: true }); // Octo qayta urmasin
+    return res.json({ ok: true });
   } catch (e) {
     console.error("❌ /payment-callback:", e);
     res.status(200).json({ ok: true });
@@ -750,13 +811,10 @@ app.get("/api/checkins/next-block", async (req, res) => {
   }
 });
 
-/* ====== YANGI: Allowed tariffs (3h/10h/24h) ======
-   GET /api/availability/allowed-tariffs?roomType=STANDARD&start=2025-10-08T03:00
-   — Check-in form duration select’ni yoqish/o‘chirish uchun
-*/
+/* ====== Allowed tariffs (3h/10h/24h) ====== */
 app.get("/api/availability/allowed-tariffs", async (req, res) => {
   try {
-    const roomType = String(req.query.roomType || "STANDARD");
+    const roomType = String(req.query.roomType || "STANDARD").toUpperCase();
     const S = toTz(req.query.start);
     if (!S)
       return res.status(400).json({ ok: false, error: "start ISO required" });
@@ -767,7 +825,7 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
 
     const { p_end, n_start } = await getNeighbors(roomType, S);
 
-    // Oldingi bron bilan urishmasin
+    // oldingi bron bilan urishmasin
     if (p_end) {
       const minStart = new Date(new Date(p_end).getTime() + pre * 60 * 1000);
       if (new Date(S) < minStart) {
@@ -775,7 +833,7 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
           ok: true,
           allowed: [],
           reason: "start_too_early_hits_previous",
-          details: { p_end, requiredEarliestStart: minStart },
+          details: { p_end, requiredEarliestStart: minStart.toISOString() },
         });
       }
     }
@@ -788,17 +846,16 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
 
     const allowed = [];
     for (const t of tariffs) {
-      const Dms = t.hours * 60 * 60 * 1000;
-      const end = new Date(new Date(S).getTime() + Dms);
+      const end = new Date(new Date(S).getTime() + t.hours * 60 * 60 * 1000);
       const endWithPost = new Date(end.getTime() + post * 60 * 1000);
 
-      // Keyingi bron boshlanishidan o‘tib ketmasin
       if (n_start && endWithPost > new Date(n_start)) continue;
 
-      // Capacity (bizning bronni ham qo‘shib)
-      const fromTs = new Date(S);
-      const toTs = endWithPost;
-      const peakExisting = await getPeakConcurrency(roomType, fromTs, toTs);
+      const peakExisting = await getPeakConcurrency(
+        roomType,
+        new Date(S),
+        endWithPost
+      );
       const peakWithUs = peakExisting + 1;
       if (peakWithUs <= cfg.capacity) allowed.push(t.code);
     }
@@ -813,11 +870,14 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
     });
   } catch (e) {
     console.error("ALLOWED-TARIFFS ERR:", e);
-    res.status(500).json({ ok: false, error: "server_error" });
+    // diagnostika uchun xabar ham qaytaramiz
+    res
+      .status(500)
+      .json({ ok: false, error: "server_error", message: e.message });
   }
 });
 
-/* === YANGI: DELETE by id (frontend dagi Family yonidagi delete uchun) === */
+/* === DELETE by id === */
 app.delete("/api/checkins/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0)
