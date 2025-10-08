@@ -12,10 +12,8 @@ import "./roomModalMedia.scss";
 /** Label/code → code (STANDARD | FAMILY) */
 function normalizeRoomCode(v) {
   const s = String(v || "").toLowerCase().trim();
-  // labellar
   if (s.includes("family")) return "FAMILY";
   if (s.includes("standard")) return "STANDARD";
-  // allaqachon code bo'lsa
   if (s === "family") return "FAMILY";
   if (s === "standard") return "STANDARD";
   return "";
@@ -38,16 +36,47 @@ const priceTable = {
   FAMILY: { upTo3Hours: 70, upTo10Hours: 100, oneDay: 150 },
 };
 
-/** Duration → key */
+/** Duration → key (bardoshlilik kuchaytirildi) */
 function normalizeDuration(duration) {
-  if (!duration || typeof duration !== "string") return "";
-  const d = duration.toLowerCase();
-  if (d.includes("3") && (d.includes("hour") || d.includes("soat") || d.includes("saat")))
-    return "upTo3Hours";
-  if (d.includes("10") && (d.includes("hour") || d.includes("soat") || d.includes("saat")))
-    return "upTo10Hours";
-  if ((d.includes("1") || d.includes("bir")) && (d.includes("day") || d.includes("kun") || d.includes("день")))
+  if (!duration) return "";
+
+  const raw = String(duration).trim();
+
+  // 1) i18n kalitlari to‘g‘ridan-to‘g‘ri kelgan bo‘lsa
+  const k = raw.replace(/\s+/g, "");
+  if (/^upTo3Hours$/i.test(k)) return "upTo3Hours";
+  if (/^upTo10Hours$/i.test(k)) return "upTo10Hours";
+  if (/^oneDay$/i.test(k)) return "oneDay";
+
+  // 2) label/ tarjimalarni matn bo‘yicha aniqlash
+  const d = raw.toLowerCase();
+
+  // "hour" so‘zining turli tillardagi/yozilishdagi variantlarini qamrab olamiz
+  const HOUR_WORDS = [
+    "hour", "hours",     // en
+    "soat", "soatgacha", // uz
+    "saat", "saatlar",   // tr
+    "час", "часа", "часов", "ч", // ru
+  ];
+
+  const DAY_WORDS = [
+    "day", "days",       // en
+    "kun",               // uz
+    "день", "сутки",     // ru
+  ];
+
+  const hasAny = (arr) => arr.some((w) => d.includes(w));
+
+  // up to 3 hours
+  if (d.includes("3") && hasAny(HOUR_WORDS)) return "upTo3Hours";
+
+  // up to 10 hours  (NBSP/space muammolari uchun faqat "10" raqamiga qaraymiz)
+  if (d.includes("10") && hasAny(HOUR_WORDS)) return "upTo10Hours";
+
+  // one day
+  if ((d.includes("one") || d.includes("1") || d.includes("bir")) && hasAny(DAY_WORDS))
     return "oneDay";
+
   return "";
 }
 
@@ -140,12 +169,17 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     }
   }, [t, propGuests, propRooms]);
 
-  const durationKey = useMemo(() => normalizeDuration(bookingInfo.duration), [bookingInfo.duration]);
+  const durationKey = useMemo(
+    () => normalizeDuration(bookingInfo.duration),
+    [bookingInfo.duration]
+  );
+
   const price = useMemo(() => {
     const table = priceTable[bookingInfo.rooms];
     if (!table || !durationKey) return null;
     return table[durationKey];
   }, [bookingInfo.rooms, durationKey]);
+
   const priceDisplay = useMemo(() => (price != null ? `${price}€` : "-"), [price]);
 
   const handleInputChange = (e) => {
@@ -194,7 +228,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
 
     try {
       const existing = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
-      const updated = [full, ...existing]; // newest first
+      const updated = [full, ...existing];
       sessionStorage.setItem("allBookings", JSON.stringify(updated));
       sessionStorage.setItem("bookingInfo", JSON.stringify(full));
       localStorage.setItem("bookingInfo", JSON.stringify(full));

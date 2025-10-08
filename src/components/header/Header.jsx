@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+// Header.jsx
+import React, { useEffect, useState, useCallback } from "react";
 import "./header.scss";
 import "./headerMedia.scss";
 import { FaWifi, FaChevronDown } from "react-icons/fa";
@@ -25,17 +26,10 @@ function getApiBase() {
     (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||
     "";
   const cleaned = String(env || "").replace(/\/+$/, "");
-  return (
-    cleaned || (typeof window !== "undefined" ? window.location.origin : "")
-  );
+  return cleaned || (typeof window !== "undefined" ? window.location.origin : "");
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function fmtHuman(ymd) {
-  if (!ymd) return "-";
-  const [y, m, d] = String(ymd).split("-");
-  return `${d}.${m}.${y}`;
-}
 const isForceFamilyBusy = () => {
   try {
     const sp = new URLSearchParams(window.location.search);
@@ -43,6 +37,20 @@ const isForceFamilyBusy = () => {
   } catch {
     return false;
   }
+};
+
+/* === Date input language map (for <input type="date">) === */
+const langMap = {
+  en: "en-US",
+  ru: "ru-RU",
+  uz: "uz-Latn-UZ",
+};
+
+/* === Local i18n qo‘shimcha (Header ichida ishlatamiz) === */
+const localI18n = {
+  en: { dateFormatShort: "DD.MM.YYYY" },
+  ru: { dateFormatShort: "ДД.ММ.ГГГГ" },
+  uz: { dateFormatShort: "KK.OO.YYYY" },
 };
 
 async function checkFamilyAvailability({ checkIn, nights = 1 }) {
@@ -70,7 +78,7 @@ async function checkFamilyAvailability({ checkIn, nights = 1 }) {
   }
 }
 
-/* YANGI: Family blackout tekshiruvi sana+soat bilan */
+/* Family blackout tekshiruvi sana+soat bilan (Postgres) */
 async function postgresFamilyBusyDT(startAt) {
   const base = getApiBase();
   const url = `${base}/api/checkins/next-block?roomType=FAMILY&startAt=${encodeURIComponent(
@@ -82,7 +90,6 @@ async function postgresFamilyBusyDT(startAt) {
     const data = ct.includes("application/json")
       ? await res.json()
       : { _raw: await res.text() };
-    // { ok:true, block: null | {start_date,end_date,...} }
     if (!res.ok) return { busy: false, block: null };
     return { busy: !!data?.block, block: data?.block || null };
   } catch {
@@ -92,14 +99,14 @@ async function postgresFamilyBusyDT(startAt) {
 
 /* ===== Component ===== */
 const Header = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [checkIn, setCheckIn] = useState("");
   const [checkOutTime, setCheckOutTime] = useState("");
   const [duration, setDuration] = useState("Up to 3 hours");
-  const [rooms, setRooms] = useState("STANDARD"); 
+  const [rooms, setRooms] = useState("STANDARD");
 
   const [checking, setChecking] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -156,7 +163,6 @@ const Header = () => {
       return;
     }
 
-    // Sana+soat (datetime) — backendga shuni yuboramiz
     const startAt = `${checkIn}T${checkOutTime}`;
 
     if (rooms === "FAMILY") {
@@ -172,7 +178,7 @@ const Header = () => {
         return;
       }
 
-      // 2) Bnovo availability (hali kunlik hisobda, avvalgidek)
+      // 2) Bnovo availability
       setChecking(true);
       try {
         await sleep(3000);
@@ -200,6 +206,12 @@ const Header = () => {
     localStorage.setItem("bookingInfo", JSON.stringify(bookingInfo));
     navigate("/rooms");
   };
+
+  /* === i18n tiliga mos <input type="date"> === */
+  const currentLangShort = (i18n.language || "en").split("-")[0];
+  const dateInputLang = langMap[currentLangShort] || "en-US";
+  const dateFormatText =
+    localI18n[currentLangShort]?.dateFormatShort || localI18n.en.dateFormatShort;
 
   return (
     <>
@@ -258,14 +270,19 @@ const Header = () => {
 
               <div className="header__form-row">
                 <div className="header__form-group">
-                  <label htmlFor="checkin">{t("check-in")}</label>
+                  <label htmlFor="checkin">
+                    {t("check-in")}
+                    <span className="muted"> ({dateFormatText})</span>
+                  </label>
                   <input
                     id="checkin"
                     type="date"
+                    lang={dateInputLang}
                     value={checkIn}
                     min={today}
                     onChange={(e) => setCheckIn(e.target.value)}
                     required
+                    className="kh-date"
                   />
                 </div>
 
@@ -278,6 +295,7 @@ const Header = () => {
                     onChange={(e) => setCheckOutTime(e.target.value)}
                     required
                     disabled={!checkIn}
+                    className="kh-time"
                   />
                 </div>
               </div>

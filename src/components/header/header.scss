@@ -287,140 +287,198 @@
   }
 }
 
+/* Labeldagi format matni */
+.muted {
+  margin-left: 6px;
+  font-size: 0.9em;
+  color: #6b7280; // gray-500
+  font-weight: 400;
+}
+
+/* Date/time inputlarining ko'rinishi bir xil bo'lsin */
+.kh-date,
+.kh-time {
+  width: 100%;
+  height: 44px;
+  border: 1.5px solid #e5e7eb; /* gray-200 */
+  border-radius: 12px;
+  padding: 10px 40px 10px 14px;
+  background: #fff;
+  line-height: 1.2;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+}
+
+.kh-date:focus,
+.kh-time:focus {
+  border-color: #f59e0b; /* amber-500 */
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15);
+}
+
+/* Kalendar ikonkasini aniqroq ko'rsatish */
+.kh-date::-webkit-calendar-picker-indicator {
+  opacity: 0.85;
+  cursor: pointer;
+  margin-right: 6px;
+}
+
+/* Safari/Chrome'da format matni rangini boshqarish */
+.kh-date:invalid::-webkit-datetime-edit {
+  color: #9ca3af; /* gray-400 */
+}
+.kh-date::-webkit-datetime-edit {
+  color: #111827; /* gray-900 */
+}
+
+/* Firefox maydoni uchun umumiy normalize */
+.kh-date::-moz-focus-inner,
+.kh-time::-moz-focus-inner {
+  border: 0;
+}
 
 /* =========================
    Modal (Header) styles
    ========================= */
-   .kh-modal__overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: rgba(0, 0, 0, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-    animation: kh-fade-in 180ms ease-out both;
+.kh-modal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: kh-fade-in 180ms ease-out both;
+}
+
+.kh-modal {
+  width: min(540px, 92vw);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  position: relative;
+  text-align: left;
+  transform: translateY(4px);
+  animation: kh-pop 200ms ease-out both;
+
+  /* Agar ichida form/btnlar bo'lsa umumiy reset */
+  *:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 169, 48, 0.35);
+    border-radius: 8px;
   }
-  
-  .kh-modal {
-    width: min(540px, 92vw);
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    padding: 20px;
-    position: relative;
-    text-align: left;
-    transform: translateY(4px);
-    animation: kh-pop 200ms ease-out both;
-  
-    /* Agar ichida form/btnlar bo'lsa umumiy reset */
-    *:focus {
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(255, 169, 48, 0.35);
-      border-radius: 8px;
-    }
+}
+
+.kh-modal__title {
+  margin: 0 0 8px 0;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: rgb(255, 169, 48); // brend rangiga mos
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.kh-modal__text {
+  margin: 0;
+  color: #333;
+  line-height: 1.6;
+}
+
+.kh-modal__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+.kh-modal__btn {
+  appearance: none;
+  border: none;
+  border-radius: 10px !important;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms ease, background-color 160ms ease,
+    opacity 160ms ease;
+
+  &:active {
+    transform: translateY(1px);
   }
-  
-  .kh-modal__title {
-    margin: 0 0 8px 0;
-    font-weight: 700;
-    font-size: 1.25rem;
-    color: rgb(255, 169, 48); // brend rangiga mos
-    text-shadow: 0 1px 0 rgba(0,0,0,0.04);
-  }
-  
-  .kh-modal__text {
-    margin: 0;
-    color: #333;
-    line-height: 1.6;
-  }
-  
-  .kh-modal__actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 16px;
-    justify-content: flex-end;
-  }
-  
-  .kh-modal__btn {
-    appearance: none;
-    border: none;
-    border-radius: 10px !important;
-    padding: 10px 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 120ms ease, background-color 160ms ease, opacity 160ms ease;
-  
-    &:active {
-      transform: translateY(1px);
-    }
-  
-    &--primary {
-      background: rgb(255, 169, 48);
-      color: #fff;
-  
-      &:hover {
-        background-color: #16324f; /* sizdagi hover rangga mos */
-      }
-    }
-  
-    &--ghost {
-      background: transparent;
-      color: #333;
-      border: 1px solid #ddd;
-  
-      &:hover {
-        background: #f7f7f7;
-      }
-    }
-  }
-  
-  /* Close (x) tugmasi kerak bo'lsa */
-  .kh-modal__close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    appearance: none;
-    background: transparent;
-    border: none;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    color: #666;
-    cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.2 ease;
-  
+
+  &--primary {
+    background: rgb(255, 169, 48);
+    color: #fff;
+
     &:hover {
-      background: rgba(0,0,0,0.05);
-    }
-    &:active {
-      transform: translateY(1px);
+      background-color: #16324f; /* sizdagi hover rangga mos */
     }
   }
-  
-  /* Animations */
-  @keyframes kh-fade-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  
-  @keyframes kh-pop {
-    from { opacity: 0; transform: translateY(8px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  
-  /* Responsivlik */
-  @media (max-width: 420px) {
-    .kh-modal {
-      padding: 16px;
-    }
-    .kh-modal__title {
-      font-size: 1.1rem;
-    }
-    .kh-modal__btn {
-      padding: 9px 14px;
+
+  &--ghost {
+    background: transparent;
+    color: #333;
+    border: 1px solid #ddd;
+
+    &:hover {
+      background: #f7f7f7;
     }
   }
-  
+}
+
+/* Close (x) tugmasi kerak bo'lsa */
+.kh-modal__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  appearance: none;
+  background: transparent;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #666;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2 ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+/* Animations */
+@keyframes kh-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes kh-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsivlik */
+@media (max-width: 420px) {
+  .kh-modal {
+    padding: 16px;
+  }
+  .kh-modal__title {
+    font-size: 1.1rem;
+  }
+  .kh-modal__btn {
+    padding: 9px 14px;
+  }
+}

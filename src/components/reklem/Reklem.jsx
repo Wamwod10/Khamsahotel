@@ -1,15 +1,17 @@
 import React from "react";
 import "./reklem.scss";
 import { FaPlane } from "react-icons/fa6";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 const Reklem = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="reklem" role="region" aria-label="Khamsa banner">
       <div className="reklem__track">
         <div className="reklem__fly">
           <FaPlane className="reklem__plane" aria-hidden="true" />
-          <span className="reklem__msg">{t("khamsaa")}</span>
+          <span className="reklem__msg">{t("khamsa")}</span>
         </div>
       </div>
     </div>
