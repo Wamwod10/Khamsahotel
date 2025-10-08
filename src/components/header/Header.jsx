@@ -1,5 +1,5 @@
 // Header.jsx
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import "./header.scss";
 import "./headerMedia.scss";
 import { FaWifi, FaChevronDown } from "react-icons/fa";
@@ -26,7 +26,9 @@ function getApiBase() {
     (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||
     "";
   const cleaned = String(env || "").replace(/\/+$/, "");
-  return cleaned || (typeof window !== "undefined" ? window.location.origin : "");
+  return (
+    cleaned || (typeof window !== "undefined" ? window.location.origin : "")
+  );
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -40,11 +42,7 @@ const isForceFamilyBusy = () => {
 };
 
 /* === Date input language map (for <input type="date">) === */
-const langMap = {
-  en: "en-US",
-  ru: "ru-RU",
-  uz: "uz-Latn-UZ",
-};
+const langMap = { en: "en-US", ru: "ru-RU", uz: "uz-Latn-UZ" };
 
 /* === Local i18n qo‘shimcha (Header ichida ishlatamiz) === */
 const localI18n = {
@@ -97,6 +95,29 @@ async function postgresFamilyBusyDT(startAt) {
   }
 }
 
+/* ===== YANGI: duration ↔ code mapping =====
+   Backend allowed-tariffs -> ["3h","10h","24h"]
+   Frontend select esa i18n label bilan.
+*/
+const DURATIONS = [
+  { code: "3h", key: "upTo3Hours" },
+  { code: "10h", key: "upTo10Hours" },
+  { code: "24h", key: "oneDay" },
+];
+function labelFromCode(code, t) {
+  const item = DURATIONS.find((d) => d.code === code);
+  return item ? t(item.key) : code;
+}
+function codeFromLabel(label = "") {
+  const s = String(label).toLowerCase();
+  if (s.includes("one day")) return "24h";
+  if (s.includes("24")) return "24h";
+  if (s.includes("10")) return "10h";
+  if (s.includes("3")) return "3h";
+  // i18n — kalitlar bo‘yicha ham tekshiramiz
+  return null;
+}
+
 /* ===== Component ===== */
 const Header = () => {
   const { t, i18n } = useTranslation();
@@ -111,6 +132,11 @@ const Header = () => {
   const [checking, setChecking] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMsg, setModalMsg] = useState("");
+
+  // YANGI: allowed tariffs
+  const [allowed, setAllowed] = useState([]); // ["3h","10h","24h"]
+  const [tariffLoading, setTariffLoading] = useState(false);
+  const [tariffError, setTariffError] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -156,6 +182,58 @@ const Header = () => {
     return 1;
   }, []);
 
+  // YANGI: startAt memo (sana + soat)
+  const startAt = useMemo(() => {
+    if (!checkIn || !checkOutTime) return "";
+    return `${checkIn}T${checkOutTime}`;
+  }, [checkIn, checkOutTime]);
+
+  // YANGI: allowed-tariffs fetcher
+  useEffect(() => {
+    let ac = new AbortController();
+    async function run() {
+      setTariffError("");
+      setAllowed([]);
+      if (!startAt || !rooms) return;
+      try {
+        setTariffLoading(true);
+        const base = getApiBase();
+        const qs = new URLSearchParams({
+          roomType: rooms,
+          start: startAt,
+        }).toString();
+        const res = await fetch(
+          `${base}/api/availability/allowed-tariffs?${qs}`,
+          { signal: ac.signal }
+        );
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        const data = ct.includes("application/json")
+          ? await res.json()
+          : { _raw: await res.text() };
+        if (!res.ok)
+          throw new Error((data && (data.error || data._raw)) || "HTTP");
+        const list = Array.isArray(data.allowed) ? data.allowed : [];
+        setAllowed(list);
+
+        // Agar joriy duration ruxsat etilmagan bo‘lsa — birinchi ruxsat etilganga o‘tkazamiz
+        const curCode = codeFromLabel(duration);
+        if (curCode && !list.includes(curCode)) {
+          const next = list[0] || "3h";
+          setDuration(labelFromCode(next, t));
+        }
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          setTariffError(e.message || "Tariff check failed");
+          setAllowed([]); // konservativ: hammasini block qilmaymiz, lekin disable ko‘rsatamiz
+        }
+      } finally {
+        setTariffLoading(false);
+      }
+    }
+    run();
+    return () => ac.abort();
+  }, [startAt, rooms, t, duration]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!checkIn || !checkOutTime || !duration || !rooms) {
@@ -163,7 +241,17 @@ const Header = () => {
       return;
     }
 
-    const startAt = `${checkIn}T${checkOutTime}`;
+    // YANGI: duration allowed-tekshiruvi
+    const pickedCode = codeFromLabel(duration);
+    if (pickedCode && allowed.length > 0 && !allowed.includes(pickedCode)) {
+      alert(
+        t("durationNotAllowed") ||
+          "Tanlangan vaqt davomiyligi ushbu vaqtda ruxsat etilmagan"
+      );
+      return;
+    }
+
+    const startAtLocal = `${checkIn}T${checkOutTime}`;
 
     if (rooms === "FAMILY") {
       if (isForceFamilyBusy()) {
@@ -172,7 +260,7 @@ const Header = () => {
       }
 
       // 1) PG blackout check — datetime bilan
-      const pg = await postgresFamilyBusyDT(startAt);
+      const pg = await postgresFamilyBusyDT(startAtLocal);
       if (pg.busy && pg.block) {
         openModal(`${t("familyNotAvailable") || "Bu xona band qilingan"}`);
         return;
@@ -193,7 +281,7 @@ const Header = () => {
       }
     }
 
-    const formattedCheckOut = `${checkIn}T${checkOutTime}`;
+    const formattedCheckOut = startAtLocal; // sizning saqlash formatizga mos
     const bookingInfo = {
       checkIn,
       checkOut: formattedCheckOut,
@@ -211,7 +299,8 @@ const Header = () => {
   const currentLangShort = (i18n.language || "en").split("-")[0];
   const dateInputLang = langMap[currentLangShort] || "en-US";
   const dateFormatText =
-    localI18n[currentLangShort]?.dateFormatShort || localI18n.en.dateFormatShort;
+    localI18n[currentLangShort]?.dateFormatShort ||
+    localI18n.en.dateFormatShort;
 
   return (
     <>
@@ -302,19 +391,48 @@ const Header = () => {
 
               <div className="header__form-row">
                 <div className="header__form-group">
-                  <label htmlFor="duration">{t("duration")}</label>
+                  <label htmlFor="duration">
+                    {t("duration")}{" "}
+                    <span className="muted" style={{ fontWeight: 400 }}>
+                      {tariffLoading
+                        ? `(${t("searchrooms") || "Checking"}…)`
+                        : allowed.length > 0
+                        ? `(${t("available") || "available"})`
+                        : startAt
+                        ? `(${t("notavailable") || "restricted"})`
+                        : ""}
+                    </span>
+                  </label>
                   <div className="custom-select">
                     <select
                       id="duration"
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
+                      disabled={!checkIn || !checkOutTime}
                     >
-                      <option>{t("upTo3Hours")}</option>
-                      <option>{t("upTo10Hours")}</option>
-                      <option>{t("oneDay")}</option>
+                      {DURATIONS.map((d) => {
+                        const label = labelFromCode(d.code, t);
+                        const dis =
+                          startAt && allowed.length > 0
+                            ? !allowed.includes(d.code)
+                            : false; // agar allowed kelmasa, bloklamaymiz
+                        return (
+                          <option key={d.code} value={label} disabled={dis}>
+                            {label}
+                          </option>
+                        );
+                      })}
                     </select>
                     <FaChevronDown className="select-icon" />
                   </div>
+                  {tariffError && (
+                    <div
+                      className="muted"
+                      style={{ color: "#b33", marginTop: 6 }}
+                    >
+                      {tariffError}
+                    </div>
+                  )}
                 </div>
 
                 <div className="header__form-group">

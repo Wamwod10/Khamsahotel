@@ -44,7 +44,6 @@ function fmtHumanDate(ymd) {
 }
 function fmtHumanDT(dt) {
   if (!dt) return "-";
-  // kutilgan format: 'YYYY-MM-DDTHH:mm[:ss]'
   const [d, t = "00:00"] = String(dt).split("T");
   const [hh = "00", mm = "00"] = t.split(":");
   return `${fmtHumanDate(d)} ${hh}:${mm}`;
@@ -87,6 +86,10 @@ export default function Checkin() {
   const [conflict, setConflict] = useState(null); // {id,start_date,end_date} | null
   const [showConflict, setShowConflict] = useState(false);
 
+  // YANGI: Admin preview uchun ruxsat etilgan tariflar (startAt + roomType bo‘yicha)
+  const [allowedTariffs, setAllowedTariffs] = useState([]); // ["3h","10h","24h"]
+  const [tariffLoading, setTariffLoading] = useState(false);
+
   /* ---- List (/api/checkins) ---- */
   async function loadList() {
     try {
@@ -94,18 +97,11 @@ export default function Checkin() {
       const qs = new URLSearchParams({ limit: "300", roomType }).toString();
       const d = await fetchJson(`${API}/api/checkins?${qs}`);
       const rows = (d.items || []).map((r) => {
-        // Backend index.js ro'yxatda 'start_at'/'end_at' (timestamp/timestamptz) qaytaradi.
-        // Agar yo‘q bo‘lsa, check_in/check_out sanalaridan yasaymiz.
         const start =
           r.start_at || (r.check_in ? `${r.check_in}T00:00` : "") || "";
         const end =
           r.end_at || (r.check_out ? `${r.check_out}T00:00` : "") || "";
-        return {
-          id: r.id,
-          roomType: r.rooms,
-          start,
-          end,
-        };
+        return { id: r.id, roomType: r.rooms, start, end };
       });
       setItems(rows);
     } catch (e) {
@@ -117,8 +113,7 @@ export default function Checkin() {
   }
   useEffect(() => {
     loadList(); /* roomType ga bog'liq */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomType]);
+  }, [roomType]); // eslint-disable-line
 
   /* ---- Overlap check (/api/checkins/range/check) ---- */
   useEffect(() => {
@@ -129,11 +124,7 @@ export default function Checkin() {
       if (endAt <= startAt) return;
       try {
         setChecking(true);
-        const qs = new URLSearchParams({
-          roomType,
-          startAt,
-          endAt,
-        }).toString();
+        const qs = new URLSearchParams({ roomType, startAt, endAt }).toString();
         const d = await fetchJson(`${API}/api/checkins/range/check?${qs}`, {
           signal: ac.signal,
         });
@@ -149,6 +140,30 @@ export default function Checkin() {
     })();
     return () => ac.abort();
   }, [startAt, endAt, roomType, API]);
+
+  /* ---- YANGI: Allowed tariffs preview (admin uchun) ---- */
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      setAllowedTariffs([]);
+      if (!isIsoDT(startAt)) return;
+      try {
+        setTariffLoading(true);
+        const qs = new URLSearchParams({ roomType, start: startAt }).toString();
+        const d = await fetchJson(
+          `${API}/api/availability/allowed-tariffs?${qs}`,
+          { signal: ac.signal }
+        );
+        setAllowedTariffs(Array.isArray(d.allowed) ? d.allowed : []);
+      } catch (e) {
+        if (e.name !== "AbortError") console.warn("tariffs error:", e.message);
+        setAllowedTariffs([]);
+      } finally {
+        setTariffLoading(false);
+      }
+    })();
+    return () => ac.abort();
+  }, [startAt, roomType, API]);
 
   /* ---- Save (/api/checkins/range) ---- */
   async function saveRange() {
@@ -190,8 +205,7 @@ export default function Checkin() {
       await fetchJson(`${API}/api/checkins/${encodeURIComponent(it.id)}`, {
         method: "DELETE",
       });
-      // Optimistic update:
-      setItems((prev) => prev.filter((x) => x.id !== it.id));
+      setItems((prev) => prev.filter((x) => x.id !== it.id)); // optimistic
     } catch (e) {
       alert(e.message || "O‘chirishda xatolik");
     }
@@ -244,7 +258,7 @@ export default function Checkin() {
                     it.roomType === "FAMILY" ? "fam" : "std"
                   }`}
                 >
-                  {/* FAMILY bo‘lsa, "Family" so‘zining OLDIGA delete tugmasi */}
+                  {/* FAMILY bo‘lsa, "Family" oldida delete tugma */}
                   {it.roomType === "FAMILY" && (
                     <button
                       type="button"
@@ -332,8 +346,23 @@ export default function Checkin() {
                   </button>
                 </div>
 
+                {/* YANGI: Admin preview — ushbu Start vaqtida qaysi tariflar sig‘adi */}
+                {isIsoDT(startAt) && (
+                  <div className="ci-hint" style={{ marginTop: 6 }}>
+                    {tariffLoading ? (
+                      "Tariffs: checking..."
+                    ) : allowedTariffs.length > 0 ? (
+                      <span className="ci-ok">
+                        Tariffs allowed: {allowedTariffs.join(", ")} ✓
+                      </span>
+                    ) : (
+                      <span className="ci-warn">Tariffs allowed: none</span>
+                    )}
+                  </div>
+                )}
+
                 {isIsoDT(startAt) && isIsoDT(endAt) && (
-                  <div className="ci-hint">
+                  <div className="ci-hint" style={{ marginTop: 6 }}>
                     {checking ? (
                       "Checking..."
                     ) : conflict ? (

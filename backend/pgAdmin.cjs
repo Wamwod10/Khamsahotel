@@ -28,12 +28,10 @@ const PORT = Number(
 const app = express();
 app.use(express.json());
 
-/* === CORS (khamsahotel.uz + preflight) ===
-   cors() paketini ishlatmaymiz; qo'l bilan to'liq ruxsat beramiz.
-   Muhimi: bu middleware barcha routelardan OLDIN turishi kerak. */
+/* === CORS (khamsahotel.uz + preflight) === */
 const ALLOWED_ORIGINS = [
-  (process.env.CLIENT_ORIGIN || "").trim(), // masalan: https://khamsahotel.uz
-  (process.env.FRONTEND_URL || "").trim(), // ehtiyot uchun
+  (process.env.CLIENT_ORIGIN || "").trim(),
+  (process.env.FRONTEND_URL || "").trim(),
   "https://khamsahotel.uz",
 ].filter(Boolean);
 
@@ -45,12 +43,7 @@ app.use((req, res, next) => {
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  // Cookie kerak bo'lsa yoqing:
-  // res.setHeader("Access-Control-Allow-Credentials", "true");
-
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204); // preflight
-  }
+  if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
 
@@ -58,14 +51,12 @@ app.use((req, res, next) => {
 types.setTypeParser(1082, (val) => val);
 
 /* ================== PG config ================== */
-// Postgres unquoted DB nomlarini baribir lowercase qiladi — biz ham shunday qilamiz
 const DB_NAME = clean(process.env.PGDATABASE, "khamsahotel").toLowerCase();
 const PG_CONFIG = {
   host: clean(process.env.PGHOST, "127.0.0.1"),
   port: Number(clean(process.env.PGPORT, "5432")),
   user: clean(process.env.PGUSER, "postgres"),
   password: clean(process.env.PGPASSWORD, "postgres"),
-  // Prod/remote’da ko‘pincha SSL kerak bo‘ladi
   ssl:
     clean(process.env.PGSSLMODE, "disable").toLowerCase() === "require"
       ? { rejectUnauthorized: false }
@@ -88,22 +79,16 @@ console.log(
 );
 
 /* ================== DB ensure ================== */
-/**
- * Localda (127.0.0.1) DB bo‘lmasa – CREATE DATABASE.
- * Remote/bulutda 3D000 chiqsa – yaratmaymiz (ko‘p provayderlarda ruxsat berilmaydi), xatoni tashlaymiz.
- */
 async function ensureDatabase() {
   try {
     await pool.query("SELECT 1");
   } catch (e) {
     if (e && e.code === "3D000") {
       if (!isLocalHost) {
-        // remote host – DB’ni bu yerda yaratmaymiz
         throw new Error(
           `Database "${DB_NAME}" topilmadi. Bulut/remote Postgresda avval DB’ni provayder panelida yarating. Original: ${e.message}`
         );
       }
-      // local — yaratib yuboramiz
       const admin = makePool("postgres");
       console.log(`Database "${DB_NAME}" topilmadi, yaratamiz...`);
       await admin.query(
@@ -123,17 +108,36 @@ async function ensureDatabase() {
 
 /* ================== Schema ensure (+ migratsiya) ================== */
 async function ensureSchema() {
-  // minimal marker jadval
+  // marker
   await pool.query(
     `CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`
   );
 
-  // ustunlarni mavjudligiga qarab qo‘shish/rename
+  // === room_types (YANGI) ===
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS public.room_types (
+      room_type TEXT PRIMARY KEY,
+      capacity  INT  NOT NULL,
+      pre_buffer_minutes  INT NOT NULL DEFAULT 0,
+      post_buffer_minutes INT NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+
+  // seed defaults agar bo'sh bo'lsa
+  await pool.query(`
+    INSERT INTO public.room_types (room_type, capacity, pre_buffer_minutes, post_buffer_minutes)
+    VALUES
+      ('FAMILY',   1, 0, 0),
+      ('STANDARD', 23, 0, 0)
+    ON CONFLICT (room_type) DO NOTHING;
+  `);
+
+  // khamsachekin ustunlarini moslashtirish
   await pool.query(`
   DO $$
   DECLARE _t text := 'khamsachekin';
   BEGIN
-    -- created_at
     IF NOT EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_schema='public' AND table_name=_t AND column_name='created_at'
@@ -141,7 +145,6 @@ async function ensureSchema() {
       EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN created_at TIMESTAMPTZ DEFAULT now()';
     END IF;
 
-    -- check_in (rename start_at -> check_in)
     IF NOT EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_schema='public' AND table_name=_t AND column_name='check_in'
@@ -156,7 +159,6 @@ async function ensureSchema() {
       END IF;
     END IF;
 
-    -- check_out (rename end_at -> check_out)
     IF NOT EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_schema='public' AND table_name=_t AND column_name='check_out'
@@ -171,7 +173,6 @@ async function ensureSchema() {
       END IF;
     END IF;
 
-    -- rooms (rename room_type -> rooms)
     IF NOT EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_schema='public' AND table_name=_t AND column_name='rooms'
@@ -186,7 +187,6 @@ async function ensureSchema() {
       END IF;
     END IF;
 
-    -- qolganlari
     IF NOT EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_schema='public' AND table_name=_t AND column_name='duration'
@@ -236,7 +236,6 @@ async function ensureSchema() {
       EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN email TEXT';
     END IF;
 
-    -- index (kunning kesimi)
     IF NOT EXISTS (
       SELECT 1 FROM pg_indexes
       WHERE schemaname='public' AND indexname='khamsachekin_time_idx'
@@ -244,7 +243,6 @@ async function ensureSchema() {
       EXECUTE 'CREATE INDEX khamsachekin_time_idx ON public.'||_t||'(rooms, check_in, check_out)';
     END IF;
 
-    -- === YANGI: soatgacha band qilish uchun TIMESTAMPTZ ustunlar
     IF NOT EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_schema='public' AND table_name=_t AND column_name='check_in_at'
@@ -265,7 +263,8 @@ async function ensureSchema() {
     ) THEN
       EXECUTE 'CREATE INDEX khamsachekin_time_at_idx ON public.'||_t||'(rooms, check_in_at, check_out_at)';
     END IF;
-  END $$;`);
+  END $$;
+  `);
 }
 
 /* ================== Small helpers ================== */
@@ -284,6 +283,70 @@ const toTz = (s) => {
   return null;
 };
 
+/* ==== NEW helpers for tariffs ==== */
+async function getRoomTypeCfg(roomType) {
+  const { rows } = await pool.query(
+    `SELECT capacity, pre_buffer_minutes, post_buffer_minutes
+     FROM public.room_types WHERE room_type=$1`,
+    [roomType]
+  );
+  if (!rows[0]) {
+    throw new Error(`Unknown room type: ${roomType}`);
+  }
+  return rows[0];
+}
+
+async function getNeighbors(roomType, startISO) {
+  // Oldingi tugagan eng yaqini (<= S) va keyingi boshlanadigan eng yaqini (>= S)
+  const qPrev = pool.query(
+    `SELECT MAX(COALESCE(check_out_at, check_out::timestamp)) AS p_end
+     FROM public.khamsachekin
+     WHERE rooms=$1 AND COALESCE(check_out_at, check_out::timestamp) <= $2::timestamptz`,
+    [roomType, startISO]
+  );
+  const qNext = pool.query(
+    `SELECT MIN(COALESCE(check_in_at, check_in::timestamp)) AS n_start
+     FROM public.khamsachekin
+     WHERE rooms=$1 AND COALESCE(check_in_at, check_in::timestamp) >= $2::timestamptz`,
+    [roomType, startISO]
+  );
+  const [r1, r2] = await Promise.all([qPrev, qNext]);
+  return {
+    p_end: r1.rows[0]?.p_end || null,
+    n_start: r2.rows[0]?.n_start || null,
+  };
+}
+
+async function getPeakConcurrency(roomType, fromTs, toTs) {
+  // fromTs..toTs oralig'ida overlap qilgan hamma intervalni olib, sweep-line
+  const { rows } = await pool.query(
+    `SELECT
+        GREATEST(COALESCE(check_in_at,  check_in::timestamp), $2::timestamptz)  AS st,
+        LEAST   (COALESCE(check_out_at, check_out::timestamp), $3::timestamptz) AS en
+     FROM public.khamsachekin
+     WHERE rooms=$1
+       AND COALESCE(check_in_at,  check_in::timestamp)  < $3::timestamptz
+       AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz`,
+    [roomType, fromTs, toTs]
+  );
+  const events = [];
+  for (const r of rows) {
+    if (r.st < r.en) {
+      events.push({ t: new Date(r.st), d: +1 });
+      events.push({ t: new Date(r.en), d: -1 });
+    }
+  }
+  // sort (vaqt, keyin d)
+  events.sort((a, b) => a.t - b.t || a.d - b.d);
+  let cur = 0,
+    peak = 0;
+  for (const e of events) {
+    cur += e.d;
+    if (cur > peak) peak = cur;
+  }
+  return peak;
+}
+
 /* ================== Health ================== */
 app.get("/healthz", async (_req, res) => {
   try {
@@ -294,7 +357,6 @@ app.get("/healthz", async (_req, res) => {
   }
 });
 
-// DB health (frontend/test uchun qulay)
 app.get("/db/health", async (_req, res) => {
   try {
     const r = await pool.query("SELECT 1 AS ok");
@@ -337,7 +399,7 @@ app.get("/api/checkins", async (req, res) => {
   }
 });
 
-/** Kun bandmi? (eski, DATE kesimi — o‘zgarmadi) */
+/** Kun bandmi? (DATE kesimi — o‘zgarmadi) */
 app.get("/api/checkins/day", async (req, res) => {
   const { start = "", date = "", roomType = "" } = req.query;
   const d = start || date;
@@ -371,14 +433,13 @@ app.get("/api/checkins/day", async (req, res) => {
   }
 });
 
-/** Bir kun insert [d, d+1) (eski — o‘zgarmadi) */
+/** Bir kun insert [d, d+1) (eski) */
 app.post("/api/checkins/day", async (req, res) => {
   const { date, roomType, note } = req.body || {};
   if (!isISO(date) || !roomType)
     return res
       .status(400)
       .json({ ok: false, error: "date YYYY-MM-DD, roomType required" });
-
   try {
     const conflict = await pool.query(
       `
@@ -407,7 +468,7 @@ app.post("/api/checkins/day", async (req, res) => {
   }
 });
 
-/** Interval overlap tekshiruv — endi datetime ham qo‘llaydi */
+/** Interval overlap tekshiruv — datetime qo‘llaydi */
 app.get("/api/checkins/range/check", async (req, res) => {
   const {
     roomType = "",
@@ -444,7 +505,7 @@ app.get("/api/checkins/range/check", async (req, res) => {
   }
 });
 
-/** Interval insert [start,end) — endi datetime ham qabul qiladi */
+/** Interval insert [start,end) — datetime */
 app.post("/api/checkins/range", async (req, res) => {
   const { roomType, start, end, startAt, endAt, note } = req.body || {};
   const A = toTz(startAt || start);
@@ -455,7 +516,6 @@ app.post("/api/checkins/range", async (req, res) => {
       .json({ ok: false, error: "roomType,startAt,endAt ISO required" });
 
   try {
-    // overlap check
     const q = await pool.query(
       `
       SELECT 1 FROM public.khamsachekin
@@ -467,7 +527,6 @@ app.post("/api/checkins/range", async (req, res) => {
     );
     if (q.rowCount) return res.status(409).json({ ok: false, error: "BUSY" });
 
-    // DATE maydonlar ham mos to‘lsin (compat)
     const dateOnlyStart = A.slice(0, 10);
     const dateOnlyEnd = B.slice(0, 10);
 
@@ -488,7 +547,7 @@ app.post("/api/checkins/range", async (req, res) => {
   }
 });
 
-/** Header.jsx uchun: berilgan vaqtdan boshlab mos eng yaqin blok (datetime qo‘llaydi) */
+/** Header.jsx uchun: berilgan vaqtda ustida turgan blok (agar ichida bo‘lsa) */
 app.get("/api/checkins/next-block", async (req, res) => {
   const { roomType = "", start = "", startAt = "" } = req.query;
   const A = toTz(startAt || start);
@@ -517,7 +576,77 @@ app.get("/api/checkins/next-block", async (req, res) => {
   }
 });
 
-/** === DELETE by id (Family badge yonidagi tugma uchun) === */
+/* ===== NEW: Allowed tariffs (3h/10h/24h) =====
+   GET /api/availability/allowed-tariffs?roomType=STANDARD&start=2025-10-08T03:00
+*/
+app.get("/api/availability/allowed-tariffs", async (req, res) => {
+  try {
+    const roomType = String(req.query.roomType || "STANDARD");
+    const S = toTz(req.query.start);
+    if (!S)
+      return res.status(400).json({ ok: false, error: "start ISO required" });
+
+    const cfg = await getRoomTypeCfg(roomType);
+    const pre = cfg.pre_buffer_minutes || 0;
+    const post = cfg.post_buffer_minutes || 0;
+
+    const { p_end, n_start } = await getNeighbors(roomType, S);
+
+    // oldingi bilan urishmasin
+    if (p_end) {
+      const minStart = new Date(new Date(p_end).getTime() + pre * 60 * 1000);
+      if (new Date(S) < minStart) {
+        return res.json({
+          ok: true,
+          allowed: [],
+          reason: "start_too_early_hits_previous",
+          details: { p_end, requiredEarliestStart: minStart },
+        });
+      }
+    }
+
+    const tariffs = [
+      { code: "3h", hours: 3 },
+      { code: "10h", hours: 10 },
+      { code: "24h", hours: 24 },
+    ];
+
+    const allowed = [];
+    for (const t of tariffs) {
+      const Dms = t.hours * 60 * 60 * 1000;
+      const end = new Date(new Date(S).getTime() + Dms);
+      const endWithPost = new Date(end.getTime() + post * 60 * 1000);
+
+      // keyingi bronni bosib o'tmasin
+      if (n_start && endWithPost > new Date(n_start)) {
+        continue;
+      }
+
+      // capacity check (bizning bronni ham qo'shib)
+      const fromTs = new Date(S);
+      const toTs = endWithPost;
+      const peakExisting = await getPeakConcurrency(roomType, fromTs, toTs);
+      const peakWithUs = peakExisting + 1;
+      if (peakWithUs <= cfg.capacity) {
+        allowed.push(t.code);
+      }
+    }
+
+    res.json({
+      ok: true,
+      roomType,
+      start: S,
+      neighbors: { p_end, n_start },
+      buffers: { pre, post },
+      allowed,
+    });
+  } catch (e) {
+    console.error("ALLOWED-TARIFFS ERR:", e);
+    res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+
+/** DELETE by id */
 app.delete("/api/checkins/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
@@ -544,11 +673,10 @@ app.use((_req, res) => res.status(404).json({ ok: false, error: "Not Found" }));
 /* ================== Start ================== */
 (async () => {
   try {
-    await ensureDatabase(); // remote bo‘lsa, DB’ni panelda yarating!
+    await ensureDatabase();
     await ensureSchema();
     await pool.query("SELECT 1");
 
-    // bog‘langanda vaqti
     const t = await pool.query("SELECT now() AS now");
     console.log("[DB] connected:", t.rows[0].now);
 

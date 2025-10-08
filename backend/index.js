@@ -50,7 +50,6 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
 ].filter(Boolean);
 
-// Asl CORS (qoldirdik), lekin DELETE va Authorization’ni ruxsat qildik
 app.use(
   cors({
     origin(origin, cb) {
@@ -59,13 +58,13 @@ app.use(
       return cb(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Accept", "Authorization"],
+    allowedHeaders: ["Content-Type, Accept, Authorization"],
     credentials: false,
   })
 );
 app.options("*", cors());
 
-// --- Qo‘shimcha yupqa preflight middleware (har ehtimolga qarshi) ---
+// Qo‘shimcha yupqa preflight
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
@@ -213,8 +212,8 @@ const isISODateTime = (s) =>
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?/.test(String(s || ""));
 const toTz = (s) => {
   if (!s) return null;
-  if (isISODateTime(s)) return s; // 'YYYY-MM-DDTHH:mm' yoki '...:ss'
-  if (isISO(s)) return `${s}T00:00:00`; // faqat sana bo‘lsa
+  if (isISODateTime(s)) return s;
+  if (isISO(s)) return `${s}T00:00:00`;
   return null;
 };
 async function ensureSchema() {
@@ -274,30 +273,78 @@ async function ensureSchema() {
         EXECUTE 'CREATE INDEX khamsachekin_time_idx ON public.'||_t||'(rooms, check_in, check_out)';
       END IF;
 
-      -- === YANGI: soatgacha bron qilish uchun TIMESTAMPTZ ustunlar + indeks
-      IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema='public' AND table_name=_t AND column_name='check_in_at'
-      ) THEN
+      -- soatli band qilish maydonlari
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='check_in_at') THEN
         EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_in_at TIMESTAMPTZ';
       END IF;
-
-      IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema='public' AND table_name=_t AND column_name='check_out_at'
-      ) THEN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='check_out_at') THEN
         EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_out_at TIMESTAMPTZ';
       END IF;
-
-      IF NOT EXISTS (
-        SELECT 1 FROM pg_indexes
-        WHERE schemaname='public' AND indexname='khamsachekin_time_at_idx'
-      ) THEN
+      IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='khamsachekin_time_at_idx') THEN
         EXECUTE 'CREATE INDEX khamsachekin_time_at_idx ON public.'||_t||'(rooms, check_in_at, check_out_at)';
       END IF;
     END $$;`);
 }
 ensureSchema().catch((e) => console.error("ensureSchema error:", e));
+
+/* ======= YANGI: Tarif hisoblash uchun helpers (room_types talab qiladi) ======= */
+async function getRoomTypeCfg(roomType) {
+  const { rows } = await pgPool.query(
+    `SELECT capacity, pre_buffer_minutes, post_buffer_minutes
+     FROM public.room_types WHERE room_type=$1`,
+    [roomType]
+  );
+  if (!rows[0]) throw new Error(`Unknown room type: ${roomType}`);
+  return rows[0];
+}
+async function getNeighbors(roomType, startISO) {
+  const qPrev = pgPool.query(
+    `SELECT MAX(COALESCE(check_out_at, check_out::timestamp)) AS p_end
+     FROM public.khamsachekin
+     WHERE rooms=$1 AND COALESCE(check_out_at, check_out::timestamp) <= $2::timestamptz`,
+    [roomType, startISO]
+  );
+  const qNext = pgPool.query(
+    `SELECT MIN(COALESCE(check_in_at, check_in::timestamp)) AS n_start
+     FROM public.khamsachekin
+     WHERE rooms=$1 AND COALESCE(check_in_at, check_in::timestamp) >= $2::timestamptz`,
+    [roomType, startISO]
+  );
+  const [r1, r2] = await Promise.all([qPrev, qNext]);
+  return {
+    p_end: r1.rows[0]?.p_end || null,
+    n_start: r2.rows[0]?.n_start || null,
+  };
+}
+async function getPeakConcurrency(roomType, fromTs, toTs) {
+  const { rows } = await pgPool.query(
+    `SELECT
+        GREATEST(COALESCE(check_in_at,  check_in::timestamp), $2::timestamptz)  AS st,
+        LEAST   (COALESCE(check_out_at, check_out::timestamp), $3::timestamptz) AS en
+     FROM public.khamsachekin
+     WHERE rooms=$1
+       AND COALESCE(check_in_at,  check_in::timestamp)  < $3::timestamptz
+       AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz`,
+    [roomType, fromTs, toTs]
+  );
+  const events = [];
+  for (const r of rows) {
+    const st = new Date(r.st);
+    const en = new Date(r.en);
+    if (st < en) {
+      events.push({ t: st, d: +1 });
+      events.push({ t: en, d: -1 });
+    }
+  }
+  events.sort((a, b) => a.t - b.t || a.d - b.d);
+  let cur = 0,
+    peak = 0;
+  for (const e of events) {
+    cur += e.d;
+    if (cur > peak) peak = cur;
+  }
+  return peak;
+}
 
 /* =======================
  *  BNOVO ROUTES
@@ -545,7 +592,7 @@ ${
 });
 
 /* =======================
- *  CHECKINS (DB) — frontend chaqiradi
+ *  CHECKINS (DB) — frontend
  * ======================= */
 app.get("/api/checkins", async (req, res) => {
   const { roomType = "", limit = "300" } = req.query;
@@ -577,7 +624,6 @@ app.get("/api/checkins", async (req, res) => {
 });
 
 app.get("/api/checkins/day", async (req, res) => {
-  // Eski DATE kesimi — o‘zgarmagan
   const { start = "", date = "", roomType = "" } = req.query;
   const d = start || date;
   if (!roomType || !isISO(d))
@@ -605,7 +651,6 @@ app.get("/api/checkins/day", async (req, res) => {
 });
 
 app.get("/api/checkins/range/check", async (req, res) => {
-  // Yangi: datetime ham qo‘llaydi (startAt/endAt ustun)
   const {
     roomType = "",
     start = "",
@@ -640,7 +685,6 @@ app.get("/api/checkins/range/check", async (req, res) => {
 });
 
 app.post("/api/checkins/range", async (req, res) => {
-  // Yangi: datetime qabul qiladi; eski start/end ham moslanadi
   const { roomType, start, end, startAt, endAt, note } = req.body || {};
   const A = toTz(startAt || start);
   const B = toTz(endAt || end);
@@ -660,7 +704,6 @@ app.post("/api/checkins/range", async (req, res) => {
     );
     if (q.rowCount) return res.status(409).json({ ok: false, error: "BUSY" });
 
-    // DATE maydonlarni ham to‘ldirib ketamiz (compat)
     const dateOnlyStart = A.slice(0, 10);
     const dateOnlyEnd = B.slice(0, 10);
 
@@ -681,7 +724,6 @@ app.post("/api/checkins/range", async (req, res) => {
 });
 
 app.get("/api/checkins/next-block", async (req, res) => {
-  // Yangi: startAt qo‘llaydi
   const { roomType = "", start = "", startAt = "" } = req.query;
   const A = toTz(startAt || start);
   if (!roomType || !A)
@@ -708,6 +750,73 @@ app.get("/api/checkins/next-block", async (req, res) => {
   }
 });
 
+/* ====== YANGI: Allowed tariffs (3h/10h/24h) ======
+   GET /api/availability/allowed-tariffs?roomType=STANDARD&start=2025-10-08T03:00
+   — Check-in form duration select’ni yoqish/o‘chirish uchun
+*/
+app.get("/api/availability/allowed-tariffs", async (req, res) => {
+  try {
+    const roomType = String(req.query.roomType || "STANDARD");
+    const S = toTz(req.query.start);
+    if (!S)
+      return res.status(400).json({ ok: false, error: "start ISO required" });
+
+    const cfg = await getRoomTypeCfg(roomType);
+    const pre = cfg.pre_buffer_minutes || 0;
+    const post = cfg.post_buffer_minutes || 0;
+
+    const { p_end, n_start } = await getNeighbors(roomType, S);
+
+    // Oldingi bron bilan urishmasin
+    if (p_end) {
+      const minStart = new Date(new Date(p_end).getTime() + pre * 60 * 1000);
+      if (new Date(S) < minStart) {
+        return res.json({
+          ok: true,
+          allowed: [],
+          reason: "start_too_early_hits_previous",
+          details: { p_end, requiredEarliestStart: minStart },
+        });
+      }
+    }
+
+    const tariffs = [
+      { code: "3h", hours: 3 },
+      { code: "10h", hours: 10 },
+      { code: "24h", hours: 24 },
+    ];
+
+    const allowed = [];
+    for (const t of tariffs) {
+      const Dms = t.hours * 60 * 60 * 1000;
+      const end = new Date(new Date(S).getTime() + Dms);
+      const endWithPost = new Date(end.getTime() + post * 60 * 1000);
+
+      // Keyingi bron boshlanishidan o‘tib ketmasin
+      if (n_start && endWithPost > new Date(n_start)) continue;
+
+      // Capacity (bizning bronni ham qo‘shib)
+      const fromTs = new Date(S);
+      const toTs = endWithPost;
+      const peakExisting = await getPeakConcurrency(roomType, fromTs, toTs);
+      const peakWithUs = peakExisting + 1;
+      if (peakWithUs <= cfg.capacity) allowed.push(t.code);
+    }
+
+    res.json({
+      ok: true,
+      roomType,
+      start: S,
+      neighbors: { p_end, n_start },
+      buffers: { pre, post },
+      allowed,
+    });
+  } catch (e) {
+    console.error("ALLOWED-TARIFFS ERR:", e);
+    res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+
 /* === YANGI: DELETE by id (frontend dagi Family yonidagi delete uchun) === */
 app.delete("/api/checkins/:id", async (req, res) => {
   const id = Number(req.params.id);
@@ -726,7 +835,7 @@ app.delete("/api/checkins/:id", async (req, res) => {
   }
 });
 
-/* ====== 404 & error handlers (ENG PASTDA!) ====== */
+/* ====== 404 & error handlers ====== */
 app.use((req, res) =>
   res.status(404).json({ error: "Not Found", path: req.path })
 );
