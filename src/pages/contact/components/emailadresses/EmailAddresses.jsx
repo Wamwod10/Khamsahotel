@@ -12,7 +12,7 @@ const EmailAddresses = () => {
   const emails = [
     {
       title: t("emailaddr_general_title"),
-      email: "info@khamsahotel.uz",
+      email: "qonoqhotel@mail.ru",
       buttonText: t("emailaddr_button"),
       icon: <HiOutlineMail className="email__call-icon" />,
     },

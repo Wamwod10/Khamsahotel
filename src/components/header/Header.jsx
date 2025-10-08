@@ -99,7 +99,7 @@ const Header = () => {
   const [checkIn, setCheckIn] = useState("");
   const [checkOutTime, setCheckOutTime] = useState("");
   const [duration, setDuration] = useState("Up to 3 hours");
-  const [rooms, setRooms] = useState("STANDARD"); // STANDARD | FAMILY
+  const [rooms, setRooms] = useState("STANDARD"); 
 
   const [checking, setChecking] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);

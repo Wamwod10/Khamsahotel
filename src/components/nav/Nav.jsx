@@ -20,9 +20,9 @@ const Nav = () => {
   const [currentLangCode, setCurrentLangCode] = useState(savedLang);
 
   const languages = [
-    { label: "Eng", code: "en" },
-    { label: "Rus", code: "ru" },
-    { label: "Uzb", code: "uz" },
+    { label: "English", code: "en" },
+    { label: "Русский", code: "ru" },
+    { label: "O'zbek", code: "uz" },
   ];
 
   // 🔗 rasm mapping (public/ ichida)
@@ -88,7 +88,10 @@ const Nav = () => {
             <img className="nav__logo-img" src="/logo.png" alt="Logo" />
             <div className="nav__khamsa">
               <NavLink to="/">Khamsa Hotel</NavLink>
-              <img src="39.svg" alt="" />
+              <div className="nav__by">
+                <p>By</p>
+                <img src="38.png" alt="" />
+              </div>
             </div>
           </h2>
 

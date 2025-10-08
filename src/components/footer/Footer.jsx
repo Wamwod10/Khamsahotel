@@ -20,7 +20,7 @@ const Footer = () => {
           </p>
           <div className="footer__socials">
             <a
-              href="https://twitte.com"
+              href="https://t.me/khamsa_hotel"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Twitter"
@@ -38,7 +38,7 @@ const Footer = () => {
               <FiInstagram />
             </a>
             <a
-              href="https://pinterest.com"
+              href="qonoqhotel@mail.ru"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Pinterest"
@@ -94,8 +94,8 @@ const Footer = () => {
           </p>
           <p className="footer__email">
             {t("email")}:{" "}
-            <a href="mailto:info@khamsahotel.com" className="footer__link">
-              info@khamsahotel.com
+            <a href="mailto:qonoqhotel@mail.ru" className="footer__link">
+              qonoqhotel@mail.ru
             </a>
           </p>
           <div className="footer__payments">

@@ -14,8 +14,8 @@ const ServiceHeader = () => {
           {t("servicedescription")}
         </p>
         <div className="service-header__buttons">
-          <button className="btn btn-primary">{t("serviceprimary")}</button>
-          <button className="btn btn-secondary">{t("servicesecondary")}</button>
+          <a href="/" className="btn btn-primary">{t("serviceprimary")}</a>
+          <a href="/contact" className="btn btn-secondary">{t("servicesecondary")}</a>
         </div>
       </div>
     </section>
