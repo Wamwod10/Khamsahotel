@@ -14,7 +14,6 @@ import { RiDrinks2Fill } from "react-icons/ri";
 
 /* ===== Helpers ===== */
 function getApiBase() {
-  // DEV: pgAdmin.cjs 5004
   const isLocal =
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" ||
@@ -30,6 +29,7 @@ function getApiBase() {
     cleaned || (typeof window !== "undefined" ? window.location.origin : "")
   );
 }
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const isForceFamilyBusy = () => {
@@ -44,13 +44,14 @@ const isForceFamilyBusy = () => {
 /* === Date input language map (for <input type="date">) === */
 const langMap = { en: "en-US", ru: "ru-RU", uz: "uz-Latn-UZ" };
 
-/* === Local i18n qo‘shimcha (Header ichida ishlatamiz) === */
+/* === Local i18n qo‘shimcha === */
 const localI18n = {
   en: { dateFormatShort: "DD.MM.YYYY" },
   ru: { dateFormatShort: "ДД.ММ.ГГГГ" },
   uz: { dateFormatShort: "KK.OO.YYYY" },
 };
 
+/* ===== Bnovo FAMILY availability (fallback) ===== */
 async function checkFamilyAvailability({ checkIn, nights = 1 }) {
   const base = getApiBase();
   const url = `${base}/api/bnovo/availability?checkIn=${encodeURIComponent(
@@ -76,7 +77,7 @@ async function checkFamilyAvailability({ checkIn, nights = 1 }) {
   }
 }
 
-/* Family blackout tekshiruvi sana+soat bilan (Postgres) */
+/* FAMILY blackout (Postgres) — startAt ichida bo‘lsa band */
 async function postgresFamilyBusyDT(startAt) {
   const base = getApiBase();
   const url = `${base}/api/checkins/next-block?roomType=FAMILY&startAt=${encodeURIComponent(
@@ -95,9 +96,8 @@ async function postgresFamilyBusyDT(startAt) {
   }
 }
 
-/* ===== YANGI: duration ↔ code mapping =====
-   Backend allowed-tariffs -> ["3h","10h","24h"]
-   Frontend select esa i18n label bilan.
+/* ===== Duration ↔ code mapping =====
+   Backend: ["3h","10h","24h"]  Frontend: i18n labels
 */
 const DURATIONS = [
   { code: "3h", key: "upTo3Hours" },
@@ -105,6 +105,7 @@ const DURATIONS = [
   { code: "24h", key: "oneDay" },
 ];
 const ALL_CODES = DURATIONS.map((d) => d.code);
+
 function labelFromCode(code, t) {
   const item = DURATIONS.find((d) => d.code === code);
   return item ? t(item.key) : code;
@@ -114,6 +115,7 @@ function codeFromLabel(label = "") {
   if (s.includes("one day") || s.includes("24")) return "24h";
   if (s.includes("10")) return "10h";
   if (s.includes("3")) return "3h";
+  // Agar i18n label bo‘lsa ham raqamlar bor — yuqorisi yetarli
   return null;
 }
 
@@ -132,13 +134,14 @@ const Header = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMsg, setModalMsg] = useState("");
 
-  // YANGI: allowed tariffs (faqat FAMILY uchun fetch qilamiz)
-  const [allowed, setAllowed] = useState(ALL_CODES); // default — hammasi
+  // Allowed tariffs (faqat FAMILY uchun API’dan)
+  const [allowed, setAllowed] = useState(ALL_CODES); // STANDARD uchun default: hammasi
   const [tariffLoading, setTariffLoading] = useState(false);
   const [tariffError, setTariffError] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
 
+  // Forms reset (agar /rooms -> back bo‘lsa)
   useEffect(() => {
     if (location.state?.clearSearch) {
       localStorage.removeItem("bookingInfo");
@@ -149,6 +152,7 @@ const Header = () => {
     }
   }, [location.state]);
 
+  // Modal ESC yopish
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && setIsModalOpen(false);
     if (isModalOpen) window.addEventListener("keydown", onKey);
@@ -181,18 +185,18 @@ const Header = () => {
     return 1;
   }, []);
 
-  // startAt (sana + soat)
+  // startAt (YYYY-MM-DDTHH:mm)
   const startAt = useMemo(() => {
     if (!checkIn || !checkOutTime) return "";
     return `${checkIn}T${checkOutTime}`;
   }, [checkIn, checkOutTime]);
 
-  /* ===== Allowed-tariffs fetch (faqat FAMILY) ===== */
+  /* ===== Allowed-tariffs fetch (FAMILY only) ===== */
   useEffect(() => {
-    let ac = new AbortController();
+    const ac = new AbortController();
 
     async function run() {
-      // STANDARD uchun cheklov yo'q: hammasini yoqamiz va API chaqirmaymiz
+      // STANDARD: cheklov yo‘q
       if (rooms !== "FAMILY") {
         setTariffError("");
         setTariffLoading(false);
@@ -201,8 +205,8 @@ const Header = () => {
       }
 
       setTariffError("");
-      setAllowed([]); // FAMILY: boshlashdan oldin bo'shatamiz
-      if (!startAt) return; // vaqt tanlanmagan bo'lsa API chaqirmaymiz
+      setAllowed([]); // FAMILY: API natijasi kelguncha bo‘sh
+      if (!startAt) return;
 
       try {
         setTariffLoading(true);
@@ -221,23 +225,22 @@ const Header = () => {
         const data = ct.includes("application/json")
           ? await res.json()
           : { _raw: await res.text() };
+
         if (!res.ok)
           throw new Error((data && (data.error || data._raw)) || "HTTP");
 
         const list = Array.isArray(data.allowed) ? data.allowed : [];
-        setAllowed(list.length ? list : []); // bo'sh bo'lsa — hech biri ruxsat emas
+        setAllowed(list);
 
-        // Tanlangan duration ruxsat etilmasa, birinchisiga o'tkazamiz
+        // Tanlangan duration ruxsat etilmasa, birinchi ruxsat etilganga o‘tkazamiz
         const curCode = codeFromLabel(duration);
         if (curCode && !list.includes(curCode)) {
-          const next = list[0] || null;
-          if (next) setDuration(labelFromCode(next, t));
+          if (list[0]) setDuration(labelFromCode(list[0], t));
         }
       } catch (e) {
         if (e.name !== "AbortError") {
-          // API xatosida ham serverni qayta urintirmaymiz, UIda xabar ko'rsatamiz
           setTariffError(e.message || "Tariff check failed");
-          setAllowed([]); // FAMILY va xato bo'lsa: konservativ — hammasi disable
+          setAllowed([]); // xatoda konservativ: hammasi blok
         }
       } finally {
         setTariffLoading(false);
@@ -246,7 +249,8 @@ const Header = () => {
 
     run();
     return () => ac.abort();
-  }, [rooms, startAt, t, duration]);
+    // duration bu yerda deps emas — aks holda loop bo‘lishi mumkin
+  }, [rooms, startAt, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -255,7 +259,9 @@ const Header = () => {
       return;
     }
 
-    // FAMILY’da tanlangan duration ruxsat etilganini tekshiramiz
+    const startAtLocal = `${checkIn}T${checkOutTime}`;
+
+    // FAMILY: duration ruxsatini tekshirish
     if (rooms === "FAMILY") {
       const pickedCode = codeFromLabel(duration);
       if (
@@ -269,27 +275,23 @@ const Header = () => {
         );
         return;
       }
-    }
 
-    const startAtLocal = `${checkIn}T${checkOutTime}`;
-
-    if (rooms === "FAMILY") {
       if (isForceFamilyBusy()) {
         openModal();
         return;
       }
 
-      // 1) PG blackout check — datetime bilan
+      // 1) PG blackout check
       const pg = await postgresFamilyBusyDT(startAtLocal);
       if (pg.busy && pg.block) {
-        openModal(`${t("familyNotAvailable") || "Bu xona band qilingan"}`);
+        openModal(t("familyNotAvailable") || "Bu xona band qilingan");
         return;
       }
 
-      // 2) Bnovo availability
+      // 2) Bnovo availability (qo‘shimcha tekshiruv)
       setChecking(true);
       try {
-        await sleep(3000);
+        await sleep(1200);
         const nights = getNightsFromDuration(duration);
         const avail = await checkFamilyAvailability({ checkIn, nights });
         if (!avail.available) {
@@ -301,10 +303,10 @@ const Header = () => {
       }
     }
 
-    const formattedCheckOut = startAtLocal; // saqlash formatiga mos
+    // Saqlab yuborish (frontend localStorage)
     const bookingInfo = {
       checkIn,
-      checkOut: formattedCheckOut,
+      checkOut: startAtLocal,
       checkOutTime,
       duration,
       rooms,
@@ -315,7 +317,7 @@ const Header = () => {
     navigate("/rooms");
   };
 
-  /* === i18n tiliga mos <input type="date"> === */
+  /* === i18n mos <input type="date"> === */
   const currentLangShort = (i18n.language || "en").split("-")[0];
   const dateInputLang = langMap[currentLangShort] || "en-US";
   const dateFormatText =
@@ -323,7 +325,7 @@ const Header = () => {
     localI18n.en.dateFormatShort;
 
   const durationStatusText = useMemo(() => {
-    if (rooms !== "FAMILY") return ""; // STANDARD’da status yozmaymiz
+    if (rooms !== "FAMILY") return "";
     if (tariffLoading) return `(${t("searchrooms") || "Checking"}…)`;
     if (!startAt) return "";
     return allowed.length > 0
