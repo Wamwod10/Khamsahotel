@@ -82,7 +82,9 @@ const makePool = (db) => new Pool({ ...PG_CONFIG, database: db });
 let pool = makePool(DB_NAME);
 
 console.log(
-  `[BOOT] HOST=${HOST} PORT=${PORT} DB=${DB_NAME} PGHOST=${PG_CONFIG.host} SSL=${PG_CONFIG.ssl ? "on" : "off"}`
+  `[BOOT] HOST=${HOST} PORT=${PORT} DB=${DB_NAME} PGHOST=${
+    PG_CONFIG.host
+  } SSL=${PG_CONFIG.ssl ? "on" : "off"}`
 );
 
 /* ================== DB ensure ================== */
@@ -234,22 +236,52 @@ async function ensureSchema() {
       EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN email TEXT';
     END IF;
 
-    -- index
+    -- index (kunning kesimi)
     IF NOT EXISTS (
       SELECT 1 FROM pg_indexes
       WHERE schemaname='public' AND indexname='khamsachekin_time_idx'
     ) THEN
       EXECUTE 'CREATE INDEX khamsachekin_time_idx ON public.'||_t||'(rooms, check_in, check_out)';
     END IF;
+
+    -- === YANGI: soatgacha band qilish uchun TIMESTAMPTZ ustunlar
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='check_in_at'
+    ) THEN
+      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_in_at TIMESTAMPTZ';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name=_t AND column_name='check_out_at'
+    ) THEN
+      EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_out_at TIMESTAMPTZ';
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_indexes
+      WHERE schemaname='public' AND indexname='khamsachekin_time_at_idx'
+    ) THEN
+      EXECUTE 'CREATE INDEX khamsachekin_time_at_idx ON public.'||_t||'(rooms, check_in_at, check_out_at)';
+    END IF;
   END $$;`);
 }
 
 /* ================== Small helpers ================== */
 const isISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
+const isISODateTime = (s) =>
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?/.test(String(s || ""));
 const addDaysISO = (ymd, n) => {
   const d = new Date(ymd);
   d.setDate(d.getDate() + n);
   return d.toISOString().slice(0, 10);
+};
+const toTz = (s) => {
+  if (!s) return null;
+  if (isISODateTime(s)) return s; // 'YYYY-MM-DDTHH:mm' yoki '...:ss'
+  if (isISO(s)) return `${s}T00:00:00`;
+  return null;
 };
 
 /* ================== Health ================== */
@@ -286,12 +318,16 @@ app.get("/api/checkins", async (req, res) => {
     params.push(+limit || 300);
     const sql = `
       SELECT id, rooms,
-            check_in, check_out, duration, price,
+            check_in, check_out,
+            check_in_at, check_out_at,
+            COALESCE(check_in_at,  (check_in::timestamp))  AS start_at,
+            COALESCE(check_out_at, (check_out::timestamp)) AS end_at,
+            duration, price,
             first_name, last_name, phone, email,
             check_in_time, created_at
       FROM public.khamsachekin
       ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-      ORDER BY check_in ASC
+      ORDER BY COALESCE(check_in_at, check_in::timestamp) ASC
       LIMIT $${params.length};`;
     const r = await pool.query(sql, params);
     res.json({ ok: true, items: r.rows });
@@ -301,7 +337,7 @@ app.get("/api/checkins", async (req, res) => {
   }
 });
 
-/** Kun bandmi? */
+/** Kun bandmi? (eski, DATE kesimi — o‘zgarmadi) */
 app.get("/api/checkins/day", async (req, res) => {
   const { start = "", date = "", roomType = "" } = req.query;
   const d = start || date;
@@ -335,7 +371,7 @@ app.get("/api/checkins/day", async (req, res) => {
   }
 });
 
-/** Bir kun insert [d, d+1) */
+/** Bir kun insert [d, d+1) (eski — o‘zgarmadi) */
 app.post("/api/checkins/day", async (req, res) => {
   const { date, roomType, note } = req.body || {};
   if (!isISO(date) || !roomType)
@@ -371,24 +407,34 @@ app.post("/api/checkins/day", async (req, res) => {
   }
 });
 
-/** Interval overlap tekshiruv */
+/** Interval overlap tekshiruv — endi datetime ham qo‘llaydi */
 app.get("/api/checkins/range/check", async (req, res) => {
-  const { roomType = "", start = "", end = "" } = req.query;
-  if (!roomType || !isISO(start) || !isISO(end))
+  const {
+    roomType = "",
+    start = "",
+    end = "",
+    startAt = "",
+    endAt = "",
+  } = req.query;
+  const A = toTz(startAt || start);
+  const B = toTz(endAt || end);
+  if (!roomType || !A || !B)
     return res
       .status(400)
-      .json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
+      .json({ ok: false, error: "roomType,startAt,endAt ISO required" });
   try {
     const r = await pool.query(
       `
-      SELECT id, rooms, check_in AS start_date, check_out AS end_date
+      SELECT id, rooms,
+             COALESCE(check_in_at,  check_in::timestamp)  AS start_date,
+             COALESCE(check_out_at, check_out::timestamp) AS end_date
       FROM public.khamsachekin
       WHERE rooms = $1
-        AND check_in < $3::date
-        AND check_out > $2::date
-      ORDER BY check_in ASC
+        AND COALESCE(check_in_at,  check_in::timestamp)  < $3::timestamptz
+        AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz
+      ORDER BY start_date ASC
       LIMIT 1;`,
-      [roomType, start, end]
+      [roomType, A, B]
     );
     const block = r.rows[0] || null;
     res.json({ ok: true, conflict: !!block, block });
@@ -398,30 +444,42 @@ app.get("/api/checkins/range/check", async (req, res) => {
   }
 });
 
-/** Interval insert [start, end) */
+/** Interval insert [start,end) — endi datetime ham qabul qiladi */
 app.post("/api/checkins/range", async (req, res) => {
-  const { roomType, start, end, note } = req.body || {};
-  if (!roomType || !isISO(start) || !isISO(end))
+  const { roomType, start, end, startAt, endAt, note } = req.body || {};
+  const A = toTz(startAt || start);
+  const B = toTz(endAt || end);
+  if (!roomType || !A || !B)
     return res
       .status(400)
-      .json({ ok: false, error: "roomType,start,end YYYY-MM-DD" });
+      .json({ ok: false, error: "roomType,startAt,endAt ISO required" });
 
   try {
+    // overlap check
     const q = await pool.query(
       `
       SELECT 1 FROM public.khamsachekin
-      WHERE rooms=$1 AND check_in < $3::date AND check_out > $2::date
+      WHERE rooms=$1
+        AND COALESCE(check_in_at,  check_in::timestamp)  < $3::timestamptz
+        AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz
       LIMIT 1;`,
-      [roomType, start, end]
+      [roomType, A, B]
     );
     if (q.rowCount) return res.status(409).json({ ok: false, error: "BUSY" });
 
+    // DATE maydonlar ham mos to‘lsin (compat)
+    const dateOnlyStart = A.slice(0, 10);
+    const dateOnlyEnd = B.slice(0, 10);
+
     const r = await pool.query(
       `
-      INSERT INTO public.khamsachekin (check_in, check_out, rooms, duration, check_in_time)
-      VALUES ($1::date, $2::date, $3, GREATEST(1, ($2::date - $1::date)), $4)
-      RETURNING id, check_in, check_out, rooms, duration;`,
-      [start, end, roomType, note || null]
+      INSERT INTO public.khamsachekin
+        (rooms, check_in, check_out, check_in_at, check_out_at, duration, check_in_time)
+      VALUES
+        ($1,   $2::date, $3::date,  $4::timestamptz, $5::timestamptz,
+         GREATEST(1, ($3::date - $2::date)), $6)
+      RETURNING id, rooms, check_in, check_out, check_in_at, check_out_at;`,
+      [roomType, dateOnlyStart, dateOnlyEnd, A, B, note || null]
     );
     res.status(201).json({ ok: true, item: r.rows[0] });
   } catch (e) {
@@ -430,26 +488,27 @@ app.post("/api/checkins/range", async (req, res) => {
   }
 });
 
-/** Header.jsx uchun: berilgan kundan boshlab mos eng yaqin blok */
+/** Header.jsx uchun: berilgan vaqtdan boshlab mos eng yaqin blok (datetime qo‘llaydi) */
 app.get("/api/checkins/next-block", async (req, res) => {
-  const { roomType = "", start = "" } = req.query;
-  if (!roomType || !isISO(start))
+  const { roomType = "", start = "", startAt = "" } = req.query;
+  const A = toTz(startAt || start);
+  if (!roomType || !A)
     return res
       .status(400)
-      .json({ ok: false, error: "roomType,start YYYY-MM-DD" });
+      .json({ ok: false, error: "roomType,startAt ISO required" });
   try {
     const r = await pool.query(
       `
       SELECT id, rooms,
-            check_in  AS start_date,
-            check_out AS end_date
+            COALESCE(check_in_at,  check_in::timestamp)  AS start_date,
+            COALESCE(check_out_at, check_out::timestamp) AS end_date
       FROM public.khamsachekin
       WHERE rooms = $1
-        AND check_in <= $2::date
-        AND check_out >  $2::date
-      ORDER BY check_in DESC
+        AND COALESCE(check_in_at,  check_in::timestamp) <= $2::timestamptz
+        AND COALESCE(check_out_at, check_out::timestamp) >  $2::timestamptz
+      ORDER BY start_date DESC
       LIMIT 1;`,
-      [roomType, start]
+      [roomType, A]
     );
     res.json({ ok: true, block: r.rows[0] || null });
   } catch (e) {

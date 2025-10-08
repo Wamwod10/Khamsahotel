@@ -25,7 +25,9 @@ function getApiBase() {
     (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||
     "";
   const cleaned = String(env || "").replace(/\/+$/, "");
-  return cleaned || (typeof window !== "undefined" ? window.location.origin : "");
+  return (
+    cleaned || (typeof window !== "undefined" ? window.location.origin : "")
+  );
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -38,32 +40,49 @@ const isForceFamilyBusy = () => {
   try {
     const sp = new URLSearchParams(window.location.search);
     return sp.get("forceFamilyBusy") === "1";
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 };
 
 async function checkFamilyAvailability({ checkIn, nights = 1 }) {
   const base = getApiBase();
-  const url = `${base}/api/bnovo/availability?checkIn=${encodeURIComponent(checkIn)}&nights=${encodeURIComponent(nights)}&roomType=FAMILY`;
+  const url = `${base}/api/bnovo/availability?checkIn=${encodeURIComponent(
+    checkIn
+  )}&nights=${encodeURIComponent(nights)}&roomType=FAMILY`;
   try {
     const res = await fetch(url, { credentials: "omit" });
     const ct = (res.headers.get("content-type") || "").toLowerCase();
-    const data = ct.includes("application/json") ? await res.json() : { _raw: await res.text() };
-    if (!res.ok) return { ok: false, available: true, reason: `HTTP ${res.status}` };
-    if (typeof data?.available === "boolean") return { ok: true, available: data.available, reason: data.source || "bnovo" };
+    const data = ct.includes("application/json")
+      ? await res.json()
+      : { _raw: await res.text() };
+    if (!res.ok)
+      return { ok: false, available: true, reason: `HTTP ${res.status}` };
+    if (typeof data?.available === "boolean")
+      return {
+        ok: true,
+        available: data.available,
+        reason: data.source || "bnovo",
+      };
     return { ok: false, available: true, reason: "unknown-shape" };
   } catch {
     return { ok: false, available: true, reason: "exception" };
   }
 }
 
-async function postgresFamilyBusy(checkIn) {
+/* YANGI: Family blackout tekshiruvi sana+soat bilan */
+async function postgresFamilyBusyDT(startAt) {
   const base = getApiBase();
-  const url = `${base}/api/checkins/next-block?roomType=FAMILY&start=${encodeURIComponent(checkIn)}`;
+  const url = `${base}/api/checkins/next-block?roomType=FAMILY&startAt=${encodeURIComponent(
+    startAt
+  )}`;
   try {
     const res = await fetch(url);
     const ct = (res.headers.get("content-type") || "").toLowerCase();
-    const data = ct.includes("application/json") ? await res.json() : { _raw: await res.text() };
-    // { ok:true, block: null | {...} }
+    const data = ct.includes("application/json")
+      ? await res.json()
+      : { _raw: await res.text() };
+    // { ok:true, block: null | {start_date,end_date,...} }
     if (!res.ok) return { busy: false, block: null };
     return { busy: !!data?.block, block: data?.block || null };
   } catch {
@@ -104,11 +123,16 @@ const Header = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, [isModalOpen]);
 
-  const openModal = useCallback((message) => {
-    setModalMsg(message || t("familyNotAvailable") || "Bu xona band qilingan");
-    setIsModalOpen(true);
-    document.body.style.overflow = "hidden";
-  }, [t]);
+  const openModal = useCallback(
+    (message) => {
+      setModalMsg(
+        message || t("familyNotAvailable") || "Bu xona band qilingan"
+      );
+      setIsModalOpen(true);
+      document.body.style.overflow = "hidden";
+    },
+    [t]
+  );
 
   const closeModal = useCallback(() => {
     setIsModalOpen(false);
@@ -132,24 +156,35 @@ const Header = () => {
       return;
     }
 
-    if (rooms === "FAMILY") {
-      if (isForceFamilyBusy()) { openModal(); return; }
+    // Sana+soat (datetime) — backendga shuni yuboramiz
+    const startAt = `${checkIn}T${checkOutTime}`;
 
-      // 1) PG blackout check
-      const pg = await postgresFamilyBusy(checkIn);
+    if (rooms === "FAMILY") {
+      if (isForceFamilyBusy()) {
+        openModal();
+        return;
+      }
+
+      // 1) PG blackout check — datetime bilan
+      const pg = await postgresFamilyBusyDT(startAt);
       if (pg.busy && pg.block) {
         openModal(`${t("familyNotAvailable") || "Bu xona band qilingan"}`);
         return;
       }
 
-      // 2) Bnovo availability
+      // 2) Bnovo availability (hali kunlik hisobda, avvalgidek)
       setChecking(true);
       try {
         await sleep(3000);
         const nights = getNightsFromDuration(duration);
         const avail = await checkFamilyAvailability({ checkIn, nights });
-        if (!avail.available) { openModal(); return; }
-      } finally { setChecking(false); }
+        if (!avail.available) {
+          openModal();
+          return;
+        }
+      } finally {
+        setChecking(false);
+      }
     }
 
     const formattedCheckOut = `${checkIn}T${checkOutTime}`;
@@ -168,8 +203,13 @@ const Header = () => {
 
   return (
     <>
-            {isModalOpen && (
-        <div className="kh-modal__overlay" role="dialog" aria-modal="true" onClick={closeModal}>
+      {isModalOpen && (
+        <div
+          className="kh-modal__overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={closeModal}
+        >
           <div className="kh-modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="kh-modal__title">{t("attention") || "Diqqat!"}</h3>
             <p className="kh-modal__text">
@@ -197,10 +237,18 @@ const Header = () => {
               </h1>
               <p className="header__text">{t("headertext")}</p>
               <div className="header__conditions-box">
-                <p className="header__conditions-text"><FaWifi /> {t("freewifi")}</p>
-                <p className="header__conditions-text"><TbAirConditioning /> {t("freeparking")}</p>
-                <p className="header__conditions-text"><RiDrinks2Fill /> {t("cafe")}</p>
-                <p className="header__conditions-text"><IoTimeOutline /> {t("service24/7")}</p>
+                <p className="header__conditions-text">
+                  <FaWifi /> {t("freewifi")}
+                </p>
+                <p className="header__conditions-text">
+                  <TbAirConditioning /> {t("freeparking")}
+                </p>
+                <p className="header__conditions-text">
+                  <RiDrinks2Fill /> {t("cafe")}
+                </p>
+                <p className="header__conditions-text">
+                  <IoTimeOutline /> {t("service24/7")}
+                </p>
               </div>
             </div>
 
@@ -238,7 +286,11 @@ const Header = () => {
                 <div className="header__form-group">
                   <label htmlFor="duration">{t("duration")}</label>
                   <div className="custom-select">
-                    <select id="duration" value={duration} onChange={(e) => setDuration(e.target.value)}>
+                    <select
+                      id="duration"
+                      value={duration}
+                      onChange={(e) => setDuration(e.target.value)}
+                    >
                       <option>{t("upTo3Hours")}</option>
                       <option>{t("upTo10Hours")}</option>
                       <option>{t("oneDay")}</option>
@@ -250,7 +302,11 @@ const Header = () => {
                 <div className="header__form-group">
                   <label htmlFor="rooms">{t("rooms")}</label>
                   <div className="custom-select">
-                    <select id="rooms" value={rooms} onChange={(e) => setRooms(e.target.value)}>
+                    <select
+                      id="rooms"
+                      value={rooms}
+                      onChange={(e) => setRooms(e.target.value)}
+                    >
                       <option value="STANDARD">{t("standard")}</option>
                       <option value="FAMILY">{t("family")}</option>
                     </select>
@@ -264,14 +320,26 @@ const Header = () => {
                 <input id="hotel" value={t("TashkentAirportHotel")} disabled />
               </div>
 
-              <button type="submit" className="header__form-button" disabled={checking || !checkIn || !checkOutTime}>
-                {checking ? (t("searchrooms") || "Searching Room...") : (t("checkavailable") || "Check availability")}
+              <button
+                type="submit"
+                className="header__form-button"
+                disabled={checking || !checkIn || !checkOutTime}
+              >
+                {checking
+                  ? t("searchrooms") || "Searching Room..."
+                  : t("checkavailable") || "Check availability"}
               </button>
 
               <div className="header__info-row">
-                <span className="header__color1"><AiOutlineSafety /> {t("secure")}</span>
-                <span className="header__color2"><FaCircleCheck /> {t("instantconfirm")}</span>
-                <span className="header__color3"><MdOutlineCancel /> {t("freecancel")}</span>
+                <span className="header__color1">
+                  <AiOutlineSafety /> {t("secure")}
+                </span>
+                <span className="header__color2">
+                  <FaCircleCheck /> {t("instantconfirm")}
+                </span>
+                <span className="header__color3">
+                  <MdOutlineCancel /> {t("freecancel")}
+                </span>
               </div>
             </form>
           </div>

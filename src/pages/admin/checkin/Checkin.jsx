@@ -8,8 +8,8 @@ function getApiBase() {
   const isLocal =
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" ||
-     window.location.hostname === "127.0.0.1");
-  if (isLocal) return "http://127.0.0.1:5004";       // DEV: majburan pgAdmin.cjs
+      window.location.hostname === "127.0.0.1");
+  if (isLocal) return "http://127.0.0.1:5004"; // DEV: pgAdmin.cjs yoki index.js
   const env =
     (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
     (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||
@@ -17,31 +17,66 @@ function getApiBase() {
   const base = String(env || "").replace(/\/+$/, "");
   return base || (typeof window !== "undefined" ? window.location.origin : "");
 }
+
 async function fetchJson(url, init) {
   const res = await fetch(url, init);
   const ct = res.headers.get("content-type") || "";
-  const data = ct.includes("application/json") ? await res.json() : await res.text();
+  const data = ct.includes("application/json")
+    ? await res.json()
+    : await res.text();
   if (!res.ok) {
-    const msg = (data && (data.error || data.message)) || (typeof data === "string" ? data : res.statusText);
+    const msg =
+      (data && (data.error || data.message)) ||
+      (typeof data === "string" ? data : res.statusText);
     throw new Error(msg);
   }
   return data;
 }
-function fmtHuman(ymd) {
+
+/* ===== Helpers ===== */
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+function fmtHumanDate(ymd) {
   if (!ymd) return "-";
   const [y, m, d] = String(ymd).split("-");
   return `${d}.${m}.${y}`;
 }
-function isIso(s){ return /^\d{4}-\d{2}-\d{2}$/.test(String(s||"")); }
+function fmtHumanDT(dt) {
+  if (!dt) return "-";
+  // kutilgan format: 'YYYY-MM-DDTHH:mm[:ss]'
+  const [d, t = "00:00"] = String(dt).split("T");
+  const [hh = "00", mm = "00"] = t.split(":");
+  return `${fmtHumanDate(d)} ${hh}:${mm}`;
+}
+function isIso(s) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
+}
+function isIsoDT(s) {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(s || ""));
+}
+// "hozir"ni datetime-local input formatida qaytarish (yaqin 5 daqiqaga yaxlitlab)
+function nowLocalInput(stepMin = 5) {
+  const d = new Date();
+  const m = Math.ceil(d.getMinutes() / stepMin) * stepMin;
+  d.setMinutes(m, 0, 0);
+  const y = d.getFullYear();
+  const mo = pad(d.getMonth() + 1);
+  const da = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mm = pad(d.getMinutes());
+  return `${y}-${mo}-${da}T${hh}:${mm}`;
+}
 
 export default function Checkin() {
   const API = useMemo(() => getApiBase(), []);
 
   // UI
   const [open, setOpen] = useState(false);
-  const [checkIn, setCheckIn] = useState("");  
-  const [checkOut, setCheckOut] = useState(""); 
-  const [roomType, setRoomType] = useState("FAMILY");
+  // YANGI: datetime bilan ishlaymiz
+  const [startAt, setStartAt] = useState(""); // YYYY-MM-DDTHH:mm
+  const [endAt, setEndAt] = useState(""); // YYYY-MM-DDTHH:mm
+  const [roomType, setRoomType] = useState("FAMILY"); // FAMILY | STANDARD
 
   // Data
   const [items, setItems] = useState([]);
@@ -49,7 +84,7 @@ export default function Checkin() {
   // Status
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [conflict, setConflict] = useState(null);     // {id,start_date,end_date} | null
+  const [conflict, setConflict] = useState(null); // {id,start_date,end_date} | null
   const [showConflict, setShowConflict] = useState(false);
 
   /* ---- List (/api/checkins) ---- */
@@ -58,57 +93,88 @@ export default function Checkin() {
       setLoading(true);
       const qs = new URLSearchParams({ limit: "300", roomType }).toString();
       const d = await fetchJson(`${API}/api/checkins?${qs}`);
-      const rows = (d.items || []).map(r => ({
-        id: r.id,
-        date: r.check_in,
-        roomType: r.rooms,
-        start: r.check_in,
-        end: r.check_out,
-      }));
+      const rows = (d.items || []).map((r) => {
+        // Backend index.js ro'yxatda 'start_at'/'end_at' (timestamp/timestamptz) qaytaradi.
+        // Agar yo‘q bo‘lsa, check_in/check_out sanalaridan yasaymiz.
+        const start =
+          r.start_at || (r.check_in ? `${r.check_in}T00:00` : "") || "";
+        const end =
+          r.end_at || (r.check_out ? `${r.check_out}T00:00` : "") || "";
+        return {
+          id: r.id,
+          roomType: r.rooms,
+          start,
+          end,
+        };
+      });
       setItems(rows);
     } catch (e) {
       console.error("list load error:", e);
       setItems([]);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
-  useEffect(() => { loadList(); /* roomType ga bog'liq */ }, [roomType]);
+  useEffect(() => {
+    loadList(); /* roomType ga bog'liq */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomType]);
 
   /* ---- Overlap check (/api/checkins/range/check) ---- */
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
       setConflict(null);
-      if (!isIso(checkIn) || !isIso(checkOut)) return;
-      if (checkOut <= checkIn) return;
+      if (!isIsoDT(startAt) || !isIsoDT(endAt)) return;
+      if (endAt <= startAt) return;
       try {
         setChecking(true);
-        const qs = new URLSearchParams({ roomType, start: checkIn, end: checkOut }).toString();
-        const d = await fetchJson(`${API}/api/checkins/range/check?${qs}`, { signal: ac.signal });
+        const qs = new URLSearchParams({
+          roomType,
+          startAt,
+          endAt,
+        }).toString();
+        const d = await fetchJson(`${API}/api/checkins/range/check?${qs}`, {
+          signal: ac.signal,
+        });
         setConflict(d.block || null);
       } catch (e) {
         if (e.name !== "AbortError") {
           console.warn("check error:", e.message);
           setConflict(null);
         }
-      } finally { setChecking(false); }
+      } finally {
+        setChecking(false);
+      }
     })();
     return () => ac.abort();
-  }, [checkIn, checkOut, roomType, API]);
+  }, [startAt, endAt, roomType, API]);
 
   /* ---- Save (/api/checkins/range) ---- */
   async function saveRange() {
-    if (!isIso(checkIn) || !isIso(checkOut) || checkOut <= checkIn) return;
-    if (conflict) { setShowConflict(true); return; }
+    if (!isIsoDT(startAt) || !isIsoDT(endAt) || endAt <= startAt) return;
+    if (conflict) {
+      setShowConflict(true);
+      return;
+    }
     try {
       await fetchJson(`${API}/api/checkins/range`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomType, start: checkIn, end: checkOut }),
+        body: JSON.stringify({ roomType, startAt, endAt }),
       });
-      setCheckIn(""); setCheckOut(""); setRoomType("FAMILY"); setOpen(false);
+      setStartAt("");
+      setEndAt("");
+      setRoomType("FAMILY");
+      setOpen(false);
       await loadList();
     } catch (e) {
-      if (String(e.message||"").toUpperCase().includes("BUSY")) setShowConflict(true);
+      if (
+        String(e.message || "")
+          .toUpperCase()
+          .includes("BUSY")
+      )
+        setShowConflict(true);
       else alert(e.message || "Xatolik");
     }
   }
@@ -116,23 +182,45 @@ export default function Checkin() {
   /* ---- Delete (/api/checkins/:id) ---- */
   async function deleteItem(it) {
     if (!it?.id) return;
-    const ok = window.confirm(`Delete ${fmtHuman(it.date)} (${it.roomType})?`);
+    const ok = window.confirm(
+      `Delete ${fmtHumanDT(it.start)} — ${fmtHumanDT(it.end)} (${it.roomType})?`
+    );
     if (!ok) return;
     try {
-      await fetchJson(`${API}/api/checkins/${encodeURIComponent(it.id)}`, { method: "DELETE" });
+      await fetchJson(`${API}/api/checkins/${encodeURIComponent(it.id)}`, {
+        method: "DELETE",
+      });
       // Optimistic update:
-      setItems(prev => prev.filter(x => x.id !== it.id));
+      setItems((prev) => prev.filter((x) => x.id !== it.id));
     } catch (e) {
       alert(e.message || "O‘chirishda xatolik");
     }
   }
 
+  /* ---- Modal ochilganda default qiymatlar ---- */
+  useEffect(() => {
+    if (!open) return;
+    // Boshlang‘ich qiymatlar: hozir va +3 soat (misol)
+    const a = nowLocalInput(5);
+    const d = new Date(a);
+    d.setHours(d.getHours() + 3);
+    const b = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+      d.getDate()
+    )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    setStartAt(a);
+    setEndAt(b);
+  }, [open]);
+
   return (
     <div className="ci-page">
       <div className="ci-head">
-        <h1 className="ci-title">Check-in Blackout Dates</h1>
-        <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-          + Add new date / range
+        <h1 className="ci-title">Check-in Blackout (Date/Time)</h1>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setOpen(true)}
+        >
+          + Add new interval
         </button>
       </div>
 
@@ -140,20 +228,28 @@ export default function Checkin() {
         {loading ? (
           <div className="ci-empty">Loading...</div>
         ) : items.length === 0 ? (
-          <div className="ci-empty">No dates added yet. Click <b>Add new date</b>.</div>
+          <div className="ci-empty">
+            No dates added yet. Click <b>Add new interval</b>.
+          </div>
         ) : (
           <ul className="ci-list">
-            {items.map(it => (
+            {items.map((it) => (
               <li key={it.id} className="ci-row">
-                <span className="ci-date">{fmtHuman(it.date)}</span>
+                <span className="ci-date">
+                  {fmtHumanDT(it.start)} — {fmtHumanDT(it.end)}
+                </span>
 
-                <span className={`ci-badge ${it.roomType === "FAMILY" ? "fam" : "std"}`}>
+                <span
+                  className={`ci-badge ${
+                    it.roomType === "FAMILY" ? "fam" : "std"
+                  }`}
+                >
                   {/* FAMILY bo‘lsa, "Family" so‘zining OLDIGA delete tugmasi */}
                   {it.roomType === "FAMILY" && (
                     <button
                       type="button"
                       className="ci-del"
-                      title="Delete this date"
+                      title="Delete this interval"
                       aria-label="Delete"
                       onClick={() => deleteItem(it)}
                       style={{
@@ -162,7 +258,7 @@ export default function Checkin() {
                         cursor: "pointer",
                         fontSize: "14px",
                         marginRight: "8px",
-                        lineHeight: 1
+                        lineHeight: 1,
                       }}
                     >
                       🗑
@@ -176,73 +272,137 @@ export default function Checkin() {
         )}
       </div>
 
-      {open && createPortal(
-        <div className="ci-overlay" onClick={() => setOpen(false)}>
-          <div className="ci-modal" onClick={(e)=>e.stopPropagation()}>
-            <div className="ci-modal__head">
-              <h2>Add interval</h2>
-              <button type="button" className="ci-close" onClick={() => setOpen(false)}>×</button>
-            </div>
-
-            <div className="ci-modal__body">
-              <label className="ci-label" htmlFor="ci-in">Check-in</label>
-              <input id="ci-in" type="date" className="ci-input"
-                     value={checkIn} onChange={(e)=>setCheckIn(e.target.value)} />
-
-              <label className="ci-label" htmlFor="ci-out">Check-out</label>
-              <input id="ci-out" type="date" className="ci-input"
-                     value={checkOut} onChange={(e)=>setCheckOut(e.target.value)} />
-
-              <label className="ci-label">Room type</label>
-              <div className="ci-seg">
-                <button type="button"
-                        className={`ci-seg__btn ${roomType === "FAMILY" ? "active" : ""}`}
-                        onClick={()=>setRoomType("FAMILY")}>Family</button>
-                <button type="button"
-                        className={`ci-seg__btn ${roomType === "STANDARD" ? "active" : ""}`}
-                        onClick={()=>setRoomType("STANDARD")}>Standard</button>
+      {open &&
+        createPortal(
+          <div className="ci-overlay" onClick={() => setOpen(false)}>
+            <div className="ci-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="ci-modal__head">
+                <h2>Add interval (with time)</h2>
+                <button
+                  type="button"
+                  className="ci-close"
+                  onClick={() => setOpen(false)}
+                >
+                  ×
+                </button>
               </div>
 
-              {isIso(checkIn) && isIso(checkOut) && (
-                <div className="ci-hint">
-                  {checking ? "Checking..." :
-                   conflict ? (
-                     <span className="ci-warn">
-                       Busy: {fmtHuman(conflict.start_date)} — {fmtHuman(conflict.end_date)}
-                     </span>
-                   ) : <span className="ci-ok">Selected interval is free ✓</span>}
+              <div className="ci-modal__body">
+                <label className="ci-label" htmlFor="ci-in">
+                  Start (check-in)
+                </label>
+                <input
+                  id="ci-in"
+                  type="datetime-local"
+                  className="ci-input"
+                  value={startAt}
+                  onChange={(e) => setStartAt(e.target.value)}
+                />
+
+                <label className="ci-label" htmlFor="ci-out">
+                  End (check-out)
+                </label>
+                <input
+                  id="ci-out"
+                  type="datetime-local"
+                  className="ci-input"
+                  value={endAt}
+                  onChange={(e) => setEndAt(e.target.value)}
+                />
+
+                <label className="ci-label">Room type</label>
+                <div className="ci-seg">
+                  <button
+                    type="button"
+                    className={`ci-seg__btn ${
+                      roomType === "FAMILY" ? "active" : ""
+                    }`}
+                    onClick={() => setRoomType("FAMILY")}
+                  >
+                    Family
+                  </button>
+                  <button
+                    type="button"
+                    className={`ci-seg__btn ${
+                      roomType === "STANDARD" ? "active" : ""
+                    }`}
+                    onClick={() => setRoomType("STANDARD")}
+                  >
+                    Standard
+                  </button>
                 </div>
-              )}
-            </div>
 
-            <div className="ci-modal__foot">
-              <button type="button" className="btn btn-secondary" onClick={()=>setOpen(false)}>Cancel</button>
-              <button type="button" className="btn btn-primary" onClick={saveRange}>Save</button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+                {isIsoDT(startAt) && isIsoDT(endAt) && (
+                  <div className="ci-hint">
+                    {checking ? (
+                      "Checking..."
+                    ) : conflict ? (
+                      <span className="ci-warn">
+                        Busy: {fmtHumanDT(conflict.start_date)} —{" "}
+                        {fmtHumanDT(conflict.end_date)}
+                      </span>
+                    ) : (
+                      <span className="ci-ok">Selected interval is free ✓</span>
+                    )}
+                  </div>
+                )}
+              </div>
 
-      {showConflict && conflict && createPortal(
-        <div className="ci-overlay" onClick={()=>setShowConflict(false)}>
-          <div className="ci-modal" onClick={(e)=>e.stopPropagation()}>
-            <div className="ci-modal__head">
-              <h2>Busy interval</h2>
-              <button type="button" className="ci-close" onClick={()=>setShowConflict(false)}>×</button>
+              <div className="ci-modal__foot">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={saveRange}
+                >
+                  Save
+                </button>
+              </div>
             </div>
-            <div className="ci-modal__body">
-              <p>
-                Xona <b>{roomType}</b> {fmtHuman(conflict.start_date)} — {fmtHuman(conflict.end_date)} oralig‘ida band.
-              </p>
+          </div>,
+          document.body
+        )}
+
+      {showConflict &&
+        conflict &&
+        createPortal(
+          <div className="ci-overlay" onClick={() => setShowConflict(false)}>
+            <div className="ci-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="ci-modal__head">
+                <h2>Busy interval</h2>
+                <button
+                  type="button"
+                  className="ci-close"
+                  onClick={() => setShowConflict(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="ci-modal__body">
+                <p>
+                  Xona <b>{roomType}</b> {fmtHumanDT(conflict.start_date)} —{" "}
+                  {fmtHumanDT(conflict.end_date)} oralig‘ida band.
+                </p>
+              </div>
+              <div className="ci-modal__foot">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setShowConflict(false)}
+                >
+                  OK
+                </button>
+              </div>
             </div>
-            <div className="ci-modal__foot">
-              <button type="button" className="btn btn-primary" onClick={()=>setShowConflict(false)}>OK</button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
