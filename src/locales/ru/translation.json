@@ -1,6 +1,8 @@
 {
   "khamsa": "Khamsa Hotel: Отдохните перед полётом",
   "notselected": "Не выбрано",
+  "available": "Доступный",  
+  "notavailable": "Нет в наличии",
   "ru": "ДД.ММ.ГГГГ",
   "home": "Главная",
   "rooms": "Номера",

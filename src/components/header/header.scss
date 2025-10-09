@@ -324,10 +324,10 @@
 
 /* Safari/Chrome'da format matni rangini boshqarish */
 .kh-date:invalid::-webkit-datetime-edit {
-  color: #9ca3af; 
+  color: #9ca3af;
 }
 .kh-date::-webkit-datetime-edit {
-  color: #111827; 
+  color: #111827;
 }
 
 /* Firefox maydoni uchun umumiy normalize */
@@ -480,5 +480,55 @@
   }
   .kh-modal__btn {
     padding: 9px 14px;
+  }
+}
+
+/* Label va badge yonma-yon chiqishi uchun */
+.kh-label-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Rangli status badge */
+.kh-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 9999px; /* pill */
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  user-select: none;
+  color: #fff;
+  background: #9aa3b2; /* default kulrang */
+}
+
+.kh-status--loading {
+  background: #9aa3b2; /* kulrang */
+  animation: kh-pulse 1.2s ease-in-out infinite;
+}
+
+.kh-status--ok {
+  background: #ff7a00; /* olovrang */
+  box-shadow: 0 0 0 1px rgba(255, 122, 0, 0.25) inset;
+}
+
+.kh-status--bad {
+  background: #e11d48; /* qizil */
+  box-shadow: 0 0 0 1px rgba(225, 29, 72, 0.25) inset;
+}
+
+@keyframes kh-pulse {
+  0% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0.85;
   }
 }

@@ -1,6 +1,8 @@
 {
   "khamsa": "Khamsa Hotel: Relax before your flight",
   "en": "DD.MM.YYYY",
+  "available": "Available",
+  "notavailable": "Not available",
   "notSelected": "Not Selected",
   "home": "Home",
   "rooms": "Rooms",
