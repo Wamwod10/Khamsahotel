@@ -44,7 +44,7 @@ const Roomcard = () => {
                     <FaRegUser /> 1 {t("guest")}
                   </p>
                   <p className="roomcard__span">
-                    <IoResizeSharp /> 3.6 m²
+                    <IoResizeSharp /> 3.2 m²
                   </p>
                 </div>
               </div>
@@ -95,7 +95,7 @@ const Roomcard = () => {
                     <RiGroupLine /> 3 {t("guests")}
                   </p>
                   <p className="roomcard__span">
-                    <IoResizeSharp /> 9.5 m²
+                    <IoResizeSharp /> 7.5 m²
                   </p>
                 </div>
               </div>

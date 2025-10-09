@@ -1,254 +1,271 @@
 .nav {
-    &__close-btn {
-        display: none; // default: yashiringan
-        background: none;
-        border: none;
-        font-size: 30px;
-        font-weight: bold;
-        position: absolute;
-        top: 16px;
-        right: 40px;
-        z-index: 10002;
-        cursor: pointer;
-        color: rgb(69, 69, 69);
+  &__close-btn {
+    display: none; // default: yashiringan
+    background: none;
+    border: none;
+    font-size: 30px;
+    font-weight: bold;
+    position: absolute;
+    top: 16px;
+    right: 40px;
+    z-index: 10002;
+    cursor: pointer;
+    color: rgb(69, 69, 69);
+  }
+
+  &__close-btn--outside {
+    display: none; // default holatda ko‘rinmasin
+    background: none;
+    border: none;
+    font-size: 32px;
+    color: #000;
+    position: sticky;
+    right: 100px;
+    top: -1px;
+    z-index: 10002;
+    cursor: pointer;
+    transition: transform 0.3s;
+
+    &:hover {
+      transform: rotate(90deg);
+    }
+  }
+  @media (max-width: 1350px) {
+    &__box {
+      justify-content: center;
+      gap: 25px;
     }
 
+    &__list {
+      gap: 15px;
+    }
+  }
+
+  @media (max-width: 1320px) {
     &__close-btn--outside {
-        display: none; // default holatda ko‘rinmasin
-        background: none;
-        border: none;
-        font-size: 32px;
-        color: #000;
-        position: sticky;
-        right: 100px;
-        top: -1px;
-        z-index: 10002;
-        cursor: pointer;
-        transition: transform 0.3s;
+      display: block;
+      position: relative;
+      width: 28px;
+      right: 100px;
+      top: -1px;
+      z-index: 10002;
+      font-size: 32px;
+      color: #000;
+      background: none;
+      border: none;
+      cursor: pointer;
 
-        &:hover {
-            transform: rotate(90deg);
-        }
-    }
-    @media (max-width: 1350px) {
-        &__box {
-            justify-content: center;
-            gap: 25px;
-        }
-
-        &__list {
-            gap: 15px;
-        }
+      &:hover {
+        transform: rotate(90deg);
+      }
     }
 
-    @media (max-width: 1320px) {
-        &__close-btn--outside {
-            display: block;
-            position: relative;
-            width: 28px;
-            right: 100px;
-            top: -1px;
-            z-index: 10002;
-            font-size: 32px;
-            color: #000;
-            background: none;
-            border: none;
-            cursor: pointer;
-
-            &:hover {
-                transform: rotate(90deg);
-            }
-        }
-
-        &__close-btn {
-            display: block;
-            background: none;
-            border: none;
-            font-size: 30px;
-            font-weight: bold;
-            position: relative;
-            left: -3px;
-            z-index: 10002;
-            cursor: pointer;
-            color: rgb(69, 69, 69);
-        }
-
-        &__box {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .nav_btn-svg {
-            display: block;
-            position: relative;
-            z-index: 10001;
-            background: none;
-            border: none;
-        }
-
-        &__list {
-            position: fixed;
-            top: var(--nav-h, 72px);
-            right: 0;
-            left: auto;
-            width: 0%;
-            height: calc(100vh - var(--nav-h, 72px));
-            background: #fff;
-            flex-direction: column;
-            align-items: flex-start;
-            row-gap: 12px;
-            padding: 24px 20px;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            box-shadow: -5px 0 15px rgba(46, 46, 46, 0.2);
-            z-index: 9999;
-            font-size: 15px;
-            border-radius: 0 0 0 10px;
-        }
-
-        &__list.show {
-            width: 100%;
-            transform: translateX(0);
-        }
-
-        &__overlay {
-            display: none;
-
-            &.show {
-                display: block;
-                position: fixed;
-                top: var(--nav-h, 72px);
-                left: 0;
-                width: 100%;
-                height: calc(100vh - var(--nav-h, 72px));
-                background: rgba(0, 0, 0, 0.15);
-                z-index: 9990;
-            }
-        }
-
-        &__list {
-            width: 33%;
-            font-size: 22px;
-            row-gap: 20px;
-        }
-
-        &__lang-btn {
-            font-size: 21px;
-        }
-
-        &__booking-link {
-            font-size: 20px;
-        }
-
-        &__logo a {
-            font-size: 25px;
-        }
+    &__close-btn {
+      display: block;
+      background: none;
+      border: none;
+      font-size: 30px;
+      font-weight: bold;
+      position: relative;
+      left: -3px;
+      z-index: 10002;
+      cursor: pointer;
+      color: rgb(69, 69, 69);
     }
 
-    @media (max-width: 1024px) {
-        &__lang-btn {
-            font-size: 20px;
-        }
-
-        &__booking-link {
-            font-size: 17px;
-        }
-
-        &__logo a {
-            font-size: 23px;
-        }
-
-        &__list {
-            font-size: 17px;
-        }
+    &__box {
+      display: flex;
+      justify-content: space-between;
     }
 
-    @media (max-width: 768px) {
-        &__logo a {
-            display: none;
-        }
-
-        &__khamsa {
-            display: none;
-        }
-
-        &__lang-btn {
-            font-size: 16px;
-        }
-
-        &__booking-link {
-            font-size: 15px;
-        }
-
-        &__list {
-            font-size: 15px;
-        }
+    .nav_btn-svg {
+      display: block;
+      position: relative;
+      z-index: 10001;
+      background: none;
+      border: none;
     }
 
-    @media (max-width: 425px) {
-        &__box {
-            gap: 70px;
-        }
-
-        &__main-box {
-            gap: 10px;
-        }
-
-        &__booking-link {
-            font-size: 13px;
-        }
-
-        &__list {
-            font-size: 14px;
-        }
-    }
-    @media (max-width: 410px) {
-        &__box {
-            gap: 45px;
-        }
+    &__list {
+      position: fixed;
+      top: var(--nav-h, 72px);
+      right: 0;
+      left: auto;
+      width: 0%;
+      height: calc(100vh - var(--nav-h, 72px));
+      background: #fff;
+      flex-direction: column;
+      align-items: flex-start;
+      row-gap: 12px;
+      padding: 24px 20px;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      box-shadow: -5px 0 15px rgba(46, 46, 46, 0.2);
+      z-index: 9999;
+      font-size: 15px;
+      border-radius: 0 0 0 10px;
     }
 
-    @media (max-width: 390px) {
-        &__box {
-            gap: 50px;
-        }
+    &__list.show {
+      width: 100%;
+      transform: translateX(0);
     }
 
-    @media (max-width: 381px) {
-        &__box {
-            gap: 45px;
-        }
+    &__overlay {
+      display: none;
+
+      &.show {
+        display: block;
+        position: fixed;
+        top: var(--nav-h, 72px);
+        left: 0;
+        width: 100%;
+        height: calc(100vh - var(--nav-h, 72px));
+        background: rgba(0, 0, 0, 0.15);
+        z-index: 9990;
+      }
     }
 
-    @media (max-width: 375px) {
-        .mobile-lang {
-            width: 100%;
-            display: flex;
-            justify-content: flex-start;
-
-            .nav__lang {
-                width: 100%;
-            }
-
-            .nav__lang-btn {
-                width: 100%;
-                justify-content: flex-start;
-                padding-left: 0;
-                font-size: 18px;
-            }
-        }
-
-        .nav__main-box .nav__lang {
-            display: none;
-        }
-
-        .nav__list {
-            gap: 12px;
-        }
-
-        .nav__box {
-            justify-content: space-between;
-            gap: 60px;
-        }
+    &__list {
+      width: 33%;
+      font-size: 22px;
+      row-gap: 20px;
     }
+
+    &__lang-btn {
+      font-size: 21px;
+    }
+
+    &__booking-link {
+      font-size: 20px;
+    }
+
+    &__logo a {
+      font-size: 25px;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    &__lang-btn {
+      font-size: 20px;
+    }
+
+    &__booking-link {
+      font-size: 17px;
+    }
+
+    &__logo a {
+      font-size: 23px;
+    }
+
+    &__list {
+      font-size: 17px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    &__logo a {
+      display: none;
+    }
+
+    &__khamsa {
+      display: none;
+    }
+
+    &__lang-btn {
+      font-size: 16px;
+    }
+
+    &__booking-link {
+      font-size: 15px;
+    }
+
+    &__list {
+      font-size: 15px;
+    }
+  }
+  @media (max-width: 450px) {
+    &__main-box {
+        column-gap: 12px;
+    }
+  }
+  @media (max-width: 425px) {
+    &__box {
+      gap: 33px;
+    }
+
+    &__main-box {
+      gap: 10px;
+    }
+
+    &__booking-link {
+      font-size: 13px;
+    }
+
+    &__list {
+      font-size: 14px;
+    }
+  }
+  @media (max-width: 410px) {
+    &__box {
+      gap: 10px;
+    }
+  }
+
+  @media (max-width: 390px) {
+    &__box {
+      gap: 10px;
+    }
+    &__main-box{
+        column-gap: 10px;
+    }
+  }
+
+  @media (max-width: 381px) {
+    &__box {
+      gap: 5px;
+    }
+  }
+
+  @media (max-width: 375px) {
+    .mobile-lang {
+      width: 100%;
+      display: flex;
+      justify-content: flex-start;
+
+      .nav__lang {
+        width: 100%;
+      }
+
+      .nav__lang-btn {
+        width: 100%;
+        justify-content: flex-start;
+        padding-left: 0;
+        font-size: 18px;
+      }
+    }
+
+    .nav__main-box .nav__lang {
+      display: none;
+    }
+
+    .nav__list {
+      gap: 12px;
+    }
+
+    .nav__box {
+      justify-content: space-between;
+      gap: 60px;
+    }
+  }
+  @media (max-width: 340px) {
+    .nav__box{
+        gap: 15px;
+    }
+}
+  @media (max-width:320px) {
+    .nav__box{
+        gap: 15px;
+    }
+  }
 }

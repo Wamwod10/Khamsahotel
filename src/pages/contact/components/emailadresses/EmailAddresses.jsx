@@ -18,13 +18,13 @@ const EmailAddresses = () => {
     },
     {
       title: t("emailaddr_reservations_title"),
-      email: "booking@khamsahotel.uz",
+      email: "qonoqhotel@mail.ru",
       buttonText: t("emailaddr_button"),
       icon: <BsCalendar3 className="email__call-icon" />,
     },
     {
       title: t("emailaddr_support_title"),
-      email: "support@khamsahotel.uz",
+      email: "qonoqhotel@mail.ru",
       buttonText: t("emailaddr_button"),
       icon: <BsHeadphones className="email__call-icon" />,
     },
