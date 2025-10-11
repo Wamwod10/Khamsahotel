@@ -225,7 +225,7 @@ const RoomCard = () => {
 
               <h3 className="room-card__room-title">{t("family") || "Family Room"}</h3>
               <p className="room-card__info">
-                <FiUser /> 3 {t("guests")} &nbsp; | &nbsp; <FaRulerCombined /> 7.5 m²
+                <FiUser /> 2 {t("guests")} + {t("child")} &nbsp; | &nbsp; <FaRulerCombined /> 7.5 m²
               </p>
               <p className="room-card__location">
                 <FiMapPin /> {t("TashkentAirportHotel")}

@@ -92,7 +92,7 @@ const Roomcard = () => {
                 <h2 className="roomcard__boxes-title">{t("family1")}</h2>
                 <div className="roomcard__boxes-spans">
                   <p className="roomcard__span">
-                    <RiGroupLine /> 3 {t("guests")}
+                    <RiGroupLine /> 2 {t("guests")} + {t("child")}
                   </p>
                   <p className="roomcard__span">
                     <IoResizeSharp /> 7.5 m²

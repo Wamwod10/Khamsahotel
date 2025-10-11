@@ -503,21 +503,21 @@
   letter-spacing: 0.2px;
   user-select: none;
   color: #fff;
-  background: #9aa3b2; /* default kulrang */
+  background: #9aa3b2;
 }
 
 .kh-status--loading {
-  background: #9aa3b2; /* kulrang */
+  background: #9aa3b2;
   animation: kh-pulse 1.2s ease-in-out infinite;
 }
 
 .kh-status--ok {
-  background: #ff7a00; /* olovrang */
+  background: #ff7a00;
   box-shadow: 0 0 0 1px rgba(255, 122, 0, 0.25) inset;
 }
 
 .kh-status--bad {
-  background: #e11d48; /* qizil */
+  background: #e11d48;
   box-shadow: 0 0 0 1px rgba(225, 29, 72, 0.25) inset;
 }
 

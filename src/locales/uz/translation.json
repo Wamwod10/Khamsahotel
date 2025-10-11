@@ -22,7 +22,7 @@
   "booktext": "Sizga mos xonani tanlang",
   "check-in": "Kirish",
   "check-out": "Chiqish",
-  "guests": "Mehmonlar",
+  "guests": "ta Mehmon",
   "guest": "Mehmon",
   "bookrooms": "Xonalar",
   "standard": "Standart xona",
@@ -45,6 +45,7 @@
   "familyNotAvailable": "Afsuski, siz tanlagan sana bo'yicha xonamiz band edi. Iltimos boshqa sana yoki xona turlarini ko'rib chiqing!",
   "understand": "Tushunarli",
   "searchrooms": "Xona qidirilmoqda...",
+  "child": "7 yoshgacha bo'lgan bola",
 
   "roomcardtitle": "Tavsiya etilgan xonalar",
   "roomcardtext": "Diqqat bilan tanlangan xonalardan tanlang",
