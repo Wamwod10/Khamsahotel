@@ -1005,7 +1005,7 @@ app.use((err, req, res, _next) => {
 
 /* ====== Start ====== */
 app.listen(PORT, () => {
-  console.log(`✅ Server ishlayapti yaxshi: ${BASE_URL} (port: ${PORT})`);
+  console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
     `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
       process.env.BNOVO_AUTH_URL
