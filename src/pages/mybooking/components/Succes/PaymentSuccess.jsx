@@ -4,28 +4,13 @@ import "./PaymentSuccess.scss";
 
 /* ===================== Common helpers ===================== */
 
-/** API bazasi (email backend uchun) – ketma-ket 3ta variantni sinab ko'ramiz */
+/** API bazasi (email backend uchun) */
 function getApiBase() {
-  const fromEnv =
+  const env =
     (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
     (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||
     "";
-
-  // PROD backend (senda .env'da BASE_URL shu):
-  const FALLBACK = "https://khamsa-backend.onrender.com";
-
-  // Dev yoki nginx reverse-proxy bo'lsa, shu origin ham ishlashi mumkin
-  const sameOrigin =
-    (typeof window !== "undefined" && window.location?.origin) || "";
-
-  // 1) Env -> 2) same origin -> 3) fallback (Render)
-  // Bo'shlarni olib tashlaymiz va oxiridagi / ni kesamiz
-  const candidates = [fromEnv, sameOrigin, FALLBACK]
-    .map((s) => (s || "").replace(/\/+$/, ""))
-    .filter(Boolean);
-
-  // Birinchi variantni qaytaramiz, yuborishda esa agar xato bo'lsa qolganlarini sinaymiz
-  return candidates[0];
+  return (env || "").replace(/\/+$/, "") || window.location.origin;
 }
 
 /** JSON bo'lmasa ham xatoni to'g'ri qaytarish */
@@ -173,37 +158,9 @@ function formatDateTime(s) {
 /* ===================== Component ===================== */
 
 const PaymentSuccess = () => {
-  const PRIMARY_API_BASE = useMemo(getApiBase, []);
+  const API_BASE = useMemo(getApiBase, []);
+  /** StrictMode/dev double-effectni to‘xtatish uchun mount flag */
   const mountedRef = useRef(false);
-
-  // email uchun bir nechta API bazani sinash
-  const apiBases = useMemo(() => {
-    const FALLBACK = "https://khamsa-backend.onrender.com";
-    const sameOrigin =
-      (typeof window !== "undefined" && window.location?.origin) || "";
-    const fromEnv =
-      (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
-      (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||
-      "";
-
-    return [fromEnv, sameOrigin, FALLBACK]
-      .map((s) => (s || "").replace(/\/+$/, ""))
-      .filter(Boolean);
-  }, []);
-
-  async function postEmailWithFallback(path, options) {
-    let last;
-    for (const base of apiBases) {
-      try {
-        last = await safeFetchJson(`${base}${path}`, options);
-        if (last?.ok) return last;
-        // 404 yoki CORS bo'lsa keyingisini sinaymiz
-      } catch (e) {
-        // keyingisini sinaymiz
-      }
-    }
-    return last || { ok: false, status: 0, data: "no-endpoint" };
-  }
 
   useEffect(() => {
     if (mountedRef.current) return; // StrictMode double-run guard
@@ -233,7 +190,7 @@ const PaymentSuccess = () => {
       id, // bo'lsa zo'r
     } = latest;
 
-    // 2) Idempotency uchun yagona imzo
+    // 2) Idempotency uchun yagona imzo (id bo‘lsa id, bo‘lmasa kuchli kompozit)
     const uniq = {
       id: id || null,
       email: email || null,
@@ -241,11 +198,12 @@ const PaymentSuccess = () => {
       createdAt: createdAt || null,
       checkIn: checkIn || null,
       room: rooms || null,
+      // Qo‘shimcha sifatida bir xil bronni aniqroq tutish uchun:
       name: `${firstName || ""} ${lastName || ""}`.trim(),
       phone: phone || null,
     };
 
-    // 3) Telegram (xohlasa) — bu qismi o'zgarmagan
+    // 3) Telegram matni (faqat FRONTEND → Telegram yo‘li; backendga dublikat yo‘q)
     const telegramText = `
 📢 Yangi bron qabul qilindi
 
@@ -261,17 +219,25 @@ const PaymentSuccess = () => {
 💶 To'lov summasi: ${price ? `${price}€` : "-"}
 
 ✅ Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi
-🌐 khamsahotel.uz
+
+🌐 Sayt: khamsahotel.uz
     `.trim();
 
+    // 4) TELEGRAM — bir marta yuborish (2 kunlik lock)
     sendOnce({
       name: "telegram",
       uniquePayload: { ...uniq, channel: "group" },
       ttlMs: 1000 * 60 * 60 * 24 * 2,
       sender: async () => await sendTelegramMessage(telegramText),
+    }).then((r) => {
+      if (r?.skipped) {
+        // console.log("Telegram skipped (dedup).");
+      } else if (!r?.ok) {
+        console.error("Telegram yuborilmadi:", r);
+      }
     });
 
-    // 4) EMAIL — success pagega kelganda jo'natamiz (bir marta)
+    // 5) EMAIL — bir marta yuborish (retry bilan). Email bo‘lmasa, o'tkazib yuboramiz.
     if (email) {
       const emailText = `
 Thank you for choosing to stay with us via Khamsahotel.uz!
@@ -304,6 +270,7 @@ Thank you for your reservation. We look forward to welcoming you!
 - Khamsa Sleep Lounge Team
       `.trim();
 
+      // Backend idempotency uchun ham kalit yuboramiz
       const idemKey = fastHash(
         stableStringify({
           to: email,
@@ -326,7 +293,7 @@ Thank you for your reservation. We look forward to welcoming you!
         sender: () =>
           withRetry(
             () =>
-              postEmailWithFallback("/send-email", {
+              safeFetchJson(`${API_BASE}/send-email`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -342,12 +309,16 @@ Thank you for your reservation. We look forward to welcoming you!
             { tries: 3, baseDelay: 500 }
           ),
       }).then((r) => {
-        if (!r?.ok && !r?.skipped) {
-          console.error("send-email failed:", r);
+        if (r?.skipped) {
+          // console.log("Email skipped (dedup).");
+        } else if (!r?.ok) {
+          console.error("send-email error:", r);
         }
       });
     }
-  }, [PRIMARY_API_BASE]); // PRIMARY_API_BASE o'zgarsa ham qayta jo'natilmaydi (mounted guard bor)
+
+    // 6) EHTIYOT: backenddagi /notify-telegram ni ishlatmaymiz (dublikat xavfi!)
+  }, [API_BASE]);
 
   return (
     <div className="payment-success-container">
