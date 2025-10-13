@@ -64,9 +64,7 @@ function hasValidLock(name, key) {
   }
 }
 
-/** Bir marta yuborish yordamchisi (idempotent).
- * Sender funksiyasi Promise qaytarishi kerak. Muvaffaqiyatdan so‘ng lock qo‘yadi.
- */
+/** Bir marta yuborish yordamchisi (idempotent). */
 async function sendOnce({ name, uniquePayload, sender, ttlMs }) {
   const sig = fastHash(stableStringify(uniquePayload));
   if (hasValidLock(name, sig)) {
@@ -205,7 +203,7 @@ const PaymentSuccess = () => {
       phone: phone || null,
     };
 
-    // 3) Telegram matni (faqat FRONTEND → Telegram yo‘li qoladi; backendga dublikat yo‘q)
+    // 3) Telegram matni (faqat FRONTEND → Telegram yo‘li; backendga dublikat yo‘q)
     const telegramText = `
 📢 Yangi bron qabul qilindi
 
@@ -221,7 +219,8 @@ const PaymentSuccess = () => {
 💶 To'lov summasi: ${price ? `${price}€` : "-"}
 
 ✅ Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi
-🌐 khamsahotel.uz
+
+🌐 Sayt: khamsahotel.uz
     `.trim();
 
     // 4) TELEGRAM — bir marta yuborish (2 kunlik lock)
@@ -319,8 +318,6 @@ Thank you for your reservation. We look forward to welcoming you!
     }
 
     // 6) EHTIYOT: backenddagi /notify-telegram ni ishlatmaymiz (dublikat xavfi!)
-    // Agar backenddan jo‘natmoqchi bo‘lsangiz, yuqoridagi sendOnce’ni backendga qo‘llang
-    // va frontendda faqat bitta kanalni qoldiring.
   }, [API_BASE]);
 
   return (

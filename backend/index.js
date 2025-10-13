@@ -120,12 +120,14 @@ const transporter = nodemailer.createTransport({
   maxConnections: 3,
   maxMessages: 100,
 });
+
 let _emailVerified = false;
 async function ensureEmailTransport() {
   if (_emailVerified) return;
   await transporter.verify();
   _emailVerified = true;
 }
+
 async function sendEmail(to, subject, text, html) {
   if (!EMAIL_USER || !EMAIL_PASS)
     throw new Error("email transport is not configured");
@@ -218,7 +220,7 @@ app.post("/send-email", async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: e?.message || "send-email failed",
-      hint: "EMAIL_USER/EMAIL_PASS App Password va Gmail hisob sozlamalarini tekshiring.",
+      hint: "EMAIL_USER/EMAIL_PASS App Password (2FA yoqilgan) va Gmail sozlamalarini tekshiring.",
     });
   }
 });
@@ -440,7 +442,6 @@ async function getRoomTypeCfg(roomType) {
     [roomType]
   );
   if (!rows[0]) {
-    // Fallback: agar jadval bo‘lmasa ham default qaytaramiz
     if (roomType === "FAMILY") {
       return {
         capacity: FAMILY_CAPACITY,
@@ -969,7 +970,6 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
     });
   } catch (e) {
     console.error("ALLOWED-TARIFFS ERR:", e);
-    // diagnostika uchun xabar ham qaytaramiz
     res
       .status(500)
       .json({ ok: false, error: "server_error", message: e.message });
