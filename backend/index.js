@@ -68,7 +68,12 @@ app.use(
       return cb(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Accept", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Accept",
+      "Authorization",
+      "Idempotency-Key",
+    ],
     credentials: false,
   })
 );
@@ -83,7 +88,7 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Accept, Authorization"
+    "Content-Type, Accept, Authorization, Idempotency-Key"
   );
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
@@ -105,24 +110,118 @@ app.get("/", (_req, res) =>
 );
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
-/* ====== Email ====== */
+/* ====== Email (Gmail) ====== */
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
   secure: true,
-  auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+  auth: { user: EMAIL_USER, pass: EMAIL_PASS }, // App Password
+  pool: true,
+  maxConnections: 3,
+  maxMessages: 100,
 });
-async function sendEmail(to, subject, text) {
+let _emailVerified = false;
+async function ensureEmailTransport() {
+  if (_emailVerified) return;
+  await transporter.verify();
+  _emailVerified = true;
+}
+async function sendEmail(to, subject, text, html) {
   if (!EMAIL_USER || !EMAIL_PASS)
     throw new Error("email transport is not configured");
-  if (!to || !subject || !text) throw new Error("email: invalid payload");
+  if (!to || !subject || (!text && !html))
+    throw new Error("email: invalid payload");
+  await ensureEmailTransport();
   return transporter.sendMail({
     from: `"Khamsa Hotel" <${EMAIL_USER}>`,
     to,
     subject,
-    text,
+    text: text || undefined,
+    html: html || undefined,
+    replyTo: EMAIL_USER,
   });
 }
+
+/* ---- Email idempotency helpers ---- */
+const EMAIL_LOCKS = new Map(); // key -> expTs
+function putEmailLock(key, ttlMs = 1000 * 60 * 60 * 24 * 2) {
+  EMAIL_LOCKS.set(key, Date.now() + ttlMs);
+}
+function hasEmailLock(key) {
+  const exp = EMAIL_LOCKS.get(key);
+  if (!exp) return false;
+  if (Date.now() > exp) {
+    EMAIL_LOCKS.delete(key);
+    return false;
+  }
+  return true;
+}
+function djb2(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = (h * 33) ^ str.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+function stableStringify(obj) {
+  if (obj === null || typeof obj !== "object") return JSON.stringify(obj);
+  if (Array.isArray(obj)) return `[${obj.map(stableStringify).join(",")}]`;
+  const keys = Object.keys(obj).sort();
+  return `{${keys
+    .map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k]))
+    .join(",")}}`;
+}
+
+/** Mijozga email jo‘natish uchun frontend chaqiradigan endpoint */
+app.post("/send-email", async (req, res) => {
+  try {
+    const {
+      to,
+      subject,
+      text = "",
+      html = "",
+      idempotencyKey,
+    } = req.body || {};
+    const headerKey = req.get("Idempotency-Key") || "";
+
+    if (!to || !subject) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "to and subject required" });
+    }
+
+    const autoKey = djb2(
+      stableStringify({
+        to,
+        subject,
+        text,
+        html,
+      })
+    );
+    const key = String(idempotencyKey || headerKey || autoKey);
+
+    if (hasEmailLock(key)) {
+      return res.json({ ok: true, deduped: true, idempotencyKey: key });
+    }
+
+    const info = await sendEmail(to, subject, text, html);
+    putEmailLock(key);
+
+    return res.json({
+      ok: true,
+      idempotencyKey: key,
+      messageId: info?.messageId || null,
+      accepted: info?.accepted || [],
+      rejected: info?.rejected || [],
+      response: info?.response || null,
+    });
+  } catch (e) {
+    console.error("[/send-email] error:", e?.response || e?.message || e);
+    return res.status(500).json({
+      ok: false,
+      error: e?.message || "send-email failed",
+      hint: "EMAIL_USER/EMAIL_PASS App Password va Gmail hisob sozlamalarini tekshiring.",
+    });
+  }
+});
 
 /* ====== Telegram ====== */
 async function notifyTelegram(text) {

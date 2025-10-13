@@ -271,6 +271,18 @@ Thank you for your reservation. We look forward to welcoming you!
 - Khamsa Sleep Lounge Team
       `.trim();
 
+      // Backend idempotency uchun ham kalit yuboramiz
+      const idemKey = fastHash(
+        stableStringify({
+          to: email,
+          subject: "Your Booking Confirmation – Khamsahotel.uz",
+          createdAt: createdAt || null,
+          checkIn: checkIn || null,
+          price: price || null,
+          id: id || null,
+        })
+      );
+
       sendOnce({
         name: "email",
         uniquePayload: {
@@ -284,11 +296,15 @@ Thank you for your reservation. We look forward to welcoming you!
             () =>
               safeFetchJson(`${API_BASE}/send-email`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "Idempotency-Key": idemKey,
+                },
                 body: JSON.stringify({
                   to: email,
                   subject: "Your Booking Confirmation – Khamsahotel.uz",
                   text: emailText,
+                  idempotencyKey: idemKey,
                 }),
               }),
             { tries: 3, baseDelay: 500 }
