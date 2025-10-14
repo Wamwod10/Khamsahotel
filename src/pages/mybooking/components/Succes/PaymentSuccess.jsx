@@ -1,4 +1,4 @@
-// PaymentSuccess.jsx
+// src/pages/mybooking/Succes/PaymentSuccess.jsx
 import React, { useEffect, useMemo, useRef } from "react";
 import "./PaymentSuccess.scss";
 
@@ -20,9 +20,7 @@ async function safeFetchJson(input, init) {
   const ct = res.headers.get("content-type") || "";
   let data;
   try {
-    data = ct.includes("application/json")
-      ? await res.json()
-      : await res.text();
+    data = ct.includes("application/json") ? await res.json() : await res.text();
   } catch {
     data = await res.text().catch(() => "");
   }
@@ -36,7 +34,7 @@ function fastHash(str) {
   return (h >>> 0).toString(36);
 }
 
-/** Barqaror stringify (kalitlarni sortlab) — aynan bir xil obyekt bir xil hash beradi */
+/** Barqaror stringify (kalitlarni sortlab) — bir xil obyekt bir xil hash */
 function stableStringify(obj) {
   if (obj === null || typeof obj !== "object") return JSON.stringify(obj);
   if (Array.isArray(obj)) return `[${obj.map(stableStringify).join(",")}]`;
@@ -46,7 +44,7 @@ function stableStringify(obj) {
     .join(",")}}`;
 }
 
-/** Mahalliy xotirada (localStorage) TTL bilan lock */
+/** localStorage TTL lock (dedup) */
 function setLock(name, key, ttlMs = 1000 * 60 * 60 * 24 * 2) {
   const now = Date.now();
   const payload = { t: now, exp: now + ttlMs };
@@ -65,18 +63,16 @@ function hasValidLock(name, key) {
   }
 }
 
-/** Bir marta yuborish yordamchisi (idempotent). */
+/** Bir marta yuborish yordamchisi */
 async function sendOnce({ name, uniquePayload, sender, ttlMs }) {
   const sig = fastHash(stableStringify(uniquePayload));
-  if (hasValidLock(name, sig)) {
-    return { ok: true, skipped: true, reason: "dedup-lock" };
-  }
+  if (hasValidLock(name, sig)) return { ok: true, skipped: true, reason: "dedup-lock" };
   const res = await sender();
   if (res?.ok) setLock(name, sig, ttlMs);
   return res;
 }
 
-/** Kichik retry yordamchisi (email uchun foydali) */
+/** Retry */
 async function withRetry(fn, { tries = 3, baseDelay = 400 } = {}) {
   let last;
   for (let i = 0; i < tries; i++) {
@@ -87,11 +83,7 @@ async function withRetry(fn, { tries = 3, baseDelay = 400 } = {}) {
   return last;
 }
 
-/* ===================== TELEGRAM ===================== */
-/* .env.local:
-   VITE_TG_BOT_TOKEN=xxxxxxxx:yyyy
-   VITE_TG_CHAT_ID=-100...
-*/
+/* ===================== TELEGRAM (ixtiyoriy) ===================== */
 const TELEGRAM_BOT_TOKEN =
   (import.meta?.env && import.meta.env.VITE_TG_BOT_TOKEN) || "";
 const TELEGRAM_CHAT_ID =
@@ -137,7 +129,7 @@ const roomKeyMap = {
   "Standard + 1 Family room": "Standard + 1 Family room",
 };
 
-function formatDate(isoDate /* YYYY-MM-DD */) {
+function formatDate(isoDate) {
   if (!isoDate) return "-";
   const [y, m, d] = String(isoDate).split("-");
   return `${d}.${m}.${y}`;
@@ -160,11 +152,10 @@ function formatDateTime(s) {
 
 const PaymentSuccess = () => {
   const API_BASE = useMemo(getApiBase, []);
-  /** StrictMode/dev double-effectni to‘xtatish uchun mount flag */
   const mountedRef = useRef(false);
 
   useEffect(() => {
-    if (mountedRef.current) return; // StrictMode double-run guard
+    if (mountedRef.current) return;
     mountedRef.current = true;
 
     // 1) Eng so‘nggi bronni sessiyadan o‘qiymiz
@@ -188,10 +179,10 @@ const PaymentSuccess = () => {
       duration,
       price,
       createdAt,
-      id, // bo'lsa zo'r
+      id,
     } = latest;
 
-    // 2) Idempotency uchun yagona imzo (id bo‘lsa id, bo‘lmasa kuchli kompozit)
+    // 2) Idempotency uchun imzo
     const uniq = {
       id: id || null,
       email: email || null,
@@ -199,12 +190,11 @@ const PaymentSuccess = () => {
       createdAt: createdAt || null,
       checkIn: checkIn || null,
       room: rooms || null,
-      // Qo‘shimcha sifatida bir xil bronni aniqroq tutish uchun:
       name: `${firstName || ""} ${lastName || ""}`.trim(),
       phone: phone || null,
     };
 
-    // 3) Telegram matni (faqat FRONTEND → Telegram yo‘li; backendga dublikat yo‘q)
+    // 3) Telegram (ixtiyoriy)
     const telegramText = `
 📢 Yangi bron qabul qilindi
 
@@ -224,21 +214,14 @@ const PaymentSuccess = () => {
 🌐 Sayt: khamsahotel.uz
     `.trim();
 
-    // 4) TELEGRAM — bir marta yuborish (2 kunlik lock)
     sendOnce({
       name: "telegram",
       uniquePayload: { ...uniq, channel: "group" },
       ttlMs: 1000 * 60 * 60 * 24 * 2,
       sender: async () => await sendTelegramMessage(telegramText),
-    }).then((r) => {
-      if (r?.skipped) {
-        // console.log("Telegram skipped (dedup).");
-      } else if (!r?.ok) {
-        console.error("Telegram yuborilmadi:", r);
-      }
     });
 
-    // 5) EMAIL — bir marta yuborish (retry bilan). Email bo‘lmasa, o'tkazib yuboramiz.
+    // 4) EMAIL — email bo‘lmasa yubormaymiz
     if (email) {
       const emailText = `
 Thank you for choosing to stay with us via Khamsahotel.uz!
@@ -271,7 +254,6 @@ Thank you for your reservation. We look forward to welcoming you!
 - Khamsa Sleep Lounge Team
       `.trim();
 
-      // Backend idempotency uchun ham kalit yuboramiz
       const idemKey = fastHash(
         stableStringify({
           to: email,
@@ -310,15 +292,11 @@ Thank you for your reservation. We look forward to welcoming you!
             { tries: 3, baseDelay: 500 }
           ),
       }).then((r) => {
-        if (r?.skipped) {
-          // console.log("Email skipped (dedup).");
-        } else if (!r?.ok) {
+        if (!r?.ok && !r?.skipped) {
           console.error("send-email error:", r);
         }
       });
     }
-
-    // 6) EHTIYOT: backenddagi /notify-telegram ni ishlatmaymiz (dublikat xavfi!)
   }, [API_BASE]);
 
   return (
@@ -344,9 +322,7 @@ Thank you for your reservation. We look forward to welcoming you!
       <p className="message">
         Rahmat! Buyurtmangiz qabul qilindi. Tasdiqnoma email orqali yuborildi.
       </p>
-      <a className="back-home" href="/">
-        Bosh sahifaga qaytish
-      </a>
+      <a className="back-home" href="/">Bosh sahifaga qaytish</a>
     </div>
   );
 };
