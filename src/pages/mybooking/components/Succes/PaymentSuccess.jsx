@@ -39,9 +39,7 @@ function stableStringify(obj) {
   if (obj === null || typeof obj !== "object") return JSON.stringify(obj);
   if (Array.isArray(obj)) return `[${obj.map(stableStringify).join(",")}]`;
   const keys = Object.keys(obj).sort();
-  return `{${keys
-    .map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k]))
-    .join(",")}}`;
+  return `{${keys.map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k])).join(",")}}`;
 }
 
 /** localStorage TTL lock (dedup) */
@@ -143,13 +141,10 @@ function formatDateTime(s) {
   if (!s) return "-";
   const d = new Date(s);
   const pad = (n) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /* ===================== Component ===================== */
-
 const PaymentSuccess = () => {
   const API_BASE = useMemo(getApiBase, []);
   const mountedRef = useRef(false);
@@ -294,6 +289,8 @@ Thank you for your reservation. We look forward to welcoming you!
       }).then((r) => {
         if (!r?.ok && !r?.skipped) {
           console.error("send-email error:", r);
+        } else {
+          console.log("send-email result:", r);
         }
       });
     }
@@ -319,9 +316,7 @@ Thank you for your reservation. We look forward to welcoming you!
         </svg>
       </div>
       <h1>To‘lov muvaffaqiyatli bajarildi!</h1>
-      <p className="message">
-        Rahmat! Buyurtmangiz qabul qilindi. Tasdiqnoma email orqali yuborildi.
-      </p>
+      <p className="message">Rahmat! Buyurtmangiz qabul qilindi. Tasdiqnoma email orqali yuborildi.</p>
       <a className="back-home" href="/">Bosh sahifaga qaytish</a>
     </div>
   );
