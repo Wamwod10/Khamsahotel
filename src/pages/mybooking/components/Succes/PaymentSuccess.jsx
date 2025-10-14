@@ -10,7 +10,8 @@ function getApiBase() {
     (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
     (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||
     "";
-  return (env || "").replace(/\/+$/, "") || window.location.origin;
+  const fallback = "https://khamsa-backend.onrender.com";
+  return (env || fallback).replace(/\/+$/, "");
 }
 
 /** JSON bo'lmasa ham xatoni to'g'ri qaytarish */

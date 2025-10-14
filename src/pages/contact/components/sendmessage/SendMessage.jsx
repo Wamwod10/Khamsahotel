@@ -15,7 +15,7 @@ const SendMessage = () => {
   });
 
   const BOT_TOKEN = "8266378942:AAGYLpPRnn9g_n6QB6acyPNYTUIOa-QGIfM";
-  const CHAT_ID = "-1002944437298"; // O'zingning Telegram ID
+  const CHAT_ID = "-100294443729"; // O'zingning Telegram ID
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -37,7 +37,7 @@ const SendMessage = () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: -1002944437298,
+        chat_id: -100294443729,
         text,
       }),
     });
