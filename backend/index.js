@@ -112,38 +112,80 @@ app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
 /* ====== Email (Gmail) ====== */
 const transporter = nodemailer.createTransport({
+  // Gmail uchun qat’iy SMTP sozlamasi
+  service: "gmail",                  // ← qo‘shildi (Gmail DNS/SNI muammolarini chetlash)
   host: "smtp.gmail.com",
   port: 465,
   secure: true,
-  auth: { user: EMAIL_USER, pass: EMAIL_PASS }, // App Password
+  auth: {
+    type: "LOGIN",                   // ← aniq ko‘rsatdik (ba’zi xostlarda kerak)
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,                // App Password (2FA yoqilgan bo‘lsin)
+  },
   pool: true,
   maxConnections: 3,
   maxMessages: 100,
-  // Gmail/SNI bilan ba'zi hostinglarda verify/send muammolarini bartaraf etadi
-  tls: { servername: "smtp.gmail.com" },
+  connectionTimeout: 20_000,         // ← vaqt limitlari
+  greetingTimeout: 15_000,
+  socketTimeout: 30_000,
+  tls: {
+    servername: "smtp.gmail.com",
+    rejectUnauthorized: true,
+  },
+  keepAlive: true,
 });
 
 let _emailVerified = false;
 async function ensureEmailTransport() {
   if (_emailVerified) return;
-  await transporter.verify();
-  _emailVerified = true;
+  try {
+    await transporter.verify();      // real SMTPga ulanib ko‘radi
+    _emailVerified = true;
+  } catch (e) {
+    // Ba’zi PaaS’larda verify bloklanishi mumkin — sendMail baribir urinish qiladi.
+    console.warn("[smtp] verify failed (continue anyway):", e?.message || e);
+  }
 }
-
+// sendEmail — RESEND orqali (HTTPS), SMTP kerak emas
 async function sendEmail(to, subject, text, html) {
-  if (!EMAIL_USER || !EMAIL_PASS)
-    throw new Error("email transport is not configured");
-  if (!to || !subject || (!text && !html))
+  if (!to || !subject || (!text && !html)) {
     throw new Error("email: invalid payload");
-  await ensureEmailTransport();
-  return transporter.sendMail({
-    from: `"Khamsa Hotel" <${EMAIL_USER}>`,
-    to,
-    subject,
-    text: text || undefined,
-    html: html || undefined,
-    replyTo: EMAIL_USER,
+  }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY yo'q (SMTP Render’da blok bo‘lishi mumkin)");
+  }
+
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      // Tez ishga tushirish: onboarding@resend.dev
+      // (Keyin: notifications@khamsahotel.uz — domen verify qilingach)
+      from: `Khamsa Hotel`,
+      to,
+      subject,
+      text: text || undefined,
+      html: html || undefined,
+    }),
   });
+
+  const data = await r.json();
+  if (!r.ok) {
+    throw new Error(data?.message || "Resend send failed");
+  }
+
+  // Nodemailer'ga o‘xshash javob formatini qaytaramiz
+  return {
+    messageId: data?.id || null,
+    accepted: [to],
+    rejected: [],
+    response: "RESEND_OK",
+  };
 }
 
 /* ---- Email idempotency helpers ---- */
