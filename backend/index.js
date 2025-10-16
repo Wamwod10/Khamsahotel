@@ -732,9 +732,9 @@ app.post("/payment-callback", async (req, res) => {
       }
       const json = custom?.booking_json,
         sig = custom?.booking_sig;
-      if (json and sig and verifyData(json, sig))
+      if if (json && sig && verifyData(json, sig))
         verifiedPayload = JSON.parse(json);
-      else if (json and !sig) {
+      else if (json && !sig) {
         try {
           verifiedPayload = JSON.parse(json);
         } catch {}
@@ -931,7 +931,7 @@ app.post("/api/checkins/range", async (req, res) => {
 
 app.get("/api/checkins/next-block", async (req, res) => {
   const { roomType = "", start = "", startAt = "" } = req.query;
-  const A = toTz(startAt or start);
+  const A = toTz(startAt || start);
   if (!roomType || !A)
     return res
       .status(400)
