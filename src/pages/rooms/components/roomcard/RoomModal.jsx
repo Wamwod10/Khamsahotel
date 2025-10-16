@@ -7,9 +7,6 @@ import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
 import "./roomModalMedia.scss";
 
-/* ---------------- Helpers ---------------- */
-
-/** Label/code → code (STANDARD | FAMILY) */
 function normalizeRoomCode(v) {
   const s = String(v || "").toLowerCase().trim();
   if (s.includes("family")) return "FAMILY";
@@ -19,7 +16,6 @@ function normalizeRoomCode(v) {
   return "";
 }
 
-/** Code → UI label */
 function roomCodeToLabel(code, t) {
   const c = String(code || "").toUpperCase();
   if (c === "STANDARD") return t("standard") || "Standard Room";
@@ -30,7 +26,7 @@ function roomCodeToLabel(code, t) {
 const guestCountByCode = { STANDARD: 1, FAMILY: 3 };
 
 const priceTable = {
-  STANDARD: { upTo3Hours: 40, upTo10Hours: 60, oneDay: 100 },
+  STANDARD: { upTo3Hours: 0.001, upTo10Hours: 60, oneDay: 100 },
   FAMILY: { upTo3Hours: 70, upTo10Hours: 100, oneDay: 150 },
 };
 
@@ -90,7 +86,6 @@ const formatTime = (s) => {
   return s.slice(0, 5);
 };
 
-/* ---------------- UI: Success modal ---------------- */
 
 const SuccessModal = ({ onStayHere, onGoToMyBooking }) => {
   const { t } = useTranslation();
@@ -126,7 +121,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     duration: "",
     hotel: t("TashkentAirportHotel") || "Tashkent Airport Hotel",
     guests: propGuests || 1,
-    rooms: normalizeRoomCode(propRooms || ""), // ALWAYS code inside
+    rooms: normalizeRoomCode(propRooms || ""), 
   });
 
   const [formData, setFormData] = useState({
@@ -138,7 +133,6 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
 
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Load from localStorage (header'dan kelgan label bo'lsa ham code'ga aylantiramiz)
   useEffect(() => {
     try {
       const saved = localStorage.getItem("bookingInfo");
