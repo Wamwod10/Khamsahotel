@@ -154,7 +154,10 @@ async function ensureEmailTransport() {
 }
 
 function cleanSubject(s) {
-  const sub = String(s ?? "").trim().replace(/\r?\n/g, " ").slice(0, 200);
+  const sub = String(s ?? "")
+    .trim()
+    .replace(/\r?\n/g, " ")
+    .slice(0, 200);
   return sub || "Khamsa notification";
 }
 
@@ -248,7 +251,14 @@ app.post("/send-email", async (req, res) => {
       return res.json({ ok: true, deduped: true, idempotencyKey: key });
     }
 
-    const info = await sendEmail({ to, subject, text, html, replyTo, fromName });
+    const info = await sendEmail({
+      to,
+      subject,
+      text,
+      html,
+      replyTo,
+      fromName,
+    });
     putEmailLock(key);
 
     return res.json({
@@ -264,8 +274,7 @@ app.post("/send-email", async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: e?.message || "send-email failed",
-      hint:
-        "Gmail uchun App Password (2FA yoqilgan) ishlatilganini va FROM = EMAIL_USER ekanini tekshiring.",
+      hint: "Gmail uchun App Password (2FA yoqilgan) ishlatilganini va FROM = EMAIL_USER ekanini tekshiring.",
     });
   }
 });
@@ -732,7 +741,7 @@ app.post("/payment-callback", async (req, res) => {
       }
       const json = custom?.booking_json,
         sig = custom?.booking_sig;
-      if if (json && sig && verifyData(json, sig))
+      if (json && sig && verifyData(json, sig))
         verifiedPayload = JSON.parse(json);
       else if (json && !sig) {
         try {
@@ -781,7 +790,11 @@ ${
 }
       `.trim();
       try {
-        await sendEmail({ to: ADMIN_EMAIL, subject: "Khamsa: Payment Success", text: human });
+        await sendEmail({
+          to: ADMIN_EMAIL,
+          subject: "Khamsa: Payment Success",
+          text: human,
+        });
       } catch {}
       try {
         await notifyTelegram(human);
