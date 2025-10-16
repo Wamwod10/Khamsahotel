@@ -111,21 +111,26 @@ app.get("/", (_req, res) =>
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
 /* ====== Email (Gmail) ====== */
+/*
+  ✅ To‘liq qayta yozildi (faqat email qismi):
+   - Gmail App Password bilan barqaror SMTP (pool + timeoutlar)
+   - verify() muvaffaqiyatsiz bo‘lsa ham sendMail urinish qiladi
+   - subject sanitizatsiyasi va HTML/text fallback
+   - Idempotency lock (RAM) – bir xil xabar takrorlanmaydi
+*/
 const transporter = nodemailer.createTransport({
-  // Gmail uchun qat’iy SMTP sozlamasi
-  service: "gmail",                  // ← qo‘shildi (Gmail DNS/SNI muammolarini chetlash)
+  // Gmail uchun qat’iy sozlama (465/SSL)
   host: "smtp.gmail.com",
   port: 465,
   secure: true,
   auth: {
-    type: "LOGIN",                   // ← aniq ko‘rsatdik (ba’zi xostlarda kerak)
     user: EMAIL_USER,
-    pass: EMAIL_PASS,                // App Password (2FA yoqilgan bo‘lsin)
+    pass: EMAIL_PASS, // 2FA yoqilgan akkauntdagi 16-belgili App Password
   },
   pool: true,
   maxConnections: 3,
   maxMessages: 100,
-  connectionTimeout: 20_000,         // ← vaqt limitlari
+  connectionTimeout: 20_000,
   greetingTimeout: 15_000,
   socketTimeout: 30_000,
   tls: {
@@ -135,60 +140,51 @@ const transporter = nodemailer.createTransport({
   keepAlive: true,
 });
 
-let _emailVerified = false;
+let _smtpReady = false;
 async function ensureEmailTransport() {
-  if (_emailVerified) return;
+  if (_smtpReady) return;
   try {
-    await transporter.verify();      // real SMTPga ulanib ko‘radi
-    _emailVerified = true;
+    await transporter.verify();
+    _smtpReady = true;
+    console.log("✅ SMTP ready");
   } catch (e) {
-    // Ba’zi PaaS’larda verify bloklanishi mumkin — sendMail baribir urinish qiladi.
-    console.warn("[smtp] verify failed (continue anyway):", e?.message || e);
+    // Ba’zi hostinglarda verify bloklanishi mumkin — sendMail baribir ishlaydi
+    console.warn("⚠️ SMTP verify failed (continue):", e?.message || e);
   }
 }
-// sendEmail — RESEND orqali (HTTPS), SMTP kerak emas
-async function sendEmail(to, subject, text, html) {
-  if (!to || !subject || (!text && !html)) {
-    throw new Error("email: invalid payload");
-  }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY yo'q (SMTP Render’da blok bo‘lishi mumkin)");
-  }
+function cleanSubject(s) {
+  const sub = String(s ?? "").trim().replace(/\r?\n/g, " ").slice(0, 200);
+  return sub || "Khamsa notification";
+}
 
-  const r = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      // Tez ishga tushirish: onboarding@resend.dev
-      // (Keyin: notifications@khamsahotel.uz — domen verify qilingach)
-      from: `Khamsa Hotel`,
-      to,
-      subject,
-      text: text || undefined,
-      html: html || undefined,
-    }),
+async function sendEmail({ to, subject, text, html, replyTo, fromName }) {
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    throw new Error("EMAIL_USER/EMAIL_PASS is not configured");
+  }
+  if (!to) throw new Error("Missing 'to'");
+  if (!subject) throw new Error("Missing 'subject'");
+  if (!text && !html) throw new Error("Missing 'text' or 'html'");
+
+  await ensureEmailTransport();
+
+  const fromHeader = fromName
+    ? `"${fromName.replace(/"/g, "'")}" <${EMAIL_USER}>`
+    : EMAIL_USER;
+
+  const info = await transporter.sendMail({
+    from: fromHeader,
+    to,
+    subject: cleanSubject(subject),
+    text: text || undefined,
+    html: html || undefined,
+    replyTo: replyTo || EMAIL_USER,
   });
 
-  const data = await r.json();
-  if (!r.ok) {
-    throw new Error(data?.message || "Resend send failed");
-  }
-
-  // Nodemailer'ga o‘xshash javob formatini qaytaramiz
-  return {
-    messageId: data?.id || null,
-    accepted: [to],
-    rejected: [],
-    response: "RESEND_OK",
-  };
+  return info;
 }
 
-/* ---- Email idempotency helpers ---- */
+// In-memory idempotency lock (2 kun)
 const EMAIL_LOCKS = new Map(); // key -> expTs
 function putEmailLock(key, ttlMs = 1000 * 60 * 60 * 24 * 2) {
   EMAIL_LOCKS.set(key, Date.now() + ttlMs);
@@ -216,7 +212,7 @@ function stableStringify(obj) {
     .join(",")}}`;
 }
 
-/** Mijozga email jo‘natish uchun frontend chaqiradigan endpoint */
+/** Frontend chaqiradi: mijozga email jo‘natish */
 app.post("/send-email", async (req, res) => {
   try {
     const {
@@ -225,19 +221,23 @@ app.post("/send-email", async (req, res) => {
       text = "",
       html = "",
       idempotencyKey,
+      replyTo,
+      fromName = "Khamsa Hotel",
     } = req.body || {};
     const headerKey = req.get("Idempotency-Key") || "";
 
-    if (!to || !subject) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "to and subject required" });
+    if (!to || !subject || (!text && !html)) {
+      return res.status(400).json({
+        ok: false,
+        error: "Fields 'to', 'subject' and 'text' or 'html' are required",
+      });
     }
 
+    // Bir xil xabarni 2 marta yubormaslik uchun imzo
     const autoKey = djb2(
       stableStringify({
         to,
-        subject,
+        subject: cleanSubject(subject),
         text,
         html,
       })
@@ -248,7 +248,7 @@ app.post("/send-email", async (req, res) => {
       return res.json({ ok: true, deduped: true, idempotencyKey: key });
     }
 
-    const info = await sendEmail(to, subject, text, html);
+    const info = await sendEmail({ to, subject, text, html, replyTo, fromName });
     putEmailLock(key);
 
     return res.json({
@@ -264,7 +264,8 @@ app.post("/send-email", async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: e?.message || "send-email failed",
-      hint: "EMAIL_USER/EMAIL_PASS App Password (2FA yoqilgan) va Gmail sozlamalarini tekshiring.",
+      hint:
+        "Gmail uchun App Password (2FA yoqilgan) ishlatilganini va FROM = EMAIL_USER ekanini tekshiring.",
     });
   }
 });
@@ -731,9 +732,9 @@ app.post("/payment-callback", async (req, res) => {
       }
       const json = custom?.booking_json,
         sig = custom?.booking_sig;
-      if (json && sig && verifyData(json, sig))
+      if (json and sig and verifyData(json, sig))
         verifiedPayload = JSON.parse(json);
-      else if (json && !sig) {
+      else if (json and !sig) {
         try {
           verifiedPayload = JSON.parse(json);
         } catch {}
@@ -780,7 +781,7 @@ ${
 }
       `.trim();
       try {
-        await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human);
+        await sendEmail({ to: ADMIN_EMAIL, subject: "Khamsa: Payment Success", text: human });
       } catch {}
       try {
         await notifyTelegram(human);
@@ -930,7 +931,7 @@ app.post("/api/checkins/range", async (req, res) => {
 
 app.get("/api/checkins/next-block", async (req, res) => {
   const { roomType = "", start = "", startAt = "" } = req.query;
-  const A = toTz(startAt || start);
+  const A = toTz(startAt or start);
   if (!roomType || !A)
     return res
       .status(400)
@@ -1049,7 +1050,7 @@ app.use((err, req, res, _next) => {
 
 /* ====== Start ====== */
 app.listen(PORT, () => {
-  console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
+  console.log(`✅ Server yaxshi ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
     `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
       process.env.BNOVO_AUTH_URL
