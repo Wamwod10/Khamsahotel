@@ -19,6 +19,7 @@ import Contact from "./pages/contact/Contact";
 import MyBooking from "./pages/mybooking/Mybooking";
 import PaymentSuccess from "./pages/mybooking/components/Succes/PaymentSuccess";
 import Reklem from "./components/reklem/Reklem";
+import About from "./pages/about/About";
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
         <Route path="/mybooking" element={<MyBooking />} />
         <Route path="/ad2007" element={<Login />} />
         <Route path="/success" element={<PaymentSuccess />} />
+        <Route path="/aboutus" element={<About />} />
       </Routes>
       <Footer />
       <ToastContainer

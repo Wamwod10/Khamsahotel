@@ -15,9 +15,7 @@ const Footer = () => {
         {/* Left side: Logo + Description */}
         <div className="footer__left">
           <h2 className="footer__logo">{t("logo")}</h2>
-          <p className="footer__description">
-            {t("description")}
-          </p>
+          <p className="footer__description">{t("description")}</p>
           <div className="footer__socials">
             <a
               href="https://t.me/khamsa_hotel"
@@ -78,14 +76,17 @@ const Footer = () => {
                 {t("footermyBooking")}
               </NavLink>
             </li>
+            <li>
+              <NavLink to="/aboutus" className="footer__link">
+                {t("aboutus")}
+              </NavLink>
+            </li>
           </ul>
         </div>
 
         <div className="footer__contact">
           <h3 className="footer__title">{t("footercontactInfo")}</h3>
-          <address className="footer__address">
-            {t("address")}
-          </address>
+          <address className="footer__address">{t("address")}</address>
           <p className="footer__phone">
             {t("phone")}:{" "}
             <a href="tel:+998958772424" className="footer__link">
@@ -115,9 +116,7 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className="footer__bottom">
-        © 2025 KhamsaHotel. {t("rights")}
-      </div>
+      <div className="footer__bottom">© 2025 KhamsaHotel. {t("rights")}</div>
     </footer>
   );
 };

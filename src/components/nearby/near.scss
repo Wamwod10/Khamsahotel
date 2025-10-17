@@ -86,7 +86,7 @@
   &__box-text {
     margin-top: 10px;
     padding-left: 16px;
-    max-width: 320px;
+    max-inline-size: 320px;
     color: #555555;
     line-height: 20px;
     font-size: 16px;
@@ -140,7 +140,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    max-width: 325px;
+    max-inline-size: 325px;
 
     & .near__view-link {
       padding: 15px 40px;

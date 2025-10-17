@@ -4,6 +4,7 @@
   "available": "Available",
   "notavailable": "Not available",
   "notSelected": "Not Selected",
+  "aboutus": "About Us",
   "home": "Home",
   "rooms": "Rooms",
   "services": "Services",
@@ -414,5 +415,29 @@
   "mybooking1": "My Booking",
   "mybookings": "My Bookings",
   "newbooking": "New Booking",
-  "nobooking": "No Bookings yet"
+  "nobooking": "No Bookings yet",
+
+  "abouttitle": "Comfort, Care & Contemporary Hospitality",
+  "aboutsubtitle": "A welcoming place where modern comfort meets genuine care.",
+  "aboutdescription": "At Khamsa, modern amenities and warm service serve one purpose: a calm, dependable stay. We offer streamlined booking, responsive support, and a guest-first approach—everything designed for your peace of mind",
+
+  "company_left_eyebrow": "About Qo’noq Hotel’s",
+  "company_left_title": "Qo’noq Hotel’s — a new-generation network of modern hotels",
+  "company_left_lead": "Qo’noq Hotel’s is a network of capsule and classic hotels located in the most convenient places—inside airports and railway stations. Our goal is to make comfortable rest accessible to every traveler, regardless of arrival time or budget.",
+  "company_left_p1": "Since its foundation, Qo’noq Hotel’s has strived to combine high service standards, contemporary design, and technology-driven solutions. We were among the first in the region to introduce the concept of “smart capsule rooms,” where every detail is designed for guest comfort—from sound insulation to intelligent lighting systems.",
+  "company_left_p2": "Today, Qo’noq Hotel’s is more than just a chain of hotels; it’s a symbol of modern, mobile hospitality. We continue to grow, open new branches, and create comfort where it matters most—on the way.",
+
+  "company_right_badge": "By Qo’noq",
+  "company_right_title": "Comfort, Care & Contemporary Hospitality",
+  "company_right_text": "A welcoming place where modern comfort meets genuine care. We offer streamlined booking, responsive support, and a guest-first approach — everything designed for your peace of mind.",
+  "company_right_b1": "Quiet, well-insulated rooms",
+  "company_right_b2": "Near Tashkent International Airport & Railway",
+  "company_right_b3": "Calm design • Sound insulation • Smart lighting",
+
+  "founder_photo_alt": "Abduqayum Abdullayev — Founder & Owner of Qo’noq Hotel’s",
+  "founder_eyebrow": "About the Founder & Owner",
+  "founder_name": "Abduqayum Abdullayev",
+  "founder_lead": "Abduqayum Abdullayev is the founder and owner of the Qo’noq Hotel’s network. An entrepreneur who began with a clear idea: hotels of a new format — convenient, technology-driven, and accessible.",
+  "founder_p1": "Under his leadership, Qo’noq Hotel’s has become a successful blend of innovation and national hospitality. Beyond the hotel business, Abduqayum also owns paid parking and storage warehouse networks, making his projects part of an integrated urban infrastructure.",
+  "founder_motto": "His core business philosophy: <b>convenience</b>, <b>honesty</b>, and <b>trust</b> in the customer."
 }

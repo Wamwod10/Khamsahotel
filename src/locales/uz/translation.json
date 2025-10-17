@@ -4,6 +4,7 @@
   "uz": "DD.MM.YYYY",
   "available": "Mavjud",
   "notavailable": "Mavjud emas",
+  "aboutus": "Biz Haqimizda",
   "home": "Bosh sahifa",
   "rooms": "Xonalar",
   "services": "Xizmatlar",
@@ -417,5 +418,29 @@
   "mybooking1": "Mening bronlarim",
   "mybookings": "Mening bronlarim",
   "newbooking": "Yangi bron",
-  "nobooking": "Hozircha bron yo‘q"
+  "nobooking": "Hozircha bron yo‘q",
+
+  "abouttitle": "Qulaylik, E’tibor va Zamonaviy Mehmondo‘stlik",
+  "aboutsubtitle": "Qulaylik va samimiy g‘amxo‘rlik uyg‘unlashgan mehmondo‘st makon.",
+  "aboutdescription": "Khamsa’da zamonaviy qulaylik va iliq xizmat bir maqsadga xizmat qiladi: xotirjam, ishonchli ta’til. Soddalashtirilgan bron, tezkor yordam va mehmonni ustuvor qo‘yish — hammasi sizning osoyishtaligingiz uchun.",
+
+  "company_left_eyebrow": "Qo’noq Hotel’s haqida",
+  "company_left_title": "Qo’noq Hotel’s — yangi avlod zamonaviy mehmonxonalar tarmog‘i",
+  "company_left_lead": "Qo’noq Hotel’s — kapsula va klassik formatdagi mehmonxonalar tarmog‘i bo‘lib, eng qulay joylarda — aeroportlar va temir yo‘l vokzallari ichida joylashgan. Maqsadimiz — kelish vaqti yoki byudjetdan qat’i nazar, har bir sayohatchiga qulay dam olishni taqdim etish.",
+  "company_left_p1": "Tashkil topganidan beri Qo’noq Hotel’s yuqori xizmat standartlari, zamonaviy dizayn va texnologik yechimlarni uyg‘unlashtirishga intiladi. Mintaqada birinchilar qatorida “aqlli kapsula xonalar” konsepsiyasini joriy etdik — har bir detal mehmon qulayligi uchun o‘ylangan: ovoz izolyatsiyasidan tortib, aqlli yoritish tizimigacha.",
+  "company_left_p2": "Bugun Qo’noq Hotel’s — bu shunchaki mehmonxonalar tarmog‘i emas, balki zamonaviy, mobil mehmondo‘stlik ramzi. Biz o‘smoqdamiz, yangi filiallar ochmoqdamiz va eng kerakli joyda — yo‘lda — qulaylik yaratmoqdamiz.",
+
+  "company_right_badge": "Qo’noq’dan",
+  "company_right_title": "Qulaylik, g‘amxo‘rlik va zamonaviy mehmondo‘stlik",
+  "company_right_text": "Zamonaviy qulaylik samimiy g‘amxo‘rlik bilan uyg‘unlashgan mehmonxona. Soddalashtirilgan bron, tezkor yordam va mehmon-ustuvor yondashuv — barchasi sizning xotirjamligingiz uchun.",
+  "company_right_b1": "Tinch, ovoz izolatsiyali xonalar",
+  "company_right_b2": "Toshkent aeroporti va vokzaliga yaqin joylashuv",
+  "company_right_b3": "Sokin dizayn • Ovoz izolyatsiyasi • Aqlli yoritish",
+
+  "founder_photo_alt": "Abduqayum Abdullayev — Qo’noq Hotel’s asoschisi va egasi",
+  "founder_eyebrow": "Asoschi va egasi haqida",
+  "founder_name": "Abduqayum Abdullayev",
+  "founder_lead": "Abduqayum Abdullayev — Qo’noq Hotel’s mehmonxonalar tarmog‘ining asoschisi va egasi. U aniq g‘oya bilan yo‘lga chiqqan tadbirkor: yangi formatdagi — qulay, texnologik va hamyonbop mehmonxonalar.",
+  "founder_p1": "Uning rahbarligida Qo’noq Hotel’s innovatsiya va milliy mehmondo‘stlik uyg‘unlashgan muvaffaqiyatli loyiha bo‘ldi. Mehmonxona biznesidan tashqari, Abduqayum pullik avtoturargohlar va omborlar tarmoqlariga ham egalik qiladi — bu loyihalarni shahar infratuzilmasining bir qismi qiladi.",
+  "founder_motto": "Biznes falsafasining asosi — mijozga nisbatan <b>qulaylik</b>, <b>halollik</b> va <b>ishonch</b>."
 }

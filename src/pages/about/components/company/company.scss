@@ -1,0 +1,187 @@
+.company {
+  /* Fallbacklar sayt ranglariga moslashadi */
+  --accent: var(--accent, #ffa726);
+  --glass-bg: var(--glass-bg, rgba(255, 255, 255, 0.06));
+  --glass-stroke: var(--glass-stroke, rgba(255, 255, 255, 0.18));
+  --text: var(--text, #e9eef6);
+  --muted: var(--muted, #cfd8e3);
+  --bg: var(--bg, #0f1216);
+
+  padding: clamp(48px, 6vw, 80px) 0;
+  background:
+    radial-gradient(80% 120% at 10% -10%, rgba(255, 167, 38, 0.12), transparent 60%),
+    radial-gradient(70% 90% at 110% 10%, rgba(255, 167, 38, 0.08), transparent 55%),
+    var(--bg);
+
+  .container {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding-inline: 16px;
+  }
+
+  &__box {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: clamp(20px, 3vw, 40px);
+    align-items: stretch;
+  }
+
+  /* ===== Left: content ===== */
+  &__content {
+    position: relative;
+    color: var(--text);
+    padding: clamp(20px, 2.2vw, 28px);
+    background: url(/public/43.png) no-repeat center/cover;
+    // background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+    border: 1px solid var(--glass-stroke);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    backdrop-filter: blur(6px);
+    color: #e9eef6;
+
+    /* Left accent line */
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 16px;
+      bottom: 16px;
+      width: 4px;
+      border-radius: 6px;
+      background: linear-gradient(180deg, var(--accent), rgba(255, 167, 38, 0.2));
+    }
+  }
+
+  &__eyebrow {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  &__title {
+    font-size: clamp(24px, 3vw, 34px);
+    line-height: 1.2;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 14px;
+  }
+
+  &__lead {
+    font-size: clamp(15px, 1.6vw, 16px);
+    line-height: 1.7;
+    color: var(--text);
+    opacity: 0.95;
+    margin: 0 0 12px;
+  }
+
+  &__divider {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 14px 0;
+    opacity: 0.6;
+  }
+
+  &__text {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--muted);
+    margin: 0 0 10px;
+  }
+
+  /* ===== Right: accent card ===== */
+  &__card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--glass-stroke);
+    border-radius: 20px;
+    padding: clamp(18px, 2vw, 24px);
+    color: var(--text);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.24);
+
+    /* soft accent halo */
+    &::after {
+      content: "";
+      position: absolute;
+      right: -40px;
+      bottom: -40px;
+      width: 160px;
+      height: 160px;
+      background: radial-gradient(closest-side, rgba(255, 167, 38, 0.25), transparent);
+      filter: blur(6px);
+    }
+  }
+
+  &__badge {
+    display: flex;
+    align-items: center;
+    column-gap: 5px;
+    font-weight: 700;
+    max-width: 80px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #111;
+    background: var(--accent);
+    padding: 6px 10px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 10px rgba(255, 167, 38, 0.35);
+  }
+
+  &__cardTitle {
+    font-size: clamp(18px, 2.2vw, 22px);
+    line-height: 1.35;
+    font-weight: 800;
+    margin: 0 0 8px;
+  }
+
+  &__cardText {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    li {
+      position: relative;
+      padding-left: 26px;
+      margin: 10px 0;
+      line-height: 1.6;
+      color: var(--text);
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 7px;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        background: var(--accent);
+        background: rgba(255, 168, 38, 0.356);
+        box-shadow: 0 0 0 3px rgba(255, 167, 38, 0.18);
+      }
+    }
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 960px) {
+    &__box {
+      grid-template-columns: 1fr;
+    }
+
+    &__card {
+      order: -1; /* card yuqoriga chiqadi, hero ostida yanada chiroyli ko‘rinadi */
+    }
+  }
+}
