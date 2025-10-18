@@ -21,8 +21,6 @@ const FRONTEND_URL = (
   process.env.FRONTEND_URL || "https://khamsahotel.uz"
 ).replace(/\/+$/, "");
 const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
-const OCTO_TEST =
-  String(process.env.OCTO_TEST ?? "false").toLowerCase() === "true";
 
 // Capacity/buffer defaults (env bilan boshqariladi)
 const FAMILY_CAPACITY = Number(
@@ -212,10 +210,12 @@ app.post("/send-email", async (req, res) => {
     } = req.body || {};
     const headerKey = req.get("Idempotency-Key") || "";
     if (!to || !subject || (!text && !html)) {
-      return res.status(400).json({
-        ok: false,
-        error: "Fields 'to', 'subject' and 'text' or 'html' are required",
-      });
+      return res
+        .status(400)
+        .json({
+          ok: false,
+          error: "Fields 'to', 'subject' and 'text' or 'html' are required",
+        });
     }
     const autoKey = djb2(
       stableStringify({ to, subject: cleanSubject(subject), text, html })
@@ -274,7 +274,7 @@ async function notifyTelegram(text) {
     console.error("Telegram fetch error:", e?.message || e);
   }
 }
-app.post("/notify/telegram/test", async (req, res) => {
+app.post("/notify/telegram/test", async (_req, res) => {
   try {
     await notifyTelegram("🔔 Test: backend telegram ok");
     res.json({ ok: true });
@@ -282,8 +282,7 @@ app.post("/notify/telegram/test", async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
-
-app.get("/notify/telegram/test", async (req, res) => {
+app.get("/notify/telegram/test", async (_req, res) => {
   try {
     await notifyTelegram("🔔 Test: backend telegram ok (GET)");
     res.json({ ok: true });
@@ -291,8 +290,6 @@ app.get("/notify/telegram/test", async (req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
-
-// 2) Umumiy endpoint: ixtiyoriy matn yuborish
 app.post("/notify/telegram", async (req, res) => {
   try {
     const { text = "ℹ️ Empty text" } = req.body || {};
@@ -599,7 +596,7 @@ app.get("/api/bnovo/availability", async (req, res) => {
 });
 
 /* =======================
- *  PAYMENTS (Octo)
+ *  PAYMENTS (Octo, REAL)
  * ======================= */
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -656,7 +653,7 @@ app.post("/create-payment", async (req, res) => {
       octo_secret: OCTO_SECRET,
       shop_transaction_id: shopTransactionId,
       auto_capture: true,
-      test: OCTO_TEST,
+      test: false, // REAL
       init_time: new Date().toISOString().replace("T", " ").substring(0, 19),
       total_sum: amountUZS,
       currency: "UZS",
@@ -673,12 +670,12 @@ app.post("/create-payment", async (req, res) => {
 
     savePending(shopTransactionId, bookingPayload);
 
-    // Retry + 60s timeout
+    // Retry + 120s timeout (REAL)
     let lastErr = null;
     for (let i = 0; i < 3; i++) {
       try {
         const controller = new AbortController();
-        const t = setTimeout(() => controller.abort(), 60000);
+        const t = setTimeout(() => controller.abort(), 120000); // 120s
         const octoRes = await fetch("https://secure.octo.uz/prepare_payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -704,7 +701,7 @@ app.post("/create-payment", async (req, res) => {
           console.error("Octo fetch error:", e?.message || e);
         }
       }
-      await sleep(400 * Math.pow(2, i)); // 400ms, 800ms, 1600ms
+      await sleep(500 * Math.pow(2, i)); // 500ms, 1000ms, 2000ms
     }
 
     if (String(lastErr?.name).includes("AbortError")) {
