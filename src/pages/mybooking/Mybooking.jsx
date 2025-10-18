@@ -8,18 +8,28 @@ import { useTranslation } from "react-i18next";
 
 /* ===================== Helpers ===================== */
 
-/** API bazasi — faqat .env dan (VITE_API_BASE_URL).
- *  Masalan: https://khamsa-backend.onrender.com
- */
+/** API bazasi — .env (VITE_API_BASE_URL) dan, HTTPS majburiy */
 function getApiBase() {
-  const viteBase = import.meta?.env?.VITE_API_BASE_URL || "";
-  if (!viteBase) {
-    console.error("VITE_API_BASE_URL yo‘q! .env’da backend URL ni qo‘ying.");
+  let base = (import.meta?.env?.VITE_API_BASE_URL || "").trim();
+  if (!base) {
+    console.error("VITE_API_BASE_URL topilmadi! .env faylini tekshiring.");
+    base = "https://khamsa-backend.onrender.com";
   }
-  return String(viteBase).replace(/\/+$/, "");
+  base = base.replace(/\/+$/, "");
+  try {
+    const u = new URL(base);
+    if (u.protocol !== "https:") {
+      console.warn(
+        "API_BASE HTTPS emas — brauzer CORS/MixedContent bloklashi mumkin."
+      );
+    }
+  } catch {
+    console.error("API_BASE noto‘g‘ri URL:", base);
+  }
+  return base;
 }
 
-/** Duration → key (UI label uchun) */
+/** Duration → key (label uchun) */
 function normalizeDuration(duration) {
   if (!duration || typeof duration !== "string") return "";
   const d = duration.toLowerCase();
@@ -51,7 +61,7 @@ function toRoomCode(v) {
   return "";
 }
 
-/** Code → label (faqat description uchun) */
+/** Code → label (faqat description) */
 function roomCodeToLabel(code) {
   const c = String(code || "").toUpperCase();
   if (c === "STANDARD") return "Standard Room";
@@ -59,7 +69,7 @@ function roomCodeToLabel(code) {
   return "-";
 }
 
-/** Narxni son qilib normalize qilish */
+/** Narxni son ko‘rinishiga keltirish */
 function normalizePrice(p) {
   if (typeof p === "number") return Number.isFinite(p) ? p : 0;
   if (typeof p === "string") {
@@ -67,6 +77,28 @@ function normalizePrice(p) {
     return Number.isFinite(n) ? n : 0;
   }
   return 0;
+}
+
+/** JSON bo‘lmasa ham mazmuni ko‘rinadigan parse */
+async function parseMaybeJson(res) {
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  if (ct.includes("application/json")) {
+    try {
+      return await res.json();
+    } catch {
+      /* fallthrough */
+    }
+  }
+  try {
+    const txt = await res.text();
+    try {
+      return JSON.parse(txt);
+    } catch {
+      return { _raw: txt };
+    }
+  } catch {
+    return null;
+  }
 }
 
 /* ===================== Component ===================== */
@@ -79,7 +111,7 @@ const MyBooking = () => {
   const API_BASE = useMemo(getApiBase, []);
   const { t } = useTranslation();
 
-  // Load from sessionStorage/localStorage
+  // Sessiyadan yuklash
   useEffect(() => {
     let saved = [];
     try {
@@ -88,14 +120,12 @@ const MyBooking = () => {
     } catch {
       saved = [];
     }
-
     const normalized = saved.map((b) => ({
       id: b.id || uuidv4(),
       ...b,
-      rooms: toRoomCode(b.rooms), // "STANDARD" | "FAMILY"
+      rooms: toRoomCode(b.rooms),
       price: normalizePrice(b.price),
     }));
-
     setBookings(normalized);
     try {
       sessionStorage.setItem("allBookings", JSON.stringify(normalized));
@@ -141,34 +171,43 @@ const MyBooking = () => {
     0
   );
 
-  /** Pay Now → Octo create-payment (oxirgi qo‘shilgan booking bilan) */
+  /** Tarmoq/CORS tez sinov */
+  async function quickHealth() {
+    try {
+      const r = await fetch(`${API_BASE}/healthz`, {
+        mode: "cors",
+        cache: "no-store",
+      });
+      if (!r.ok) console.warn("healthz status:", r.status);
+      return true;
+    } catch (e) {
+      console.error("healthz fail:", e);
+      return false;
+    }
+  }
+
+  /** Pay Now → backend /create-payment */
   const handlePayment = async () => {
     if (!API_BASE) {
       alert(
-        "API manzili topilmadi. VITE_API_BASE_URL ni .env’da belgilang (https)."
+        "API manzili topilmadi. .env faylida VITE_API_BASE_URL ni belgilang (HTTPS)."
       );
       return;
     }
     if (totalAmount <= 0) {
-      alert("To‘lov uchun summa mavjud emas");
+      alert("To‘lov uchun summa mavjud emas.");
       return;
     }
-    const latestBooking = [...bookings]
-      .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
-      .at(-1); // oxirgi
+    const latestBooking = bookings.at(-1);
     if (!latestBooking?.email) {
-      alert("Email maʼlumoti mavjud emas");
+      alert("Email maʼlumoti mavjud emas.");
       return;
     }
-
     if (paying) return;
     setPaying(true);
 
     try {
-      // ixtiyoriy health check (tarmoq/CORS tez tekshiruv)
-      try {
-        await fetch(`${API_BASE}/healthz`, { cache: "no-store" });
-      } catch {}
+      await quickHealth(); // diagnostika uchun, xato bo‘lsa ham davom etadi
 
       const durationKey = normalizeDuration(latestBooking.duration);
       const body = {
@@ -180,7 +219,7 @@ const MyBooking = () => {
         booking: {
           checkIn: latestBooking.checkIn,
           duration: latestBooking.duration,
-          rooms: latestBooking.rooms, // "STANDARD" | "FAMILY"
+          rooms: latestBooking.rooms,
           guests: latestBooking.guests,
           firstName: latestBooking.firstName,
           lastName: latestBooking.lastName,
@@ -192,40 +231,34 @@ const MyBooking = () => {
 
       const res = await fetch(`${API_BASE}/create-payment`, {
         method: "POST",
+        mode: "cors", // ko‘rinishi uchun aniq belgilab qo‘ydik
         headers: { "Content-Type": "application/json" },
-        // MUHIM: frontendda AbortController yo‘q — timeout backendda qilinadi
+        // frontendda timeout/abort YO‘Q — backend 120s retry/timeout qiladi
         body: JSON.stringify(body),
       });
 
-      const ct = (res.headers.get("content-type") || "").toLowerCase();
-      const data = ct.includes("application/json")
-        ? await res.json()
-        : await res.text().then((t) => {
-            try {
-              return JSON.parse(t);
-            } catch {
-              return t;
-            }
-          });
+      const data = await parseMaybeJson(res);
 
       if (res.ok && data && typeof data === "object" && data.paymentUrl) {
-        window.location.href = data.paymentUrl; // Octo sahifasiga yo‘naltirish
+        window.location.href = data.paymentUrl; // Octo sahifasiga o‘tish
         return;
       }
 
+      // Backenddan xato qaytdi
       const msg =
         (data && typeof data === "object" && (data.error || data.message)) ||
-        (typeof data === "string" && data.slice(0, 300)) ||
+        (data && data._raw) ||
         `Xatolik (status ${res.status})`;
+      console.error("create-payment response:", { status: res.status, data });
       alert(`To‘lov yaratishda xatolik: ${msg}`);
-      console.error("create-payment error:", { status: res.status, data });
     } catch (err) {
-      const text =
+      // Brauzer tarmoq/CORS xatosi
+      console.error("create-payment fetch error:", err);
+      const guess =
         err?.name === "TypeError"
-          ? "Tarmoq yoki CORS xatosi (HTTPS va domenlarni tekshiring)"
+          ? "Tarmoq yoki CORS xatosi. HTTPS domenlari va CORS ruxsatlarini tekshiring."
           : err?.message || String(err);
-      alert(`To‘lov yaratishda xatolik yuz berdi: ${text}`);
-      console.error("fetch failure:", err);
+      alert(`To‘lov yaratishda xatolik yuz berdi: ${guess}`);
     } finally {
       setPaying(false);
     }
