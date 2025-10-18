@@ -1,13 +1,5 @@
 {
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; connect-src 'self' https://khamsa-backend.onrender.com https://api.telegram.org https://secure.octo.uz; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; frame-ancestors 'self';"
-        }
-      ]
-    }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
   ]
 }
