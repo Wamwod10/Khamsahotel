@@ -1,4 +1,6 @@
 // backend/index.js — Khamsa backend (Express + Bnovo + Octo + Postgres)
+// REAL Octo (testsiz), kengaytirilgan CORS, 120s timeout + retry, Telegram + Email, debug route’lar.
+
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
@@ -21,16 +23,8 @@ const FRONTEND_URL = (
   process.env.FRONTEND_URL || "https://khamsahotel.uz"
 ).replace(/\/+$/, "");
 const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
-
-// Capacity/buffer defaults (env bilan boshqariladi)
-const FAMILY_CAPACITY = Number(
-  process.env.FAMILY_CAPACITY || process.env.FAMILY_STOCK || 1
-);
-const STANDARD_CAPACITY = Number(
-  process.env.STANDARD_CAPACITY || process.env.STANDARD_STOCK || 23
-);
-const FAMILY_PRE_BUFFER_MIN = Number(process.env.FAMILY_PRE_BUFFER_MIN || 0);
-const FAMILY_POST_BUFFER_MIN = Number(process.env.FAMILY_POST_BUFFER_MIN || 0);
+const OCTO_TEST =
+  String(process.env.OCTO_TEST ?? "false").toLowerCase() === "true"; // default false (REAL)
 
 const {
   OCTO_SHOP_ID,
@@ -53,17 +47,29 @@ if (missing.length)
 app.set("trust proxy", 1);
 
 /* ====== CORS ====== */
-const ALLOWED_ORIGINS = [
-  FRONTEND_URL,
-  "https://www.khamsahotel.uz",
-  "http://localhost:5173",
-  "http://localhost:3000",
-].filter(Boolean);
+// www va non-www, prod va dev domenlarini qamrab olamiz
+const ORIGIN_OK = (o) => {
+  if (!o) return true; // server-to-server yoki curl uchun
+  const allow = [
+    FRONTEND_URL, // env dagi
+    "https://khamsahotel.uz",
+    "https://www.khamsahotel.uz",
+    "https://khamsa-backend.onrender.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
+  ];
+  return allow.some(
+    (x) =>
+      x &&
+      x.replace(/\/+$/, "").toLowerCase() ===
+        o.replace(/\/+$/, "").toLowerCase()
+  );
+};
 
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      if (ORIGIN_OK(origin)) return cb(null, true);
       console.warn("CORS block:", origin);
       return cb(new Error("Not allowed by CORS"));
     },
@@ -73,22 +79,23 @@ app.use(
       "Accept",
       "Authorization",
       "Idempotency-Key",
+      "X-Requested-With",
     ],
     credentials: false,
   })
 );
-app.options("*", cors());
 
-// Yupqa preflight
+// Yupqa preflight + headerlar
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin))
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Vary", "Origin");
+  if (ORIGIN_OK(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+    res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Accept, Authorization, Idempotency-Key"
+    "Content-Type, Accept, Authorization, Idempotency-Key, X-Requested-With"
   );
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
@@ -99,7 +106,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(express.text({ type: ["text/*"], limit: "512kb" }));
 
-/* ====== Health ====== */
+/* ====== Health & Debug ====== */
 app.get("/", (_req, res) =>
   res.json({
     ok: true,
@@ -112,13 +119,30 @@ app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.get("/debug/ping", (_req, res) =>
   res.json({ ok: true, now: Date.now(), base: BASE_URL })
 );
+app.get("/debug/egress-ip", async (_req, res) => {
+  try {
+    const r = await fetch("https://api.ipify.org?format=json");
+    const j = await r.json();
+    res.json({ ok: true, ip: j.ip });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+app.get("/debug/octo-head", async (_req, res) => {
+  try {
+    const r = await fetch("https://secure.octo.uz/", { method: "GET" });
+    res.json({ ok: r.ok, status: r.status });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 /* ====== Email (Gmail) ====== */
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
   secure: true,
-  auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+  auth: { user: EMAIL_USER, pass: EMAIL_PASS }, // App Password talab qilinadi
   pool: true,
   maxConnections: 3,
   maxMessages: 100,
@@ -453,7 +477,6 @@ async function ensureSchema() {
     END $$;`);
 }
 
-// YANGI: room_types jadvali
 async function ensureRoomTypes() {
   await pgPool.query(`
     CREATE TABLE IF NOT EXISTS public.room_types (
@@ -471,7 +494,12 @@ async function ensureRoomTypes() {
            pre_buffer_minutes = EXCLUDED.pre_buffer_minutes,
            post_buffer_minutes = EXCLUDED.post_buffer_minutes,
            updated_at = now();`,
-    ["FAMILY", FAMILY_CAPACITY, FAMILY_PRE_BUFFER_MIN, FAMILY_POST_BUFFER_MIN]
+    [
+      "FAMILY",
+      Number(process.env.FAMILY_CAPACITY || process.env.FAMILY_STOCK || 1),
+      Number(process.env.FAMILY_PRE_BUFFER_MIN || 0),
+      Number(process.env.FAMILY_POST_BUFFER_MIN || 0),
+    ]
   );
   await pgPool.query(
     `INSERT INTO public.room_types (room_type, capacity)
@@ -479,7 +507,10 @@ async function ensureRoomTypes() {
      ON CONFLICT (room_type) DO UPDATE
        SET capacity = EXCLUDED.capacity,
            updated_at = now();`,
-    ["STANDARD", STANDARD_CAPACITY]
+    [
+      "STANDARD",
+      Number(process.env.STANDARD_CAPACITY || process.env.STANDARD_STOCK || 23),
+    ]
   );
 }
 ensureSchema()
@@ -495,13 +526,17 @@ async function getRoomTypeCfg(roomType) {
   if (!rows[0]) {
     if (roomType === "FAMILY") {
       return {
-        capacity: FAMILY_CAPACITY,
-        pre_buffer_minutes: FAMILY_PRE_BUFFER_MIN,
-        post_buffer_minutes: FAMILY_POST_BUFFER_MIN,
+        capacity: Number(
+          process.env.FAMILY_CAPACITY || process.env.FAMILY_STOCK || 1
+        ),
+        pre_buffer_minutes: Number(process.env.FAMILY_PRE_BUFFER_MIN || 0),
+        post_buffer_minutes: Number(process.env.FAMILY_POST_BUFFER_MIN || 0),
       };
     }
     return {
-      capacity: STANDARD_CAPACITY,
+      capacity: Number(
+        process.env.STANDARD_CAPACITY || process.env.STANDARD_STOCK || 23
+      ),
       pre_buffer_minutes: 0,
       post_buffer_minutes: 0,
     };
@@ -653,7 +688,7 @@ app.post("/create-payment", async (req, res) => {
       octo_secret: OCTO_SECRET,
       shop_transaction_id: shopTransactionId,
       auto_capture: true,
-      test: false, // REAL
+      test: OCTO_TEST, // REAL uchun .env da false qoldiring
       init_time: new Date().toISOString().replace("T", " ").substring(0, 19),
       total_sum: amountUZS,
       currency: "UZS",
@@ -988,68 +1023,6 @@ app.get("/api/checkins/next-block", async (req, res) => {
     res.json({ ok: true, block: r.rows[0] || null });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
-  }
-});
-
-/* ====== Allowed tariffs (3h/10h/24h) ====== */
-app.get("/api/availability/allowed-tariffs", async (req, res) => {
-  try {
-    const roomType = String(req.query.roomType || "STANDARD").toUpperCase();
-    const S = toTz(req.query.start);
-    if (!S)
-      return res.status(400).json({ ok: false, error: "start ISO required" });
-
-    const cfg = await getRoomTypeCfg(roomType);
-    const pre = cfg.pre_buffer_minutes || 0;
-    const post = cfg.post_buffer_minutes || 0;
-
-    const { p_end, n_start } = await getNeighbors(roomType, S);
-
-    if (p_end) {
-      const minStart = new Date(new Date(p_end).getTime() + pre * 60 * 1000);
-      if (new Date(S) < minStart) {
-        return res.json({
-          ok: true,
-          allowed: [],
-          reason: "start_too_early_hits_previous",
-          details: { p_end, requiredEarliestStart: minStart.toISOString() },
-        });
-      }
-    }
-
-    const tariffs = [
-      { code: "3h", hours: 3 },
-      { code: "10h", hours: 10 },
-      { code: "24h", hours: 24 },
-    ];
-    const allowed = [];
-    for (const t of tariffs) {
-      const end = new Date(new Date(S).getTime() + t.hours * 60 * 60 * 1000);
-      const endWithPost = new Date(end.getTime() + post * 60 * 1000);
-      if (n_start && endWithPost > new Date(n_start)) continue;
-
-      const peakExisting = await getPeakConcurrency(
-        roomType,
-        new Date(S),
-        endWithPost
-      );
-      const peakWithUs = peakExisting + 1;
-      if (peakWithUs <= cfg.capacity) allowed.push(t.code);
-    }
-
-    res.json({
-      ok: true,
-      roomType,
-      start: S,
-      neighbors: { p_end, n_start },
-      buffers: { pre, post },
-      allowed,
-    });
-  } catch (e) {
-    console.error("ALLOWED-TARIFFS ERR:", e);
-    res
-      .status(500)
-      .json({ ok: false, error: "server_error", message: e.message });
   }
 });
 
