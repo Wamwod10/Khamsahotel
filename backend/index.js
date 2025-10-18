@@ -1,5 +1,5 @@
 // backend/index.js — Khamsa backend (Express + Bnovo + Octo + Postgres)
-// REAL Octo (testsiz), kengaytirilgan CORS, 120s timeout + retry, Telegram + Email, debug route’lar.
+// REAL Octo, keng CORS, 120s timeout + retry, Telegram + Email, debug route’lar.
 
 import express from "express";
 import cors from "cors";
@@ -14,7 +14,9 @@ dotenv.config();
 
 /* ====== App & Config ====== */
 const app = express();
+const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT || 5004);
+
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(
   /\/+$/,
   ""
@@ -47,7 +49,6 @@ if (missing.length)
 app.set("trust proxy", 1);
 
 /* ====== CORS ====== */
-// www/non-www, prod/dev hammasi ruxsat etilgan
 const ALLOW = [
   FRONTEND_URL,
   "https://khamsahotel.uz",
@@ -78,6 +79,8 @@ app.use(
     credentials: false,
   })
 );
+
+// Preflight + umumiy headerlar
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (ORIGIN_OK(origin)) {
@@ -89,14 +92,25 @@ app.use((req, res, next) => {
     "Access-Control-Allow-Headers",
     "Content-Type, Accept, Authorization, Idempotency-Key, X-Requested-With"
   );
+  res.setHeader("Cache-Control", "no-store");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
 
 /* ====== Parsers ====== */
-app.use(express.json({ limit: "2mb" }));
+// Umumiy JSON / urlencoded / text
+app.use(
+  express.json({
+    limit: "2mb",
+    type: [
+      "application/json",
+      "application/csp-report",
+      "application/reports+json",
+    ],
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
-app.use(express.text({ type: ["text/*"], limit: "512kb" }));
+app.use(express.text({ type: ["text/*"], limit: "1mb" }));
 
 /* ====== Health & Debug ====== */
 app.get("/", (_req, res) =>
@@ -107,14 +121,16 @@ app.get("/", (_req, res) =>
     port: PORT,
   })
 );
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
+app.get("/healthz", (_req, res) => res.json({ ok: true, base: BASE_URL }));
+
 app.get("/debug/ping", (_req, res) =>
   res.json({ ok: true, now: Date.now(), base: BASE_URL })
 );
 app.get("/debug/egress-ip", async (_req, res) => {
   try {
     const r = await fetch("https://api.ipify.org?format=json");
-    res.json({ ok: true, ip: (await r.json()).ip });
+    const j = await r.json();
+    res.json({ ok: true, ip: j.ip });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
@@ -126,6 +142,9 @@ app.get("/debug/octo-head", async (_req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+app.post("/debug/echo", (req, res) => {
+  res.json({ headers: req.headers, bodyType: typeof req.body, body: req.body });
 });
 
 /* ====== Email (Gmail App Password) ====== */
@@ -143,14 +162,16 @@ const transporter = nodemailer.createTransport({
   tls: { servername: "smtp.gmail.com", rejectUnauthorized: true },
   keepAlive: true,
 });
+
 let _smtpReady = false;
 async function ensureEmailTransport() {
   if (_smtpReady) return;
   try {
     await transporter.verify();
     _smtpReady = true;
+    console.log("✅ SMTP ready");
   } catch (e) {
-    console.warn("SMTP verify skip:", e?.message || e);
+    console.warn("⚠️ SMTP verify skip:", e?.message || e);
   }
 }
 const cleanSubject = (s) =>
@@ -158,6 +179,7 @@ const cleanSubject = (s) =>
     .trim()
     .replace(/\r?\n/g, " ")
     .slice(0, 200) || "Khamsa notification";
+
 async function sendEmail({ to, subject, text, html, replyTo, fromName }) {
   if (!EMAIL_USER || !EMAIL_PASS)
     throw new Error("EMAIL_USER/EMAIL_PASS not set");
@@ -171,13 +193,14 @@ async function sendEmail({ to, subject, text, html, replyTo, fromName }) {
     from,
     to,
     subject: cleanSubject(subject),
-    text,
-    html,
+    text: text || undefined,
+    html: html || undefined,
     replyTo: replyTo || EMAIL_USER,
   });
 }
+
 const EMAIL_LOCKS = new Map();
-const putEmailLock = (k, ttlMs = 172800000) =>
+const putEmailLock = (k, ttlMs = 1000 * 60 * 60 * 24 * 2) =>
   EMAIL_LOCKS.set(k, Date.now() + ttlMs);
 const hasEmailLock = (k) => {
   const e = EMAIL_LOCKS.get(k);
@@ -300,13 +323,14 @@ const SIGN_SECRET = crypto
   .createHash("sha256")
   .update(String(process.env.OCTO_SECRET || "octo"))
   .digest();
-const signData = (obj) => ({
-  json: JSON.stringify(obj),
-  sig: crypto
+const signData = (obj) => {
+  const json = JSON.stringify(obj);
+  const sig = crypto
     .createHmac("sha256", SIGN_SECRET)
-    .update(JSON.stringify(obj))
-    .digest("hex"),
-});
+    .update(json)
+    .digest("hex");
+  return { json, sig };
+};
 const verifyData = (json, sig) => {
   try {
     const h = crypto
@@ -334,7 +358,7 @@ setInterval(() => {
     if (now - (v?.ts || 0) > 86400000) PENDING.delete(k);
 }, 3600000);
 
-/* ===================== BNOVO ROUTES ===================== */
+/* ======================= BNOVO ROUTES ======================= */
 app.get("/api/bnovo/availability", async (req, res) => {
   try {
     const { checkIn, nights = 1, roomType = "STANDARD" } = req.query || {};
@@ -370,7 +394,7 @@ app.get("/api/bnovo/availability", async (req, res) => {
   }
 });
 
-/* ===================== PAYMENTS (Octo, REAL) ===================== */
+/* ======================= PAYMENTS (Octo, REAL) ======================= */
 app.post("/create-payment", async (req, res) => {
   try {
     if (!OCTO_SHOP_ID || !OCTO_SECRET)
@@ -473,18 +497,48 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
+/* ====== Octo callback — turli Content-Type lar uchun bardoshli parsing ====== */
+function parseIncomingBody(req) {
+  // Agar body allaqachon object bo‘lsa — qaytaramiz
+  if (req.body && typeof req.body === "object" && !Array.isArray(req.body))
+    return req.body;
+
+  // Agar string bo‘lsa — urinamiz JSON/parsing
+  if (typeof req.body === "string") {
+    const raw = req.body.trim();
+    // JSON
+    if (raw.startsWith("{") || raw.startsWith("[")) {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        /* fallthrough */
+      }
+    }
+    // x-www-form-urlencoded yoki key=value&...
+    try {
+      const sp = new URLSearchParams(raw);
+      const obj = {};
+      for (const [k, v] of sp.entries()) obj[k] = v;
+      // ichida custom_data JSON bo‘lsa ochamiz
+      if (obj.custom_data) {
+        try {
+          obj.custom_data = JSON.parse(obj.custom_data);
+        } catch {
+          /* ignore */
+        }
+      }
+      return obj;
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+}
+
 app.post("/payment-callback", async (req, res) => {
   try {
-    const body =
-      typeof req.body === "string"
-        ? (() => {
-            try {
-              return JSON.parse(req.body);
-            } catch {
-              return {};
-            }
-          })()
-        : req.body || {};
+    const body = parseIncomingBody(req);
     const statuses = [
       body?.status,
       body?.payment_status,
@@ -507,6 +561,7 @@ app.post("/payment-callback", async (req, res) => {
       body?.error === 0 ||
       String(body?.state || "").toUpperCase() === "CAPTURED";
 
+    // Payloadni tekshirish
     let verifiedPayload = null;
     try {
       let custom = body?.custom_data;
@@ -579,14 +634,16 @@ ${
       return res.json({ ok: true });
     }
 
+    // Not successful yoki payload topilmadi — baribir 200 qaytaramiz
     return res.json({ ok: true });
   } catch (e) {
     console.error("❌ /payment-callback:", e);
+    // Octo qayta urinishlari to‘xtamasligi uchun 200
     res.status(200).json({ ok: true });
   }
 });
 
-/* ===================== Postgres ===================== */
+/* ======================= Postgres ======================= */
 const pgPool = new Pool({
   host: process.env.PGHOST || "",
   port: Number(process.env.PGPORT || 5432),
@@ -602,6 +659,7 @@ pgPool
   .query("SELECT now() AS now")
   .then((r) => console.log("[DB] connected:", r.rows[0].now))
   .catch((e) => console.error("[DB] connect error:", e.message));
+
 app.get("/db/health", async (_req, res) => {
   try {
     const r = await pgPool.query("SELECT 1 AS ok");
@@ -611,6 +669,7 @@ app.get("/db/health", async (_req, res) => {
   }
 });
 
+/* ====== Availability helpers (DB) ====== */
 const isISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
 const isISODateTime = (s) =>
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?/.test(String(s || ""));
@@ -688,6 +747,7 @@ async function ensureSchema() {
       END IF;
     END $$;`);
 }
+
 async function ensureRoomTypes() {
   await pgPool.query(`
     CREATE TABLE IF NOT EXISTS public.room_types (
@@ -724,11 +784,12 @@ async function ensureRoomTypes() {
     ]
   );
 }
+
 ensureSchema()
   .then(ensureRoomTypes)
   .catch((e) => console.error("ensureSchema/room_types error:", e));
 
-/* ====== Availability helpers (DB) ====== */
+/* ====== Availability helpers (runtime) ====== */
 async function getRoomTypeCfg(roomType) {
   const { rows } = await pgPool.query(
     `SELECT capacity, pre_buffer_minutes, post_buffer_minutes FROM public.room_types WHERE room_type=$1`,
@@ -756,11 +817,15 @@ async function getRoomTypeCfg(roomType) {
 }
 async function getNeighbors(roomType, startISO) {
   const qPrev = pgPool.query(
-    `SELECT MAX(COALESCE(check_out_at, check_out::timestamp)) AS p_end FROM public.khamsachekin WHERE rooms=$1 AND COALESCE(check_out_at, check_out::timestamp) <= $2::timestamptz`,
+    `SELECT MAX(COALESCE(check_out_at, check_out::timestamp)) AS p_end
+     FROM public.khamsachekin
+     WHERE rooms=$1 AND COALESCE(check_out_at, check_out::timestamp) <= $2::timestamptz`,
     [roomType, startISO]
   );
   const qNext = pgPool.query(
-    `SELECT MIN(COALESCE(check_in_at, check_in::timestamp)) AS n_start FROM public.khamsachekin WHERE rooms=$1 AND COALESCE(check_in_at, check_in::timestamp) >= $2::timestamptz`,
+    `SELECT MIN(COALESCE(check_in_at, check_in::timestamp)) AS n_start
+     FROM public.khamsachekin
+     WHERE rooms=$1 AND COALESCE(check_in_at, check_in::timestamp) >= $2::timestamptz`,
     [roomType, startISO]
   );
   const [r1, r2] = await Promise.all([qPrev, qNext]);
@@ -771,20 +836,19 @@ async function getNeighbors(roomType, startISO) {
 }
 async function getPeakConcurrency(roomType, fromTs, toTs) {
   const { rows } = await pgPool.query(
-    `
-    SELECT
-      GREATEST(COALESCE(check_in_at,  check_in::timestamp), $2::timestamptz)  AS st,
-      LEAST   (COALESCE(check_out_at, check_out::timestamp), $3::timestamptz) AS en
-    FROM public.khamsachekin
-    WHERE rooms=$1
-      AND COALESCE(check_in_at,  check_in::timestamp)  < $3::timestamptz
-      AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz`,
+    `SELECT
+        GREATEST(COALESCE(check_in_at,  check_in::timestamp), $2::timestamptz)  AS st,
+        LEAST   (COALESCE(check_out_at, check_out::timestamp), $3::timestamptz) AS en
+     FROM public.khamsachekin
+     WHERE rooms=$1
+       AND COALESCE(check_in_at,  check_in::timestamp)  < $3::timestamptz
+       AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz`,
     [roomType, fromTs, toTs]
   );
   const events = [];
   for (const r of rows) {
-    const st = new Date(r.st),
-      en = new Date(r.en);
+    const st = new Date(r.st);
+    const en = new Date(r.en);
     if (st < en) {
       events.push({ t: st, d: +1 });
       events.push({ t: en, d: -1 });
@@ -804,8 +868,8 @@ async function getPeakConcurrency(roomType, fromTs, toTs) {
 app.get("/api/checkins", async (req, res) => {
   const { roomType = "", limit = "300" } = req.query;
   try {
-    const params = [],
-      where = [];
+    const params = [];
+    const where = [];
     if (roomType) {
       params.push(roomType);
       where.push(`rooms = $${params.length}`);
@@ -865,8 +929,8 @@ app.get("/api/checkins/range/check", async (req, res) => {
     startAt = "",
     endAt = "",
   } = req.query;
-  const A = toTz(startAt || start),
-    B = toTz(endAt || end);
+  const A = toTz(startAt || start);
+  const B = toTz(endAt || end);
   if (!roomType || !A || !B)
     return res
       .status(400)
@@ -893,8 +957,8 @@ app.get("/api/checkins/range/check", async (req, res) => {
 
 app.post("/api/checkins/range", async (req, res) => {
   const { roomType, start, end, startAt, endAt, note } = req.body || {};
-  const A = toTz(startAt || start),
-    B = toTz(endAt || end);
+  const A = toTz(startAt || start);
+  const B = toTz(endAt || end);
   if (!roomType || !A || !B)
     return res
       .status(400)
@@ -911,8 +975,8 @@ app.post("/api/checkins/range", async (req, res) => {
     );
     if (q.rowCount) return res.status(409).json({ ok: false, error: "BUSY" });
 
-    const dateOnlyStart = A.slice(0, 10),
-      dateOnlyEnd = B.slice(0, 10);
+    const dateOnlyStart = A.slice(0, 10);
+    const dateOnlyEnd = B.slice(0, 10);
     const r = await pgPool.query(
       `
       INSERT INTO public.khamsachekin
@@ -984,7 +1048,7 @@ app.use((err, req, res, _next) => {
 });
 
 /* ====== Start ====== */
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log(`✅ Server yaxshi ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
     `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${

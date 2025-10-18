@@ -1,0 +1,14 @@
+{
+  "amount": 1,
+  "email": "test@example.com",
+  "booking": {
+    "checkIn": "2025-10-19",
+    "duration": "1 day",
+    "rooms": "STANDARD",
+    "guests": 1,
+    "firstName": "Test",
+    "lastName": "User",
+    "phone": "+998900000000",
+    "price": 1
+  }
+}
