@@ -98,7 +98,7 @@ app.use((req, res, next) => {
 });
 
 /* ====== Parsers ====== */
-// Umumiy JSON / urlencoded / text
+// JSON / urlencoded / text (Octo callback har xil bo‘lishi mumkin)
 app.use(
   express.json({
     limit: "2mb",
@@ -499,11 +499,11 @@ app.post("/create-payment", async (req, res) => {
 
 /* ====== Octo callback — turli Content-Type lar uchun bardoshli parsing ====== */
 function parseIncomingBody(req) {
-  // Agar body allaqachon object bo‘lsa — qaytaramiz
+  // Body object bo‘lsa — qaytaramiz
   if (req.body && typeof req.body === "object" && !Array.isArray(req.body))
     return req.body;
 
-  // Agar string bo‘lsa — urinamiz JSON/parsing
+  // String bo‘lsa — JSON yoki form-data sifatida parse qilamiz
   if (typeof req.body === "string") {
     const raw = req.body.trim();
     // JSON
@@ -511,21 +511,18 @@ function parseIncomingBody(req) {
       try {
         return JSON.parse(raw);
       } catch {
-        /* fallthrough */
+        /* ignore */
       }
     }
-    // x-www-form-urlencoded yoki key=value&...
+    // x-www-form-urlencoded
     try {
       const sp = new URLSearchParams(raw);
       const obj = {};
       for (const [k, v] of sp.entries()) obj[k] = v;
-      // ichida custom_data JSON bo‘lsa ochamiz
       if (obj.custom_data) {
         try {
           obj.custom_data = JSON.parse(obj.custom_data);
-        } catch {
-          /* ignore */
-        }
+        } catch {}
       }
       return obj;
     } catch {
@@ -788,81 +785,6 @@ async function ensureRoomTypes() {
 ensureSchema()
   .then(ensureRoomTypes)
   .catch((e) => console.error("ensureSchema/room_types error:", e));
-
-/* ====== Availability helpers (runtime) ====== */
-async function getRoomTypeCfg(roomType) {
-  const { rows } = await pgPool.query(
-    `SELECT capacity, pre_buffer_minutes, post_buffer_minutes FROM public.room_types WHERE room_type=$1`,
-    [roomType]
-  );
-  if (!rows[0]) {
-    if (roomType === "FAMILY") {
-      return {
-        capacity: Number(
-          process.env.FAMILY_CAPACITY || process.env.FAMILY_STOCK || 1
-        ),
-        pre_buffer_minutes: Number(process.env.FAMILY_PRE_BUFFER_MIN || 0),
-        post_buffer_minutes: Number(process.env.FAMILY_POST_BUFFER_MIN || 0),
-      };
-    }
-    return {
-      capacity: Number(
-        process.env.STANDARD_CAPACITY || process.env.STANDARD_STOCK || 23
-      ),
-      pre_buffer_minutes: 0,
-      post_buffer_minutes: 0,
-    };
-  }
-  return rows[0];
-}
-async function getNeighbors(roomType, startISO) {
-  const qPrev = pgPool.query(
-    `SELECT MAX(COALESCE(check_out_at, check_out::timestamp)) AS p_end
-     FROM public.khamsachekin
-     WHERE rooms=$1 AND COALESCE(check_out_at, check_out::timestamp) <= $2::timestamptz`,
-    [roomType, startISO]
-  );
-  const qNext = pgPool.query(
-    `SELECT MIN(COALESCE(check_in_at, check_in::timestamp)) AS n_start
-     FROM public.khamsachekin
-     WHERE rooms=$1 AND COALESCE(check_in_at, check_in::timestamp) >= $2::timestamptz`,
-    [roomType, startISO]
-  );
-  const [r1, r2] = await Promise.all([qPrev, qNext]);
-  return {
-    p_end: r1.rows[0]?.p_end || null,
-    n_start: r2.rows[0]?.n_start || null,
-  };
-}
-async function getPeakConcurrency(roomType, fromTs, toTs) {
-  const { rows } = await pgPool.query(
-    `SELECT
-        GREATEST(COALESCE(check_in_at,  check_in::timestamp), $2::timestamptz)  AS st,
-        LEAST   (COALESCE(check_out_at, check_out::timestamp), $3::timestamptz) AS en
-     FROM public.khamsachekin
-     WHERE rooms=$1
-       AND COALESCE(check_in_at,  check_in::timestamp)  < $3::timestamptz
-       AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz`,
-    [roomType, fromTs, toTs]
-  );
-  const events = [];
-  for (const r of rows) {
-    const st = new Date(r.st);
-    const en = new Date(r.en);
-    if (st < en) {
-      events.push({ t: st, d: +1 });
-      events.push({ t: en, d: -1 });
-    }
-  }
-  events.sort((a, b) => a.t - b.t || a.d - b.d);
-  let cur = 0,
-    peak = 0;
-  for (const e of events) {
-    cur += e.d;
-    if (cur > peak) peak = cur;
-  }
-  return peak;
-}
 
 /* ====== Frontend uchun DB endpointlar ====== */
 app.get("/api/checkins", async (req, res) => {
