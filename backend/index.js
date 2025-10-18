@@ -21,6 +21,8 @@ const FRONTEND_URL = (
   process.env.FRONTEND_URL || "https://khamsahotel.uz"
 ).replace(/\/+$/, "");
 const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
+const OCTO_TEST =
+  String(process.env.OCTO_TEST ?? "false").toLowerCase() === "true";
 
 // Capacity/buffer defaults (env bilan boshqariladi)
 const FAMILY_CAPACITY = Number(
@@ -109,34 +111,23 @@ app.get("/", (_req, res) =>
   })
 );
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
+app.get("/debug/ping", (_req, res) =>
+  res.json({ ok: true, now: Date.now(), base: BASE_URL })
+);
 
 /* ====== Email (Gmail) ====== */
-/*
-  ✅ To‘liq qayta yozildi (faqat email qismi):
-   - Gmail App Password bilan barqaror SMTP (pool + timeoutlar)
-   - verify() muvaffaqiyatsiz bo‘lsa ham sendMail urinish qiladi
-   - subject sanitizatsiyasi va HTML/text fallback
-   - Idempotency lock (RAM) – bir xil xabar takrorlanmaydi
-*/
 const transporter = nodemailer.createTransport({
-  // Gmail uchun qat’iy sozlama (465/SSL)
   host: "smtp.gmail.com",
   port: 465,
   secure: true,
-  auth: {
-    user: EMAIL_USER,
-    pass: EMAIL_PASS, // 2FA yoqilgan akkauntdagi 16-belgili App Password
-  },
+  auth: { user: EMAIL_USER, pass: EMAIL_PASS },
   pool: true,
   maxConnections: 3,
   maxMessages: 100,
   connectionTimeout: 20_000,
   greetingTimeout: 15_000,
   socketTimeout: 30_000,
-  tls: {
-    servername: "smtp.gmail.com",
-    rejectUnauthorized: true,
-  },
+  tls: { servername: "smtp.gmail.com", rejectUnauthorized: true },
   keepAlive: true,
 });
 
@@ -148,11 +139,9 @@ async function ensureEmailTransport() {
     _smtpReady = true;
     console.log("✅ SMTP ready");
   } catch (e) {
-    // Ba’zi hostinglarda verify bloklanishi mumkin — sendMail baribir ishlaydi
     console.warn("⚠️ SMTP verify failed (continue):", e?.message || e);
   }
 }
-
 function cleanSubject(s) {
   const sub = String(s ?? "")
     .trim()
@@ -160,21 +149,16 @@ function cleanSubject(s) {
     .slice(0, 200);
   return sub || "Khamsa notification";
 }
-
 async function sendEmail({ to, subject, text, html, replyTo, fromName }) {
-  if (!EMAIL_USER || !EMAIL_PASS) {
+  if (!EMAIL_USER || !EMAIL_PASS)
     throw new Error("EMAIL_USER/EMAIL_PASS is not configured");
-  }
   if (!to) throw new Error("Missing 'to'");
   if (!subject) throw new Error("Missing 'subject'");
   if (!text && !html) throw new Error("Missing 'text' or 'html'");
-
   await ensureEmailTransport();
-
   const fromHeader = fromName
     ? `"${fromName.replace(/"/g, "'")}" <${EMAIL_USER}>`
     : EMAIL_USER;
-
   const info = await transporter.sendMail({
     from: fromHeader,
     to,
@@ -183,7 +167,6 @@ async function sendEmail({ to, subject, text, html, replyTo, fromName }) {
     html: html || undefined,
     replyTo: replyTo || EMAIL_USER,
   });
-
   return info;
 }
 
@@ -228,28 +211,18 @@ app.post("/send-email", async (req, res) => {
       fromName = "Khamsa Hotel",
     } = req.body || {};
     const headerKey = req.get("Idempotency-Key") || "";
-
     if (!to || !subject || (!text && !html)) {
       return res.status(400).json({
         ok: false,
         error: "Fields 'to', 'subject' and 'text' or 'html' are required",
       });
     }
-
-    // Bir xil xabarni 2 marta yubormaslik uchun imzo
     const autoKey = djb2(
-      stableStringify({
-        to,
-        subject: cleanSubject(subject),
-        text,
-        html,
-      })
+      stableStringify({ to, subject: cleanSubject(subject), text, html })
     );
     const key = String(idempotencyKey || headerKey || autoKey);
-
-    if (hasEmailLock(key)) {
+    if (hasEmailLock(key))
       return res.json({ ok: true, deduped: true, idempotencyKey: key });
-    }
 
     const info = await sendEmail({
       to,
@@ -260,7 +233,6 @@ app.post("/send-email", async (req, res) => {
       fromName,
     });
     putEmailLock(key);
-
     return res.json({
       ok: true,
       idempotencyKey: key,
@@ -274,7 +246,7 @@ app.post("/send-email", async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: e?.message || "send-email failed",
-      hint: "Gmail uchun App Password (2FA yoqilgan) ishlatilganini va FROM = EMAIL_USER ekanini tekshiring.",
+      hint: "Gmail App Password ishlatilayotganini va FROM=EMAIL_USER ekanini tekshiring.",
     });
   }
 });
@@ -283,18 +255,53 @@ app.post("/send-email", async (req, res) => {
 async function notifyTelegram(text) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
   try {
-    await fetch(
+    const r = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text,
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+        }),
       }
     );
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j?.ok === false) console.error("Telegram error:", j);
   } catch (e) {
-    console.error("Telegram error:", e);
+    console.error("Telegram fetch error:", e?.message || e);
   }
 }
+app.post("/notify/telegram/test", async (req, res) => {
+  try {
+    await notifyTelegram("🔔 Test: backend telegram ok");
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.get("/notify/telegram/test", async (req, res) => {
+  try {
+    await notifyTelegram("🔔 Test: backend telegram ok (GET)");
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// 2) Umumiy endpoint: ixtiyoriy matn yuborish
+app.post("/notify/telegram", async (req, res) => {
+  try {
+    const { text = "ℹ️ Empty text" } = req.body || {};
+    await notifyTelegram(String(text));
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 /* ====== Helpers ====== */
 async function safeParseResponse(res) {
@@ -382,7 +389,6 @@ const toTz = (s) => {
 };
 
 async function ensureSchema() {
-  // asosiy jadval
   await pgPool.query(
     `CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`
   );
@@ -450,7 +456,7 @@ async function ensureSchema() {
     END $$;`);
 }
 
-// YANGI: room_types jadvali (Render’da ham mavjud bo‘lishi uchun)
+// YANGI: room_types jadvali
 async function ensureRoomTypes() {
   await pgPool.query(`
     CREATE TABLE IF NOT EXISTS public.room_types (
@@ -459,10 +465,7 @@ async function ensureRoomTypes() {
       pre_buffer_minutes  INT NOT NULL DEFAULT 0,
       post_buffer_minutes INT NOT NULL DEFAULT 0,
       updated_at TIMESTAMPTZ DEFAULT now()
-    );
-  `);
-
-  // FAMILY
+    );`);
   await pgPool.query(
     `INSERT INTO public.room_types (room_type, capacity, pre_buffer_minutes, post_buffer_minutes)
      VALUES ($1,$2,$3,$4)
@@ -473,8 +476,6 @@ async function ensureRoomTypes() {
            updated_at = now();`,
     ["FAMILY", FAMILY_CAPACITY, FAMILY_PRE_BUFFER_MIN, FAMILY_POST_BUFFER_MIN]
   );
-
-  // STANDARD (buffer 0/0 default)
   await pgPool.query(
     `INSERT INTO public.room_types (room_type, capacity)
      VALUES ($1,$2)
@@ -484,7 +485,6 @@ async function ensureRoomTypes() {
     ["STANDARD", STANDARD_CAPACITY]
   );
 }
-
 ensureSchema()
   .then(ensureRoomTypes)
   .catch((e) => console.error("ensureSchema/room_types error:", e));
@@ -601,11 +601,15 @@ app.get("/api/bnovo/availability", async (req, res) => {
 /* =======================
  *  PAYMENTS (Octo)
  * ======================= */
-// (o'zgarmadi)
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 app.post("/create-payment", async (req, res) => {
   try {
     if (!OCTO_SHOP_ID || !OCTO_SECRET)
       return res.status(500).json({ error: "Payment sozlanmagan (env yo'q)" });
+
     const {
       amount,
       description = "Mehmonxona to'lovi",
@@ -613,10 +617,11 @@ app.post("/create-payment", async (req, res) => {
       booking = {},
     } = req.body || {};
     const amt = Number(amount);
-    if (!Number.isFinite(amt) || amt <= 0 || !email)
+    if (!Number.isFinite(amt) || amt <= 0 || !email) {
       return res
         .status(400)
         .json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
+    }
 
     const computeCheckOut = (checkInStr, durationStr) => {
       const d = new Date(checkInStr);
@@ -651,7 +656,7 @@ app.post("/create-payment", async (req, res) => {
       octo_secret: OCTO_SECRET,
       shop_transaction_id: shopTransactionId,
       auto_capture: true,
-      test: false,
+      test: OCTO_TEST,
       init_time: new Date().toISOString().replace("T", " ").substring(0, 19),
       total_sum: amountUZS,
       currency: "UZS",
@@ -668,27 +673,46 @@ app.post("/create-payment", async (req, res) => {
 
     savePending(shopTransactionId, bookingPayload);
 
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 20000);
-    const octoRes = await fetch("https://secure.octo.uz/prepare_payment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    }).catch((e) => {
-      throw new Error(`Octo fetch failed: ${e?.message || e}`);
-    });
-    clearTimeout(t);
+    // Retry + 60s timeout
+    let lastErr = null;
+    for (let i = 0; i < 3; i++) {
+      try {
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), 60000);
+        const octoRes = await fetch("https://secure.octo.uz/prepare_payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        clearTimeout(t);
 
-    const data = await safeParseResponse(octoRes);
-    if (octoRes.ok && data?.error === 0 && data?.data?.octo_pay_url)
-      return res.json({ paymentUrl: data.data.octo_pay_url });
+        const data = await safeParseResponse(octoRes);
+        if (octoRes.ok && data?.error === 0 && data?.data?.octo_pay_url) {
+          return res.json({ paymentUrl: data.data.octo_pay_url });
+        }
+        console.error("Octo error:", { status: octoRes.status, data });
+        lastErr = new Error(
+          (data && (data.errMessage || data.message)) ||
+            `Octo status ${octoRes.status}`
+        );
+      } catch (e) {
+        lastErr = e;
+        if (String(e?.name).includes("AbortError")) {
+          console.error("Octo fetch aborted (timeout)");
+        } else {
+          console.error("Octo fetch error:", e?.message || e);
+        }
+      }
+      await sleep(400 * Math.pow(2, i)); // 400ms, 800ms, 1600ms
+    }
 
-    console.error("Octo error:", { status: octoRes.status, data });
-    const msg =
-      (data && (data.errMessage || data.message)) ||
-      `Octo error (status ${octoRes.status})`;
-    return res.status(400).json({ error: msg });
+    if (String(lastErr?.name).includes("AbortError")) {
+      return res
+        .status(504)
+        .json({ error: "Octo timeout — qayta urinib ko‘ring" });
+    }
+    return res.status(400).json({ error: lastErr?.message || "Octo error" });
   } catch (err) {
     console.error("❌ create-payment:", err);
     res.status(500).json({ error: "Server xatosi" });
@@ -760,8 +784,8 @@ app.post("/payment-callback", async (req, res) => {
     if (isSuccess && verifiedPayload) {
       const pushRes = await createBookingInBnovo(verifiedPayload);
       const human = `
-To'lov muvaffaqiyatli.
-Bron:
+<b>To'lov muvaffaqiyatli</b>
+<b>Bron:</b>
 - Ism: ${verifiedPayload.firstName} ${verifiedPayload.lastName || ""}
 - Tel: ${verifiedPayload.phone || "-"}
 - Email: ${verifiedPayload.email}
@@ -789,6 +813,7 @@ ${
       )}`
 }
       `.trim();
+
       try {
         await sendEmail({
           to: ADMIN_EMAIL,
@@ -983,7 +1008,6 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
 
     const { p_end, n_start } = await getNeighbors(roomType, S);
 
-    // oldingi bron bilan urishmasin
     if (p_end) {
       const minStart = new Date(new Date(p_end).getTime() + pre * 60 * 1000);
       if (new Date(S) < minStart) {
@@ -1001,12 +1025,10 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
       { code: "10h", hours: 10 },
       { code: "24h", hours: 24 },
     ];
-
     const allowed = [];
     for (const t of tariffs) {
       const end = new Date(new Date(S).getTime() + t.hours * 60 * 60 * 1000);
       const endWithPost = new Date(end.getTime() + post * 60 * 1000);
-
       if (n_start && endWithPost > new Date(n_start)) continue;
 
       const peakExisting = await getPeakConcurrency(
