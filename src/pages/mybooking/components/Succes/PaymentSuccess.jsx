@@ -81,15 +81,23 @@ async function withRetry(fn, { tries = 3, baseDelay = 400 } = {}) {
   return last;
 }
 
-/* ===================== TELEGRAM (ixtiyoriy) ===================== */
+/* ===================== TELEGRAM (frontenddan to‘g‘ridan-to‘g‘ri) ===================== */
 const TELEGRAM_BOT_TOKEN =
   (import.meta?.env && import.meta.env.VITE_TG_BOT_TOKEN) || "";
 const TELEGRAM_CHAT_ID =
   (import.meta?.env && import.meta.env.VITE_TG_CHAT_ID) || "";
 
+/** Xabar matnida HTML special belgilarini qochirish */
+function esc(s = "") {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 async function sendTelegramMessage(text) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-    console.error("Telegram sozlanmagan: BOT_TOKEN yoki CHAT_ID yo‘q");
+    console.error("Telegram sozlanmagan: VITE_TG_BOT_TOKEN yoki VITE_TG_CHAT_ID yo‘q");
     return { ok: false, reason: "missing-config" };
   }
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -177,7 +185,7 @@ const PaymentSuccess = () => {
       id,
     } = latest;
 
-    // 2) Idempotency uchun imzo
+    // 2) Idempotency uchun imzo (telegram va email uchun bir xil identifikator bazasi)
     const uniq = {
       id: id || null,
       email: email || null,
@@ -189,34 +197,45 @@ const PaymentSuccess = () => {
       phone: phone || null,
     };
 
-    // 3) Telegram (ixtiyoriy)
-    const telegramText = `
-📢 Yangi bron qabul qilindi
+    // 3) Telegramga yuboriladigan xabar (HTML)
+    const telegramText = [
+      "📢 <b>Yangi bron qabul qilindi</b>",
+      "",
+      `👤 <b>Ism:</b> ${esc(firstName || "-")} ${esc(lastName || "")}`,
+      `📧 <b>Email:</b> ${esc(email || "-")}`,
+      `📞 <b>Telefon:</b> ${esc(phone || "-")}`,
+      "",
+      `🗓️ <b>Bron vaqti:</b> ${esc(formatDateTime(createdAt))}`,
+      `📅 <b>Kirish sanasi:</b> ${esc(formatDate(checkIn))}`,
+      `⏰ <b>Kirish vaqti:</b> ${esc(formatTime(checkOutTime))}`,
+      `🛏️ <b>Xona:</b> ${esc(roomKeyMap[rooms] || rooms || "-")}`,
+      `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
+      `💶 <b>To'lov summasi:</b> ${esc(price ? `${price}€` : "-")}`,
+      "",
+      "✅ <i>Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</i>",
+      "",
+      "🌐 <b>Sayt:</b> khamsahotel.uz",
+    ].join("\n");
 
-👤 Ism: ${firstName || "-"} ${lastName || ""}
-📧 Email: ${email || "-"}
-📞 Telefon: ${phone || "-"}
-
-🗓️ Bron vaqti: ${formatDateTime(createdAt)}
-📅 Kirish sanasi: ${formatDate(checkIn)}
-⏰ Kirish vaqti: ${formatTime(checkOutTime)}
-🛏️ Xona: ${roomKeyMap[rooms] || rooms || "-"}
-📆 Davomiylik: ${duration || "-"}
-💶 To'lov summasi: ${price ? `${price}€` : "-"}
-
-✅ Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi
-
-🌐 Sayt: khamsahotel.uz
-    `.trim();
-
+    // 4) TELEGRAM — dedup + retry bilan yuborish (frontenddan)
     sendOnce({
       name: "telegram",
       uniquePayload: { ...uniq, channel: "group" },
-      ttlMs: 1000 * 60 * 60 * 24 * 2,
-      sender: async () => await sendTelegramMessage(telegramText),
+      ttlMs: 1000 * 60 * 60 * 24 * 2, // 2 kun
+      sender: () =>
+        withRetry(() => sendTelegramMessage(telegramText), {
+          tries: 3,
+          baseDelay: 600,
+        }),
+    }).then((r) => {
+      if (!r?.ok && !r?.skipped) {
+        console.error("Telegram xabar yuborilmadi:", r);
+      } else {
+        console.log("Telegram xabar yuborildi/skipped:", r);
+      }
     });
 
-    // 4) EMAIL — email bo‘lmasa yubormaymiz
+    // 5) EMAIL — email bo‘lsa backend orqali yuboramiz (ixtiyoriy)
     if (email) {
       const emailText = `
 Thank you for choosing to stay with us via Khamsahotel.uz!
@@ -316,7 +335,9 @@ Thank you for your reservation. We look forward to welcoming you!
         </svg>
       </div>
       <h1>To‘lov muvaffaqiyatli bajarildi!</h1>
-      <p className="message">Rahmat! Buyurtmangiz qabul qilindi. Tasdiqnoma email orqali yuborildi.</p>
+      <p className="message">
+        Rahmat! Buyurtmangiz qabul qilindi. Tasdiqnoma email orqali yuborildi.
+      </p>
       <a className="back-home" href="/">Bosh sahifaga qaytish</a>
     </div>
   );
