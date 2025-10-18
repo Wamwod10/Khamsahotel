@@ -153,7 +153,9 @@ const MyBooking = () => {
       alert("To‘lov uchun summa mavjud emas");
       return;
     }
-    const latestBooking = bookings[bookings.length - 1]; // oxirgi
+    const latestBooking = [...bookings]
+      .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+      .at(-1); // oxirgi
     if (!latestBooking?.email) {
       alert("Email maʼlumoti mavjud emas");
       return;
