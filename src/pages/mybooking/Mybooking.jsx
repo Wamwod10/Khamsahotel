@@ -1,3 +1,4 @@
+// src/pages/mybooking/MyBooking.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import "./mybooking.scss";
 import BookingCard from "./components/BookingCard/BookingCard";
@@ -5,27 +6,15 @@ import EditBookingModal from "./components/Edit/EditBookingModal";
 import { v4 as uuidv4 } from "uuid";
 import { useTranslation } from "react-i18next";
 
-/** API bazasi (Vite/CRA) */
-function getApiBase() {
-  const viteBase =
-    (import.meta?.env && import.meta.env.VITE_API_BASE_URL) || "";
-  const craBase =
-    (typeof process !== "undefined" && process?.env?.REACT_APP_API_BASE_URL) ||
-    "";
-  const fallback =
-    (typeof window !== "undefined" && window.location.origin) || "";
-  return (viteBase || craBase || fallback).replace(/\/+$/, "");
-}
+/* ===================== Helpers ===================== */
 
-/** Timeout bilan fetch */
-async function fetchWithTimeout(url, options = {}, ms = 15000) {
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), ms);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(t);
+/** API bazasi — faqat .env dan. (HTTPS -> backend) */
+function getApiBase() {
+  const viteBase = import.meta?.env?.VITE_API_BASE_URL || "";
+  if (!viteBase) {
+    console.error("VITE_API_BASE_URL yo‘q! Backend URL shart.");
   }
+  return String(viteBase).replace(/\/+$/, "");
 }
 
 /** Duration → key */
@@ -68,13 +57,17 @@ function roomCodeToLabel(code) {
   return "-";
 }
 
+/* ===================== Component ===================== */
 const MyBooking = () => {
   const [bookings, setBookings] = useState([]);
   const [editingBooking, setEditingBooking] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [paying, setPaying] = useState(false);
-  const API_BASE = useMemo(getApiBase, []);
 
+  const API_BASE = useMemo(getApiBase, []);
+  const { t } = useTranslation();
+
+  // Load from sessionStorage/localStorage
   useEffect(() => {
     let saved = [];
     try {
@@ -140,9 +133,7 @@ const MyBooking = () => {
   /** Pay Now → Octo create-payment (oxirgi booking ma’lumoti bilan) */
   const handlePayment = async () => {
     if (!API_BASE) {
-      alert(
-        "API manzili topilmadi. .env dagi VITE_API_BASE_URL/REACT_APP_API_BASE_URL ni tekshiring."
-      );
+      alert("API manzili topilmadi. VITE_API_BASE_URL ni .env’da belgilang.");
       return;
     }
     if (totalAmount <= 0) {
@@ -155,8 +146,11 @@ const MyBooking = () => {
       return;
     }
 
+    if (paying) return;
     setPaying(true);
+
     try {
+      // ixtiyoriy health check
       try {
         await fetch(`${API_BASE}/healthz`, { cache: "no-store" });
       } catch {}
@@ -181,9 +175,10 @@ const MyBooking = () => {
         },
       };
 
-      const res = await fetchWithTimeout(`${API_BASE}/create-payment`, {
+      const res = await fetch(`${API_BASE}/create-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // MUHIM: signal/AbortController YO‘Q — frontend abort qilmaydi
         body: JSON.stringify(body),
       });
 
@@ -199,7 +194,7 @@ const MyBooking = () => {
           });
 
       if (res.ok && data && typeof data === "object" && data.paymentUrl) {
-        window.location.href = data.paymentUrl;
+        window.location.href = data.paymentUrl; // Octo sahifasiga o'tish
         return;
       }
 
@@ -211,8 +206,8 @@ const MyBooking = () => {
       console.error("create-payment error:", { status: res.status, data });
     } catch (err) {
       const text =
-        err?.name === "AbortError"
-          ? "Server javob bermadi (timeout)"
+        err?.name === "TypeError"
+          ? "Tarmoq yoki CORS xatosi (HTTPS va domenlarni tekshiring)"
           : err?.message || String(err);
       alert(`To‘lov yaratishda xatolik yuz berdi: ${text}`);
       console.error("fetch failure:", err);
@@ -222,8 +217,6 @@ const MyBooking = () => {
   };
 
   const addNewBooking = () => (window.location.href = "/");
-
-  const { t } = useTranslation();
 
   return (
     <div className="my-booking-container">
