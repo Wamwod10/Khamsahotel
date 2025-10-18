@@ -17,14 +17,18 @@ function getApiBase() {
 /** JSON bo'lmasa ham xatoni to'g'ri qaytarish */
 async function safeFetchJson(input, init) {
   const res = await fetch(input, init);
-  const ct = res.headers.get("content-type") || "";
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
   let data;
   try {
     data = ct.includes("application/json")
       ? await res.json()
       : await res.text();
   } catch {
-    data = await res.text().catch(() => "");
+    try {
+      data = await res.text();
+    } catch {
+      data = "";
+    }
   }
   return { ok: res.ok, status: res.status, data };
 }
@@ -79,8 +83,12 @@ async function sendOnce({ name, uniquePayload, sender, ttlMs }) {
 async function withRetry(fn, { tries = 3, baseDelay = 500 } = {}) {
   let last;
   for (let i = 0; i < tries; i++) {
-    last = await fn();
-    if (last?.ok) return last;
+    try {
+      last = await fn();
+      if (last?.ok) return last;
+    } catch (e) {
+      last = { ok: false, error: e?.message || String(e) };
+    }
     await new Promise((r) => setTimeout(r, baseDelay * Math.pow(2, i)));
   }
   return last;
@@ -155,6 +163,7 @@ function formatTime(s) {
 function formatDateTime(s) {
   if (!s) return "-";
   const d = new Date(s);
+  if (isNaN(d.getTime())) return "-";
   const pad = (n) => String(n).padStart(2, "0");
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(
     d.getHours()
@@ -174,7 +183,8 @@ const PaymentSuccess = () => {
     let latest = null;
     try {
       const all = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
-      latest = all?.[0] || null;
+      // Oxirgi qo‘shilgan bronni olish xavfsizroq:
+      latest = Array.isArray(all) && all.length ? all[all.length - 1] : null;
     } catch {}
     if (!latest) {
       try {

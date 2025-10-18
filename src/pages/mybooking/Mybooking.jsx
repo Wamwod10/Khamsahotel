@@ -8,16 +8,18 @@ import { useTranslation } from "react-i18next";
 
 /* ===================== Helpers ===================== */
 
-/** API bazasi — faqat .env dan. (HTTPS -> backend) */
+/** API bazasi — faqat .env dan (VITE_API_BASE_URL).
+ *  Masalan: https://khamsa-backend.onrender.com
+ */
 function getApiBase() {
   const viteBase = import.meta?.env?.VITE_API_BASE_URL || "";
   if (!viteBase) {
-    console.error("VITE_API_BASE_URL yo‘q! Backend URL shart.");
+    console.error("VITE_API_BASE_URL yo‘q! .env’da backend URL ni qo‘ying.");
   }
   return String(viteBase).replace(/\/+$/, "");
 }
 
-/** Duration → key */
+/** Duration → key (UI label uchun) */
 function normalizeDuration(duration) {
   if (!duration || typeof duration !== "string") return "";
   const d = duration.toLowerCase();
@@ -57,6 +59,16 @@ function roomCodeToLabel(code) {
   return "-";
 }
 
+/** Narxni son qilib normalize qilish */
+function normalizePrice(p) {
+  if (typeof p === "number") return Number.isFinite(p) ? p : 0;
+  if (typeof p === "string") {
+    const n = Number(p.replace(/[^\d.,-]/g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
 /* ===================== Component ===================== */
 const MyBooking = () => {
   const [bookings, setBookings] = useState([]);
@@ -81,14 +93,7 @@ const MyBooking = () => {
       id: b.id || uuidv4(),
       ...b,
       rooms: toRoomCode(b.rooms), // "STANDARD" | "FAMILY"
-      price:
-        typeof b.price === "string"
-          ? Number(
-              String(b.price)
-                .replace(/[^\d.,-]/g, "")
-                .replace(",", ".")
-            ) || 0
-          : Number(b.price) || 0,
+      price: normalizePrice(b.price),
     }));
 
     setBookings(normalized);
@@ -112,7 +117,13 @@ const MyBooking = () => {
 
   const handleSaveBooking = (updatedBooking) => {
     const updated = bookings.map((b) =>
-      b.id === editingBooking.id ? { ...updatedBooking, id: b.id } : b
+      b.id === editingBooking.id
+        ? {
+            ...updatedBooking,
+            id: b.id,
+            price: normalizePrice(updatedBooking.price),
+          }
+        : b
     );
     setBookings(updated);
     saveBookingsToStorage(updated);
@@ -130,17 +141,19 @@ const MyBooking = () => {
     0
   );
 
-  /** Pay Now → Octo create-payment (oxirgi booking ma’lumoti bilan) */
+  /** Pay Now → Octo create-payment (oxirgi qo‘shilgan booking bilan) */
   const handlePayment = async () => {
     if (!API_BASE) {
-      alert("API manzili topilmadi. VITE_API_BASE_URL ni .env’da belgilang.");
+      alert(
+        "API manzili topilmadi. VITE_API_BASE_URL ni .env’da belgilang (https)."
+      );
       return;
     }
     if (totalAmount <= 0) {
       alert("To‘lov uchun summa mavjud emas");
       return;
     }
-    const latestBooking = bookings[0];
+    const latestBooking = bookings[bookings.length - 1]; // oxirgi
     if (!latestBooking?.email) {
       alert("Email maʼlumoti mavjud emas");
       return;
@@ -150,7 +163,7 @@ const MyBooking = () => {
     setPaying(true);
 
     try {
-      // ixtiyoriy health check
+      // ixtiyoriy health check (tarmoq/CORS tez tekshiruv)
       try {
         await fetch(`${API_BASE}/healthz`, { cache: "no-store" });
       } catch {}
@@ -178,7 +191,7 @@ const MyBooking = () => {
       const res = await fetch(`${API_BASE}/create-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // MUHIM: signal/AbortController YO‘Q — frontend abort qilmaydi
+        // MUHIM: frontendda AbortController yo‘q — timeout backendda qilinadi
         body: JSON.stringify(body),
       });
 
@@ -194,7 +207,7 @@ const MyBooking = () => {
           });
 
       if (res.ok && data && typeof data === "object" && data.paymentUrl) {
-        window.location.href = data.paymentUrl; // Octo sahifasiga o'tish
+        window.location.href = data.paymentUrl; // Octo sahifasiga yo‘naltirish
         return;
       }
 
@@ -246,6 +259,13 @@ const MyBooking = () => {
             />
           ))}
 
+          <div className="my-booking-summary">
+            <div className="total">
+              {t("total")}:{" "}
+              {totalAmount > 0 ? `${totalAmount.toLocaleString()}€` : "0€"}
+            </div>
+          </div>
+
           <div className="my-booking-buttons">
             <button
               className="btn btn-pay"
@@ -254,11 +274,9 @@ const MyBooking = () => {
               aria-busy={paying ? "true" : "false"}
             >
               {paying
-                ? "Processing..."
-                : `Pay Now (${
-                    totalAmount > 0
-                      ? `${totalAmount.toLocaleString()}€`
-                      : "No amount"
+                ? t("processing") || "Processing..."
+                : `${t("paynow") || "Pay Now"} (${
+                    totalAmount > 0 ? `${totalAmount.toLocaleString()}€` : "0€"
                   })`}
             </button>
           </div>
