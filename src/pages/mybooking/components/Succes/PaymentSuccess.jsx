@@ -4,7 +4,7 @@ import "./PaymentSuccess.scss";
 
 /* ===================== Common helpers ===================== */
 
-/** API bazasi (email backend uchun) */
+/** API bazasi (email backend uchun — ixtiyoriy) */
 function getApiBase() {
   const env =
     (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
@@ -20,26 +20,30 @@ async function safeFetchJson(input, init) {
   const ct = res.headers.get("content-type") || "";
   let data;
   try {
-    data = ct.includes("application/json") ? await res.json() : await res.text();
+    data = ct.includes("application/json")
+      ? await res.json()
+      : await res.text();
   } catch {
     data = await res.text().catch(() => "");
   }
   return { ok: res.ok, status: res.status, data };
 }
 
-/** Kichik, tez hash (idempotency key uchun). DJB2 varianti. */
+/** Tez hash (idempotency key uchun) */
 function fastHash(str) {
   let h = 5381;
   for (let i = 0; i < str.length; i++) h = (h * 33) ^ str.charCodeAt(i);
   return (h >>> 0).toString(36);
 }
 
-/** Barqaror stringify (kalitlarni sortlab) — bir xil obyekt bir xil hash */
+/** Barqaror stringify */
 function stableStringify(obj) {
   if (obj === null || typeof obj !== "object") return JSON.stringify(obj);
   if (Array.isArray(obj)) return `[${obj.map(stableStringify).join(",")}]`;
   const keys = Object.keys(obj).sort();
-  return `{${keys.map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k])).join(",")}}`;
+  return `{${keys
+    .map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k]))
+    .join(",")}}`;
 }
 
 /** localStorage TTL lock (dedup) */
@@ -64,14 +68,15 @@ function hasValidLock(name, key) {
 /** Bir marta yuborish yordamchisi */
 async function sendOnce({ name, uniquePayload, sender, ttlMs }) {
   const sig = fastHash(stableStringify(uniquePayload));
-  if (hasValidLock(name, sig)) return { ok: true, skipped: true, reason: "dedup-lock" };
+  if (hasValidLock(name, sig))
+    return { ok: true, skipped: true, reason: "dedup-lock" };
   const res = await sender();
   if (res?.ok) setLock(name, sig, ttlMs);
   return res;
 }
 
-/** Retry */
-async function withRetry(fn, { tries = 3, baseDelay = 400 } = {}) {
+/** Retry wrapper */
+async function withRetry(fn, { tries = 3, baseDelay = 500 } = {}) {
   let last;
   for (let i = 0; i < tries; i++) {
     last = await fn();
@@ -81,13 +86,13 @@ async function withRetry(fn, { tries = 3, baseDelay = 400 } = {}) {
   return last;
 }
 
-/* ===================== TELEGRAM (frontenddan to‘g‘ridan-to‘g‘ri) ===================== */
+/* ===================== TELEGRAM (frontenddan) ===================== */
 const TELEGRAM_BOT_TOKEN =
   (import.meta?.env && import.meta.env.VITE_TG_BOT_TOKEN) || "";
 const TELEGRAM_CHAT_ID =
   (import.meta?.env && import.meta.env.VITE_TG_CHAT_ID) || "";
 
-/** Xabar matnida HTML special belgilarini qochirish */
+/** HTML qochirish (Telegram parse_mode=HTML uchun) */
 function esc(s = "") {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -97,7 +102,9 @@ function esc(s = "") {
 
 async function sendTelegramMessage(text) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-    console.error("Telegram sozlanmagan: VITE_TG_BOT_TOKEN yoki VITE_TG_CHAT_ID yo‘q");
+    console.error(
+      "❌ Telegram sozlanmagan: VITE_TG_BOT_TOKEN yoki VITE_TG_CHAT_ID yo‘q"
+    );
     return { ok: false, reason: "missing-config" };
   }
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -116,12 +123,12 @@ async function sendTelegramMessage(text) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data?.ok === false) {
-      console.error("Telegram sendMessage error:", data);
+      console.error("❌ Telegram sendMessage error:", data);
       return { ok: false, status: res.status, data };
     }
     return { ok: true, data };
   } catch (e) {
-    console.error("Telegram sendMessage failed:", e);
+    console.error("❌ Telegram sendMessage failed:", e);
     return { ok: false, reason: "network-error" };
   }
 }
@@ -149,28 +156,33 @@ function formatDateTime(s) {
   if (!s) return "-";
   const d = new Date(s);
   const pad = (n) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
 }
 
 /* ===================== Component ===================== */
 const PaymentSuccess = () => {
   const API_BASE = useMemo(getApiBase, []);
-  const mountedRef = useRef(false);
+  const sentRef = useRef(false);
 
   useEffect(() => {
-    if (mountedRef.current) return;
-    mountedRef.current = true;
+    if (sentRef.current) return;
+    sentRef.current = true;
 
-    // 1) Eng so‘nggi bronni sessiyadan o‘qiymiz
+    // 1) Sessiyadan eng so‘nggi bronni olish (bir nechta kalitga fallback)
     let latest = null;
     try {
       const all = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
       latest = all?.[0] || null;
-    } catch {
-      latest = null;
+    } catch {}
+    if (!latest) {
+      try {
+        latest = JSON.parse(sessionStorage.getItem("lastBooking") || "null");
+      } catch {}
     }
-    if (!latest) return;
 
+    // 2) Maydonga ajratib olish
     const {
       firstName,
       lastName,
@@ -183,9 +195,9 @@ const PaymentSuccess = () => {
       price,
       createdAt,
       id,
-    } = latest;
+    } = latest || {};
 
-    // 2) Idempotency uchun imzo (telegram va email uchun bir xil identifikator bazasi)
+    // 3) Idem bazasi
     const uniq = {
       id: id || null,
       email: email || null,
@@ -195,48 +207,65 @@ const PaymentSuccess = () => {
       room: rooms || null,
       name: `${firstName || ""} ${lastName || ""}`.trim(),
       phone: phone || null,
+      ts: new Date().toISOString(),
     };
 
-    // 3) Telegramga yuboriladigan xabar (HTML)
-    const telegramText = [
-      "📢 <b>Yangi bron qabul qilindi</b>",
-      "",
-      `👤 <b>Ism:</b> ${esc(firstName || "-")} ${esc(lastName || "")}`,
-      `📧 <b>Email:</b> ${esc(email || "-")}`,
-      `📞 <b>Telefon:</b> ${esc(phone || "-")}`,
-      "",
-      `🗓️ <b>Bron vaqti:</b> ${esc(formatDateTime(createdAt))}`,
-      `📅 <b>Kirish sanasi:</b> ${esc(formatDate(checkIn))}`,
-      `⏰ <b>Kirish vaqti:</b> ${esc(formatTime(checkOutTime))}`,
-      `🛏️ <b>Xona:</b> ${esc(roomKeyMap[rooms] || rooms || "-")}`,
-      `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
-      `💶 <b>To'lov summasi:</b> ${esc(price ? `${price}€` : "-")}`,
-      "",
-      "✅ <i>Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</i>",
-      "",
-      "🌐 <b>Sayt:</b> khamsahotel.uz",
-    ].join("\n");
+    // 4) Xabar matni — bron bo‘lsa to‘liq, bo‘lmasa fallback
+    let telegramText;
+    if (latest) {
+      telegramText = [
+        "📢 <b>Yangi bron — SUCCESS sahifasi</b>",
+        "",
+        `👤 <b>Ism:</b> ${esc(firstName || "-")} ${esc(lastName || "")}`,
+        `📧 <b>Email:</b> ${esc(email || "-")}`,
+        `📞 <b>Telefon:</b> ${esc(phone || "-")}`,
+        "",
+        `🗓️ <b>Bron vaqti:</b> ${esc(formatDateTime(createdAt))}`,
+        `📅 <b>Kirish sanasi:</b> ${esc(formatDate(checkIn))}`,
+        `⏰ <b>Kirish vaqti:</b> ${esc(formatTime(checkOutTime))}`,
+        `🛏️ <b>Xona:</b> ${esc(roomKeyMap[rooms] || rooms || "-")}`,
+        `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
+        `💶 <b>Narx:</b> ${esc(price ? `${price}€` : "-")}`,
+        "",
+        `🌐 <b>Sayt:</b> khamsahotel.uz`,
+        `🧭 <b>Path:</b> ${esc(window.location.pathname)}`,
+      ].join("\n");
+    } else {
+      telegramText = [
+        "ℹ️ <b>Success sahifasi ochildi</b> (bron payload topilmadi).",
+        `🕒 ${esc(new Date().toLocaleString())}`,
+        `🌐 Path: ${esc(window.location.pathname)}`,
+        `🧭 Referrer: ${esc(document.referrer || "-")}`,
+        `🖥️ UA: ${esc(navigator.userAgent)}`,
+      ].join("\n");
+    }
 
-    // 4) TELEGRAM — dedup + retry bilan yuborish (frontenddan)
+    // 5) Telegram — dedup + retry
     sendOnce({
       name: "telegram",
-      uniquePayload: { ...uniq, channel: "group" },
-      ttlMs: 1000 * 60 * 60 * 24 * 2, // 2 kun
+      uniquePayload: {
+        ...uniq,
+        channel: "group",
+        path: window.location.pathname,
+      },
+      ttlMs: 1000 * 60 * 60 * 24 * 2,
       sender: () =>
         withRetry(() => sendTelegramMessage(telegramText), {
           tries: 3,
-          baseDelay: 600,
+          baseDelay: 700,
         }),
     }).then((r) => {
-      if (!r?.ok && !r?.skipped) {
-        console.error("Telegram xabar yuborilmadi:", r);
+      if (r?.skipped) {
+        console.log("ℹ️ Telegram skipped (dedup).", r);
+      } else if (r?.ok) {
+        console.log("✅ Telegram yuborildi.", r);
       } else {
-        console.log("Telegram xabar yuborildi/skipped:", r);
+        console.error("❌ Telegram yuborishda muammo:", r);
       }
     });
 
-    // 5) EMAIL — email bo‘lsa backend orqali yuboramiz (ixtiyoriy)
-    if (email) {
+    // 6) (Ixtiyoriy) Email yuborish backend orqali — faqat email bo‘lsa
+    if (latest?.email) {
       const emailText = `
 Thank you for choosing to stay with us via Khamsahotel.uz!
 
@@ -270,7 +299,7 @@ Thank you for your reservation. We look forward to welcoming you!
 
       const idemKey = fastHash(
         stableStringify({
-          to: email,
+          to: latest.email,
           subject: "Your Booking Confirmation – Khamsahotel.uz",
           createdAt: createdAt || null,
           checkIn: checkIn || null,
@@ -283,7 +312,7 @@ Thank you for your reservation. We look forward to welcoming you!
         name: "email",
         uniquePayload: {
           ...uniq,
-          to: email,
+          to: latest.email,
           subject: "Your Booking Confirmation – Khamsahotel.uz",
         },
         ttlMs: 1000 * 60 * 60 * 24 * 2,
@@ -297,20 +326,17 @@ Thank you for your reservation. We look forward to welcoming you!
                   "Idempotency-Key": idemKey,
                 },
                 body: JSON.stringify({
-                  to: email,
+                  to: latest.email,
                   subject: "Your Booking Confirmation – Khamsahotel.uz",
                   text: emailText,
                   idempotencyKey: idemKey,
                 }),
               }),
-            { tries: 3, baseDelay: 500 }
+            { tries: 3, baseDelay: 600 }
           ),
       }).then((r) => {
-        if (!r?.ok && !r?.skipped) {
-          console.error("send-email error:", r);
-        } else {
-          console.log("send-email result:", r);
-        }
+        if (!r?.ok && !r?.skipped) console.error("❌ send-email error:", r);
+        else console.log("ℹ️ send-email result:", r);
       });
     }
   }, [API_BASE]);
@@ -338,7 +364,9 @@ Thank you for your reservation. We look forward to welcoming you!
       <p className="message">
         Rahmat! Buyurtmangiz qabul qilindi. Tasdiqnoma email orqali yuborildi.
       </p>
-      <a className="back-home" href="/">Bosh sahifaga qaytish</a>
+      <a className="back-home" href="/">
+        Bosh sahifaga qaytish
+      </a>
     </div>
   );
 };
