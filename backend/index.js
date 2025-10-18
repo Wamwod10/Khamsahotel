@@ -26,7 +26,7 @@ const FRONTEND_URL = (
 ).replace(/\/+$/, "");
 const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
 const OCTO_TEST =
-  String(process.env.OCTO_TEST ?? "false").toLowerCase() === "true"; // REAL -> false
+  String(process.env.OCTO_TEST ?? "false").toLowerCase() === "true"; 
 
 const {
   OCTO_SHOP_ID,
