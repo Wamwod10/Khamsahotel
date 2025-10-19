@@ -136,15 +136,24 @@ app.get("/debug/egress-ip", async (_req, res) => {
   }
 });
 app.get("/debug/octo-head", async (_req, res) => {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 10_000);
   try {
-    const r = await fetch("https://secure.octo.uz/", { method: "GET" });
+    const r = await fetch("https://secure.octo.uz/", {
+      method: "GET",
+      signal: controller.signal,
+    });
     res.json({ ok: r.ok, status: r.status });
   } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
+    res
+      .status(500)
+      .json({
+        ok: false,
+        error: e.name === "AbortError" ? "timeout" : e.message,
+      });
+  } finally {
+    clearTimeout(t);
   }
-});
-app.post("/debug/echo", (req, res) => {
-  res.json({ headers: req.headers, bodyType: typeof req.body, body: req.body });
 });
 
 /* ====== Email (Gmail App Password) ====== */
