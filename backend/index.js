@@ -9,6 +9,7 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { Pool } from "pg";
 import { checkAvailability, createBookingInBnovo } from "./bnovo.js";
+import dns from "dns/promises";
 
 dotenv.config();
 
@@ -26,7 +27,7 @@ const FRONTEND_URL = (
 ).replace(/\/+$/, "");
 const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
 const OCTO_TEST =
-  String(process.env.OCTO_TEST ?? "false").toLowerCase() === "true"; 
+  String(process.env.OCTO_TEST ?? "false").toLowerCase() === "true";
 
 const {
   OCTO_SHOP_ID,
@@ -135,6 +136,15 @@ app.get("/debug/egress-ip", async (_req, res) => {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+app.get("/debug/dns", async (req, res) => {
+  try {
+    const h = req.query.host || "secure.octo.uz";
+    const addrs = await dns.lookup(h, { all: true });
+    res.json({ ok: true, host: h, addrs });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 app.get("/debug/octo-head", async (_req, res) => {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 10_000);
@@ -145,12 +155,10 @@ app.get("/debug/octo-head", async (_req, res) => {
     });
     res.json({ ok: r.ok, status: r.status });
   } catch (e) {
-    res
-      .status(500)
-      .json({
-        ok: false,
-        error: e.name === "AbortError" ? "timeout" : e.message,
-      });
+    res.status(500).json({
+      ok: false,
+      error: e.name === "AbortError" ? "timeout" : e.message,
+    });
   } finally {
     clearTimeout(t);
   }
