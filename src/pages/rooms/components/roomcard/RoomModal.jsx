@@ -26,7 +26,7 @@ function roomCodeToLabel(code, t) {
 const guestCountByCode = { STANDARD: 1, FAMILY: 3 };
 
 const priceTable = {
-  STANDARD: { upTo3Hours: 0.001, upTo10Hours: 60, oneDay: 100 },
+  STANDARD: { upTo3Hours: 40, upTo10Hours: 60, oneDay: 100 },
   FAMILY: { upTo3Hours: 70, upTo10Hours: 100, oneDay: 150 },
 };
 
