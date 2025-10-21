@@ -224,7 +224,7 @@ const PaymentSuccess = () => {
     let telegramText;
     if (latest) {
       telegramText = [
-        "📢 <b>Yangi bron — SUCCESS sahifasi</b>",
+        "📢 <b>Yangi bron — SUCCESS sahifasi uchun</b>",
         "",
         `👤 <b>Ism:</b> ${esc(firstName || "-")} ${esc(lastName || "")}`,
         `📧 <b>Email:</b> ${esc(email || "-")}`,
