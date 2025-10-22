@@ -197,24 +197,35 @@ const cleanSubject = (s) =>
     .replace(/\r?\n/g, " ")
     .slice(0, 200) || "Khamsa notification";
 
-async function sendEmail({ to, subject, text, html, replyTo, fromName }) {
-  if (!EMAIL_USER || !EMAIL_PASS)
-    throw new Error("EMAIL_USER/EMAIL_PASS not set");
-  if (!to || !subject || (!text && !html))
+// --- sendEmail — RESEND orqali (SMTP kerak emas) ---
+async function sendEmail({ to, subject, text, html, replyTo }) {
+  if (!to || !subject || (!text && !html)) {
     throw new Error("to/subject/text-or-html required");
-  await ensureEmailTransport();
-  const from = fromName
-    ? `"${fromName.replace(/"/g, "'")}" <${EMAIL_USER}>`
-    : EMAIL_USER;
-  return transporter.sendMail({
-    from,
-    to,
-    subject: cleanSubject(subject),
-    text: text || undefined,
-    html: html || undefined,
-    replyTo: replyTo || EMAIL_USER,
+  }
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("RESEND_API_KEY missing");
+
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM || `Khamsa Hotel`,
+      to,
+      subject,
+      text: text || undefined,
+      html: html || undefined,
+      reply_to: replyTo || process.env.EMAIL_USER,
+    }),
   });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.message || "Resend send failed");
+  return { messageId: data?.id || null, accepted: [to], rejected: [], response: "RESEND_OK" };
 }
+
 
 const EMAIL_LOCKS = new Map();
 const putEmailLock = (k, ttlMs = 1000 * 60 * 60 * 24 * 2) =>
