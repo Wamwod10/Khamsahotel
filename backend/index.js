@@ -10,7 +10,6 @@ import { checkAvailability, createBookingInBnovo } from "./bnovo.js";
 
 dotenv.config();
 
-/* ====== App & Config ====== */
 const app = express();
 const PORT = Number(process.env.PORT || 5004);
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(
@@ -68,7 +67,12 @@ app.use(
       return cb(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Accept", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Accept",
+      "Authorization",
+      "Idempotency-Key",
+    ],
     credentials: false,
   })
 );
@@ -83,7 +87,7 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Accept, Authorization"
+    "Content-Type, Accept, Authorization, Idempotency-Key"
   );
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
@@ -123,6 +127,33 @@ async function sendEmail(to, subject, text) {
     text,
   });
 }
+
+/* === Public send-email endpoint (+idempotency) === */
+const emailLocks = new Map(); // key -> timestamp
+app.post("/send-email", async (req, res) => {
+  try {
+    const { to, subject, text } = req.body || {};
+    const idem = req.headers["idempotency-key"];
+    if (!to || !subject || !text) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "to/subject/text required" });
+    }
+    // 24 soat ichida bir xil kalitni qayta qabul qilmaslik
+    if (idem) {
+      const hit = emailLocks.get(idem);
+      if (hit && Date.now() - hit < 24 * 60 * 60 * 1000) {
+        return res.json({ ok: true, skipped: true, reason: "idempotent" });
+      }
+    }
+    await sendEmail(to, subject, text);
+    if (idem) emailLocks.set(idem, Date.now());
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("send-email error:", e);
+    res.status(500).json({ ok: false, error: "send-email failed" });
+  }
+});
 
 /* ====== Telegram ====== */
 async function notifyTelegram(text) {
