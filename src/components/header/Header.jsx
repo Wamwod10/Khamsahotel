@@ -115,7 +115,7 @@ function codeFromLabel(label = "") {
   if (s.includes("one day") || s.includes("24")) return "24h";
   if (s.includes("10")) return "10h";
   if (s.includes("3")) return "3h";
-  // Agar i18n label bo‘lsa ham raqamlar bor — yuqorisi yetarli
+  // i18n labelda ham raqamlar bor — yetarli
   return null;
 }
 
@@ -135,7 +135,7 @@ const Header = () => {
   const [modalMsg, setModalMsg] = useState("");
 
   // Allowed tariffs (faqat FAMILY uchun API’dan)
-  const [allowed, setAllowed] = useState(ALL_CODES); // STANDARD uchun default: hammasi
+  const [allowed, setAllowed] = useState(ALL_CODES); // STANDARD: default — hammasi
   const [tariffLoading, setTariffLoading] = useState(false);
   const [tariffError, setTariffError] = useState("");
 
@@ -217,9 +217,7 @@ const Header = () => {
         }).toString();
         const res = await fetch(
           `${base}/api/availability/allowed-tariffs?${qs}`,
-          {
-            signal: ac.signal,
-          }
+          { signal: ac.signal }
         );
         const ct = (res.headers.get("content-type") || "").toLowerCase();
         const data = ct.includes("application/json")
@@ -324,14 +322,17 @@ const Header = () => {
     localI18n[currentLangShort]?.dateFormatShort ||
     localI18n.en.dateFormatShort;
 
-  const durationStatusText = useMemo(() => {
-    if (rooms !== "FAMILY") return "";
-    if (tariffLoading) return `(${t("searchrooms") || "Checking"}…)`;
-    if (!startAt) return "";
+  /* ====== STATUS BADGE (rangli) ======
+     loading -> kulrang, ok -> olovrang, bad -> qizil
+  */
+  const durationStatus = useMemo(() => {
+    if (rooms !== "FAMILY") return null;
+    if (tariffLoading) return { key: "searchrooms", kind: "loading" };
+    if (!startAt) return null;
     return allowed.length > 0
-      ? `(${t("available") || "available"})`
-      : `(${t("notavailable") || "restricted"})`;
-  }, [rooms, tariffLoading, allowed.length, startAt, t]);
+      ? { key: "available", kind: "ok" }
+      : { key: "notavailable", kind: "bad" };
+  }, [rooms, tariffLoading, allowed.length, startAt]);
 
   return (
     <>
@@ -422,12 +423,18 @@ const Header = () => {
 
               <div className="header__form-row">
                 <div className="header__form-group">
-                  <label htmlFor="duration">
-                    {t("duration")}{" "}
-                    <span className="muted" style={{ fontWeight: 400 }}>
-                      {durationStatusText}
-                    </span>
+                  <label htmlFor="duration" className="kh-label-inline">
+                    <span>{t("duration")}</span>
+                    {/* Rangli status badge */}
+                    {durationStatus && (
+                      <span
+                        className={`kh-status kh-status--${durationStatus.kind}`}
+                      >
+                        {t(durationStatus.key) || durationStatus.key}
+                      </span>
+                    )}
                   </label>
+
                   <div className="custom-select">
                     <select
                       id="duration"
@@ -440,7 +447,7 @@ const Header = () => {
                         const disableForFamily =
                           rooms === "FAMILY" && startAt
                             ? !allowed.includes(d.code)
-                            : false; // STANDARD yoki startAt yo'q — disable yo'q
+                            : false;
                         return (
                           <option
                             key={d.code}
