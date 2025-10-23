@@ -309,7 +309,7 @@ const MyBooking = () => {
               aria-busy={paying ? "true" : "false"}
             >
               {paying
-                ? t("processing") || "Processing..."
+                ? "Processing..."
                 : `${t("paynow") || "Pay Now"} (${
                     totalAmount > 0 ? `${totalAmount.toLocaleString()}€` : "0€"
                   })`}
