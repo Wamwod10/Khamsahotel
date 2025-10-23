@@ -224,7 +224,7 @@ const PaymentSuccess = () => {
     let telegramText;
     if (latest) {
       telegramText = [
-        "📢 <b>Yangi bron — SUCCESS sahifasi uchun</b>",
+        "📢 <b>Yangi bron qabul qilindi</b>",
         "",
         `👤 <b>Ism:</b> ${esc(firstName || "-")} ${esc(lastName || "")}`,
         `📧 <b>Email:</b> ${esc(email || "-")}`,
@@ -237,8 +237,8 @@ const PaymentSuccess = () => {
         `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
         `💶 <b>Narx:</b> ${esc(price ? `${price}€` : "-")}`,
         "",
+        `✅ <b> Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`
         `🌐 <b>Sayt:</b> khamsahotel.uz`,
-        `🧭 <b>Path:</b> ${esc(window.location.pathname)}`,
       ].join("\n");
     } else {
       telegramText = [
