@@ -237,7 +237,7 @@ const PaymentSuccess = () => {
         `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
         `💶 <b>Narx:</b> ${esc(price ? `${price}€` : "-")}`,
         "",
-        `✅ <b> Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`
+        `✅ <b> Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`,
         `🌐 <b>Sayt:</b> khamsahotel.uz`,
       ].join("\n");
     } 
