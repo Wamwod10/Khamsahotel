@@ -240,15 +240,8 @@ const PaymentSuccess = () => {
         `✅ <b> Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`
         `🌐 <b>Sayt:</b> khamsahotel.uz`,
       ].join("\n");
-    } else {
-      telegramText = [
-        "ℹ️ <b>Success sahifasi ochildi</b> (bron payload topilmadi).",
-        `🕒 ${esc(new Date().toLocaleString())}`,
-        `🌐 Path: ${esc(window.location.pathname)}`,
-        `🧭 Referrer: ${esc(document.referrer || "-")}`,
-        `🖥️ UA: ${esc(navigator.userAgent)}`,
-      ].join("\n");
-    }
+    } 
+    
 
     // 5) Telegram — dedup + retry
     sendOnce({
