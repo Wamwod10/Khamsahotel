@@ -701,15 +701,13 @@ app.post("/payment-callback", async (req, res) => {
         "",
         `🗓️ <b>Bron vaqti:</b> ${esc(formatDateTime(createdAt))}`,
         `📅 <b>Kirish sanasi:</b> ${esc(formatDate(checkIn))}`,
-        `⏰ <b>Chiqish sanasi:</b> ${esc(formatDate(checkOut))}`,
-        `🛏️ <b>Xona:</b> ${esc(
-          roomKeyMap[String(roomType).toUpperCase()] || roomType || "-"
-        )}`,
+        `⏰ <b>Kirish vaqti:</b> ${esc(formatTime(checkOutTime))}`,
+        `🛏️ <b>Xona:</b> ${esc(roomKeyMap[rooms] || rooms || "-")}`,
         `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
-        `💶 <b>Narx:</b> ${esc(priceEur != null ? `${priceEur}€` : "-")}`,
+        `💶 <b>Narx:</b> ${esc(price ? `${price}€` : "-")}`,
         "",
-        `✅ <b> Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`,
-        `🌐 <b>Sayt:</b> khamsahotel.uz`,
+        `✅ <b>Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`,
+        `🌐 <b>Sayt:</b> khamsahotel.uz`, 
       ].join("\n");
 
       const humanText = `
