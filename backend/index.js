@@ -636,42 +636,126 @@ app.post("/payment-callback", async (req, res) => {
 
     if (isSuccess && verifiedPayload) {
       const pushRes = await createBookingInBnovo(verifiedPayload);
-      const human = `
+
+      // ==== Frontend uslubidagi HTML xabar (faqat shu blok ichida) ====
+      const esc = (v) =>
+        String(v ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+
+      const pad = (n) => String(n).padStart(2, "0");
+      const formatDate = (isoLike) => {
+        if (!isoLike) return "-";
+        const d = new Date(isoLike);
+        if (isNaN(d)) return esc(isoLike);
+        return `${pad(d.getDate())}.${pad(
+          d.getMonth() + 1
+        )}.${d.getFullYear()}`;
+      };
+      const formatTime = (isoLike) => {
+        if (!isoLike) return "-";
+        const d = new Date(isoLike);
+        if (isNaN(d)) return "-";
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+      const formatDateTime = (isoLike) => {
+        if (!isoLike) return "-";
+        const d = new Date(isoLike);
+        if (isNaN(d)) return "-";
+        return `${pad(d.getDate())}.${pad(
+          d.getMonth() + 1
+        )}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+
+      const roomKeyMap = {
+        STANDARD: "Standard Room",
+        FAMILY: "Family Room",
+        SMART: "Smart Capsule",
+        CAPSULE: "Capsule",
+        DELUXE: "Deluxe",
+      };
+
+      const {
+        firstName,
+        lastName,
+        phone,
+        email,
+        roomType,
+        checkIn,
+        checkOut,
+        guests,
+        priceEur,
+        duration,
+      } = verifiedPayload;
+
+      const createdAt = new Date().toISOString();
+
+      const humanHtml = [
+        "📢 <b>Yangi bron qabul qilindi</b>",
+        "",
+        `👤 <b>Ism:</b> ${esc(firstName || "-")} ${esc(lastName || "")}`,
+        `📧 <b>Email:</b> ${esc(email || "-")}`,
+        `📞 <b>Telefon:</b> ${esc(phone || "-")}`,
+        "",
+        `🗓️ <b>Bron vaqti:</b> ${esc(formatDateTime(createdAt))}`,
+        `📅 <b>Kirish sanasi:</b> ${esc(formatDate(checkIn))}`,
+        `⏰ <b>Chiqish sanasi:</b> ${esc(formatDate(checkOut))}`,
+        `🛏️ <b>Xona:</b> ${esc(
+          roomKeyMap[String(roomType).toUpperCase()] || roomType || "-"
+        )}`,
+        `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
+        `💶 <b>Narx:</b> ${esc(priceEur != null ? `${priceEur}€` : "-")}`,
+        "",
+        `✅ <b> Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`,
+        `🌐 <b>Sayt:</b> khamsahotel.uz`,
+      ].join("\n");
+
+      // Email uchun soddalashtirilgan matn (o'zgarmas format)
+      const humanText = `
 To'lov muvaffaqiyatli.
 Bron:
-- Ism: ${verifiedPayload.firstName} ${verifiedPayload.lastName || ""}
-- Tel: ${verifiedPayload.phone || "-"}
-- Email: ${verifiedPayload.email}
-- Xona: ${verifiedPayload.roomType}
-- Check-in: ${verifiedPayload.checkIn}
-- Check-out: ${verifiedPayload.checkOut}
-- Mehmonlar: ${verifiedPayload.guests || 1}
-- Narx (EUR): ${verifiedPayload.priceEur}
-Bnovo push: ${
-        pushRes.pushed
-          ? "✅ Pushed"
-          : pushRes.ok
-          ? "⚠️ Skipped (cheklov)"
-          : "❌ Fail"
+- Ism: ${firstName || "-"} ${lastName || ""}
+- Tel: ${phone || "-"}
+- Email: ${email || "-"}
+- Xona: ${roomType || "-"}
+- Check-in: ${checkIn || "-"}
+- Check-out: ${checkOut || "-"}
+- Mehmonlar: ${guests || 1}
+- Narx (EUR): ${priceEur != null ? priceEur : "-"}
+`.trim();
+
+      // Lokal (faqat shu blokda) HTML yuboruvchi helper — notifyTelegram ni o'zgartirmadik
+      async function notifyTelegramHtml(html) {
+        if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+        const payload = {
+          chat_id: TELEGRAM_CHAT_ID,
+          text: html,
+          parse_mode: "HTML",
+          disable_web_page_preview: true,
+        };
+        try {
+          const r = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await r.json().catch(() => ({}));
+          if (!data?.ok) console.error("Telegram send error:", data);
+        } catch (e) {
+          console.error("Telegram error:", e);
+        }
       }
-${
-  pushRes.ok
-    ? pushRes.pushed
-      ? ""
-      : `Reason: ${pushRes.reason || ""}`
-    : `Reason: ${JSON.stringify(
-        pushRes.error || pushRes.status || pushRes.data || {},
-        null,
-        2
-      )}`
-}
-      `.trim();
+
       try {
-        await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", human);
+        await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", humanText);
       } catch {}
+
       try {
-        await notifyTelegram(human);
+        await notifyTelegramHtml(humanHtml);
       } catch {}
+
       return res.json({ ok: true });
     }
 
