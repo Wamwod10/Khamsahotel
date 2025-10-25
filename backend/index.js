@@ -478,7 +478,7 @@ app.get("/api/bnovo/availability", async (req, res) => {
 /* =======================
  *  PAYMENTS (Octo)
  * ======================= */
-// (o'zgarmadi)
+// (o'zgarmadi, faqat return_url ni trampoline endpointga o'zgartirdik)
 app.post("/create-payment", async (req, res) => {
   try {
     if (!OCTO_SHOP_ID || !OCTO_SECRET)
@@ -533,7 +533,8 @@ app.post("/create-payment", async (req, res) => {
       total_sum: amountUZS,
       currency: "UZS",
       description: `${description} (${amt} EUR)`,
-      return_url: `${FRONTEND_URL}/success`,
+      // MUHIM: Octo brauzerni shu URLga qaytaradi; biz esa toza /success ga yo'naltiramiz
+      return_url: `${BASE_URL}/octo-return`,
       notify_url: `${BASE_URL}/payment-callback`,
       language: "uz",
       custom_data: {
@@ -570,6 +571,12 @@ app.post("/create-payment", async (req, res) => {
     console.error("❌ create-payment:", err);
     res.status(500).json({ error: "Server xatosi" });
   }
+});
+
+// YANGI: Octo qaytargan brauzer redirectini toza /success ga trim qilamiz
+app.get("/octo-return", (req, res) => {
+  // xohlasangiz bu yerda statusni tekshirib, muvaffaqiyatsiz holatda /failed ga yuborishingiz mumkin
+  return res.redirect(302, `${FRONTEND_URL}/success`);
 });
 
 app.post("/payment-callback", async (req, res) => {
@@ -653,12 +660,6 @@ app.post("/payment-callback", async (req, res) => {
           d.getMonth() + 1
         )}.${d.getFullYear()}`;
       };
-      const formatTime = (isoLike) => {
-        if (!isoLike) return "-";
-        const d = new Date(isoLike);
-        if (isNaN(d)) return "-";
-        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      };
       const formatDateTime = (isoLike) => {
         if (!isoLike) return "-";
         const d = new Date(isoLike);
@@ -711,7 +712,6 @@ app.post("/payment-callback", async (req, res) => {
         `🌐 <b>Sayt:</b> khamsahotel.uz`,
       ].join("\n");
 
-      // Email uchun soddalashtirilgan matn (o'zgarmas format)
       const humanText = `
 To'lov muvaffaqiyatli.
 Bron:
@@ -725,7 +725,7 @@ Bron:
 - Narx (EUR): ${priceEur != null ? priceEur : "-"}
 `.trim();
 
-      // Lokal (faqat shu blokda) HTML yuboruvchi helper — notifyTelegram ni o'zgartirmadik
+      // Lokal HTML yuboruvchi helper (notifyTelegram ni o'zgartirmadik)
       async function notifyTelegramHtml(html) {
         if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -1021,7 +1021,7 @@ app.use((err, req, res, _next) => {
 
 /* ====== Start ====== */
 app.listen(PORT, () => {
-  console.log(`✅ Server ishlayapti: ${BASE_URL} (port: ${PORT})`);
+  console.log(`✅ Server yaxshi ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
     `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
       process.env.BNOVO_AUTH_URL
