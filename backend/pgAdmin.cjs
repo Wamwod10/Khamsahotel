@@ -72,31 +72,45 @@ types.setTypeParser(1082, (val) => val);
 
 /* ================== PG config ================== */
 const DB_NAME = clean(process.env.PGDATABASE, "khamsahotel").toLowerCase();
-const PG_CONFIG = {
-  host: clean(process.env.PGHOST, "127.0.0.1"),
+
+const rawHost = clean(process.env.PGHOST, "127.0.0.1");
+const isLocalHost =
+  ["localhost", "127.0.0.1"].includes(rawHost) ||
+  rawHost.startsWith("192.168.") ||
+  rawHost.startsWith("10.") ||
+  rawHost.startsWith("172.16.") ||
+  rawHost.startsWith("172.17.") ||
+  rawHost.startsWith("172.18.") ||
+  rawHost.startsWith("172.19.") ||
+  rawHost.startsWith("172.2") ||
+  rawHost.startsWith("172.3");
+
+const wantRequireSSL =
+  clean(process.env.PGSSLMODE, "disable").toLowerCase() === "require";
+
+const PG_CONFIG_BASE = {
+  host: rawHost,
   port: Number(clean(process.env.PGPORT, "5432")),
   user: clean(process.env.PGUSER, "postgres"),
   password: clean(process.env.PGPASSWORD, "postgres"),
+  // Remote yoki PGSSLMODE=require bo‘lsa SSL yoqamiz
   ssl:
-    clean(process.env.PGSSLMODE, "disable").toLowerCase() === "require"
-      ? { rejectUnauthorized: false }
-      : undefined,
+    wantRequireSSL || !isLocalHost ? { rejectUnauthorized: false } : undefined,
+  keepAlive: true,
 };
 
-const isLocalHost =
-  ["localhost", "127.0.0.1"].includes(PG_CONFIG.host) ||
-  PG_CONFIG.host.startsWith("192.168.") ||
-  PG_CONFIG.host.startsWith("10.") ||
-  PG_CONFIG.host.startsWith("172.16.");
-
-const makePool = (db) => new Pool({ ...PG_CONFIG, database: db });
+const makePool = (db) => new Pool({ ...PG_CONFIG_BASE, database: db });
 let pool = makePool(DB_NAME);
 
 console.log(
   `[BOOT] HOST=${HOST} PORT=${PORT} DB=${DB_NAME} PGHOST=${
-    PG_CONFIG.host
-  } SSL=${PG_CONFIG.ssl ? "on" : "off"}`
+    PG_CONFIG_BASE.host
+  } SSL=${PG_CONFIG_BASE.ssl ? "on" : "off"} keepAlive=${
+    PG_CONFIG_BASE.keepAlive ? "on" : "off"
+  }`
 );
+
+
 
 /* ================== DB ensure ================== */
 async function ensureDatabase() {
@@ -112,7 +126,7 @@ async function ensureDatabase() {
       const admin = makePool("postgres");
       console.log(`Database "${DB_NAME}" topilmadi, yaratamiz...`);
       await admin.query(
-        `CREATE DATABASE ${DB_NAME} ENCODING 'UTF8' OWNER ${PG_CONFIG.user};`
+        `CREATE DATABASE ${DB_NAME} ENCODING 'UTF8' OWNER ${PG_CONFIG_BASE.user};`
       );
       await admin.end();
       try {

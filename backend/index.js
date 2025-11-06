@@ -219,19 +219,29 @@ setInterval(() => {
     if (now - (v?.ts || 0) > 86400000) PENDING.delete(k);
 }, 3600000);
 
+
+
 /* =========================================================
  *  Postgres
  * ========================================================= */
+const rawHost = process.env.PGHOST || "";
+const isLocal =
+  ["localhost", "127.0.0.1"].includes(rawHost) ||
+  /^192\.168\./.test(rawHost) ||
+  /^10\./.test(rawHost) ||
+  /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(rawHost);
+
+const wantRequireSSL =
+  String(process.env.PGSSLMODE || "disable").toLowerCase() === "require";
+
 const pgPool = new Pool({
-  host: process.env.PGHOST || "",
+  host: rawHost,
   port: Number(process.env.PGPORT || 5432),
   database: process.env.PGDATABASE || "",
   user: process.env.PGUSER || "",
   password: process.env.PGPASSWORD || "",
-  ssl:
-    String(process.env.PGSSLMODE || "disable").toLowerCase() === "require"
-      ? { rejectUnauthorized: false }
-      : undefined,
+  ssl: wantRequireSSL || !isLocal ? { rejectUnauthorized: false } : undefined,
+  keepAlive: true,
 });
 pgPool
   .query("SELECT now() AS now")
@@ -478,7 +488,6 @@ app.get("/api/bnovo/availability", async (req, res) => {
 /* =======================
  *  PAYMENTS (Octo)
  * ======================= */
-// (o'zgarmadi, faqat return_url ni trampoline endpointga o'zgartirdik)
 app.post("/create-payment", async (req, res) => {
   try {
     if (!OCTO_SHOP_ID || !OCTO_SECRET)
@@ -533,7 +542,6 @@ app.post("/create-payment", async (req, res) => {
       total_sum: amountUZS,
       currency: "UZS",
       description: `${description} (${amt} EUR)`,
-      // MUHIM: Octo brauzerni shu URLga qaytaradi; biz esa toza /success ga yo'naltiramiz
       return_url: `${BASE_URL}/octo-return`,
       notify_url: `${BASE_URL}/payment-callback`,
       language: "uz",
@@ -573,9 +581,8 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// YANGI: Octo qaytargan brauzer redirectini toza /success ga trim qilamiz
+// Octo qaytargan redirectni toza /success ga yo'naltiramiz
 app.get("/octo-return", (req, res) => {
-  // xohlasangiz bu yerda statusni tekshirib, muvaffaqiyatsiz holatda /failed ga yuborishingiz mumkin
   return res.redirect(302, `${FRONTEND_URL}/success`);
 });
 
@@ -644,7 +651,7 @@ app.post("/payment-callback", async (req, res) => {
     if (isSuccess && verifiedPayload) {
       const pushRes = await createBookingInBnovo(verifiedPayload);
 
-      // ==== Frontend uslubidagi HTML xabar (faqat shu blok ichida) ====
+      // ==== Frontend uslubidagi HTML xabar (aniqlanmagan o‘zgaruvchilarsiz) ====
       const esc = (v) =>
         String(v ?? "")
           .replace(/&/g, "&amp;")
@@ -701,13 +708,13 @@ app.post("/payment-callback", async (req, res) => {
         "",
         `🗓️ <b>Bron vaqti:</b> ${esc(formatDateTime(createdAt))}`,
         `📅 <b>Kirish sanasi:</b> ${esc(formatDate(checkIn))}`,
-        `⏰ <b>Kirish vaqti:</b> ${esc(formatTime(checkOutTime))}`,
-        `🛏️ <b>Xona:</b> ${esc(roomKeyMap[rooms] || rooms || "-")}`,
+        `📅 <b>Chiqish sanasi:</b> ${esc(formatDate(checkOut))}`,
+        `🛏️ <b>Xona:</b> ${esc(roomKeyMap[roomType] || roomType || "-")}`,
         `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
-        `💶 <b>Narx:</b> ${esc(price ? `${price}€` : "-")}`,
+        `💶 <b>Narx:</b> ${priceEur != null ? esc(`${priceEur}€`) : "-"}`,
         "",
         `✅ <b>Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`,
-        `🌐 <b>Sayt:</b> khamsahotel.uz`, 
+        `🌐 <b>Sayt:</b> khamsahotel.uz`,
       ].join("\n");
 
       const humanText = `
