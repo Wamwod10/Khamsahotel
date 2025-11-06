@@ -25,5 +25,6 @@
   },
   "license": "ISC",
   "keywords": [],
-  "author": ""
+  "author": "",
+  "engines": { "node": "20.x" }
 }

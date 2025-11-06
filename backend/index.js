@@ -219,8 +219,6 @@ setInterval(() => {
     if (now - (v?.ts || 0) > 86400000) PENDING.delete(k);
 }, 3600000);
 
-
-
 /* =========================================================
  *  Postgres
  * ========================================================= */
@@ -234,15 +232,29 @@ const isLocal =
 const wantRequireSSL =
   String(process.env.PGSSLMODE || "disable").toLowerCase() === "require";
 
-const pgPool = new Pool({
-  host: rawHost,
-  port: Number(process.env.PGPORT || 5432),
-  database: process.env.PGDATABASE || "",
-  user: process.env.PGUSER || "",
-  password: process.env.PGPASSWORD || "",
-  ssl: wantRequireSSL || !isLocal ? { rejectUnauthorized: false } : undefined,
-  keepAlive: true,
-});
+const pgPool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+        keepAlive: true,
+        max: 3,
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+      }
+    : {
+        host: process.env.PGHOST,
+        port: Number(process.env.PGPORT || 5432),
+        database: process.env.PGDATABASE,
+        user: process.env.PGUSER,
+        password: process.env.PGPASSWORD,
+        ssl: { rejectUnauthorized: false },
+        keepAlive: true,
+        max: 3,
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+      }
+);
 pgPool
   .query("SELECT now() AS now")
   .then((r) => console.log("[DB] connected:", r.rows[0].now))
