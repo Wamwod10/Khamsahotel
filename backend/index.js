@@ -222,23 +222,18 @@ setInterval(() => {
 /* =========================================================
  *  Postgres
  * ========================================================= */
-const rawHost = process.env.PGHOST || "";
-const isLocal =
-  ["localhost", "127.0.0.1"].includes(rawHost) ||
-  /^192\.168\./.test(rawHost) ||
-  /^10\./.test(rawHost) ||
-  /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(rawHost);
-
-const wantRequireSSL =
-  String(process.env.PGSSLMODE || "disable").toLowerCase() === "require";
+const connectionString = process.env.DATABASE_URL || null;
+const isInternal = /-internal\.render\.com/.test(
+  String(connectionString || "")
+);
 
 const pgPool = new Pool(
-  process.env.DATABASE_URL
+  connectionString
     ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
+        connectionString,
+        ssl: isInternal ? false : { rejectUnauthorized: false },
         keepAlive: true,
-        max: 3,
+        max: 5,
         connectionTimeoutMillis: 10000,
         idleTimeoutMillis: 30000,
       }
@@ -248,9 +243,12 @@ const pgPool = new Pool(
         database: process.env.PGDATABASE,
         user: process.env.PGUSER,
         password: process.env.PGPASSWORD,
-        ssl: { rejectUnauthorized: false },
+        ssl:
+          String(process.env.PGSSLMODE || "disable").toLowerCase() === "require"
+            ? { rejectUnauthorized: false }
+            : undefined,
         keepAlive: true,
-        max: 3,
+        max: 5,
         connectionTimeoutMillis: 10000,
         idleTimeoutMillis: 30000,
       }
@@ -259,6 +257,7 @@ pgPool
   .query("SELECT now() AS now")
   .then((r) => console.log("[DB] connected:", r.rows[0].now))
   .catch((e) => console.error("[DB] connect error:", e.message));
+
 app.get("/db/health", async (_req, res) => {
   try {
     const r = await pgPool.query("SELECT 1 AS ok");
