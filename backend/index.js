@@ -76,7 +76,7 @@ app.use(
     credentials: false,
   })
 );
-app.options("*", cors());
+
 
 // Yupqa preflight
 app.use((req, res, next) => {
@@ -116,9 +116,26 @@ const transporter = nodemailer.createTransport({
   secure: true,
   auth: { user: EMAIL_USER, pass: EMAIL_PASS },
 });
+
+// Server start bo'lganda SMTP (Gmail) sozlanishini tekshiramiz
+if (EMAIL_USER && EMAIL_PASS) {
+  transporter
+    .verify()
+    .then(() => {
+      console.log("✅ SMTP (Gmail) OK. EMAIL_USER =", EMAIL_USER);
+    })
+    .catch((e) => {
+      console.error("❌ SMTP verify xato:", e.message || e);
+    });
+} else {
+  console.warn(
+    "⚠️ EMAIL_USER yoki EMAIL_PASS .env da yo'q. Email transport ishlamaydi."
+  );
+}
+
 async function sendEmail(to, subject, text) {
   if (!EMAIL_USER || !EMAIL_PASS)
-    throw new Error("email transport is not configured");
+    throw new Error("email transport is not configured (EMAIL_USER/PASS yo'q)");
   if (!to || !subject || !text) throw new Error("email: invalid payload");
   return transporter.sendMail({
     from: `"Khamsa Hotel" <${EMAIL_USER}>`,
@@ -151,7 +168,11 @@ app.post("/send-email", async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     console.error("send-email error:", e);
-    res.status(500).json({ ok: false, error: "send-email failed" });
+    res.status(500).json({
+      ok: false,
+      error: "send-email failed",
+      detail: e?.message || String(e),
+    });
   }
 });
 
@@ -724,7 +745,7 @@ app.post("/payment-callback", async (req, res) => {
         `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
         `💶 <b>Narx:</b> ${priceEur != null ? esc(`${priceEur}€`) : "-"}`,
         "",
-        `✅ <b>Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`,
+        `✅ <b>Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘lgan bo‘sh xonaga joylashtiriladi</b>`,
         `🌐 <b>Sayt:</b> khamsahotel.uz`,
       ].join("\n");
 
