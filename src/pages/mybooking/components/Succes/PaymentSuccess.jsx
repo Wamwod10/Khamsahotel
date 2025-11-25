@@ -192,6 +192,14 @@ const PaymentSuccess = () => {
       } catch {}
     }
 
+    // Agar umuman bron topilmasa — hech narsa yubormaymiz
+    if (!latest) {
+      console.warn(
+        "⚠️ PaymentSuccess: sessionStorage ichidan bron topilmadi (allBookings/lastBooking)."
+      );
+      return;
+    }
+
     // 2) Maydonga ajratib olish
     const {
       firstName,
@@ -205,10 +213,10 @@ const PaymentSuccess = () => {
       price,
       createdAt,
       id,
-    } = latest || {};
+    } = latest;
 
-    // 3) Idem bazasi
-    const uniq = {
+    // Dedup uchun barqaror identifikator (TSIZ!)
+    const uniqIdentity = {
       id: id || null,
       email: email || null,
       price: price || null,
@@ -217,40 +225,37 @@ const PaymentSuccess = () => {
       room: rooms || null,
       name: `${firstName || ""} ${lastName || ""}`.trim(),
       phone: phone || null,
-      ts: new Date().toISOString(),
     };
 
-    // 4) Xabar matni — bron bo‘lsa to‘liq, bo‘lmasa fallback
-    let telegramText;
-    if (latest) {
-      telegramText = [
-        "📢 <b>Yangi bron qabul qilindi</b>",
-        "",
-        `👤 <b>Ism:</b> ${esc(firstName || "-")} ${esc(lastName || "")}`,
-        `📧 <b>Email:</b> ${esc(email || "-")}`,
-        `📞 <b>Telefon:</b> ${esc(phone || "-")}`,
-        "",
-        `🗓️ <b>Bron vaqti:</b> ${esc(formatDateTime(createdAt))}`,
-        `📅 <b>Kirish sanasi:</b> ${esc(formatDate(checkIn))}`,
-        `⏰ <b>Kirish vaqti:</b> ${esc(formatTime(checkOutTime))}`,
-        `🛏️ <b>Xona:</b> ${esc(roomKeyMap[rooms] || rooms || "-")}`,
-        `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
-        `💶 <b>Narx:</b> ${esc(price ? `${price}€` : "-")}`,
-        "",
-        `✅ <b> Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`,
-        `🌐 <b>Sayt:</b> khamsahotel.uz`,
-      ].join("\n");
-    } 
-    
+    // 4) Telegram xabar matni — bron bo‘lsa to‘liq
+    const telegramText = [
+      "📢 <b>Yangi bron qabul qilindi</b>",
+      "",
+      `👤 <b>Ism:</b> ${esc(firstName || "-")} ${esc(lastName || "")}`,
+      `📧 <b>Email:</b> ${esc(email || "-")}`,
+      `📞 <b>Telefon:</b> ${esc(phone || "-")}`,
+      "",
+      `🗓️ <b>Bron vaqti:</b> ${esc(formatDateTime(createdAt))}`,
+      `📅 <b>Kirish sanasi:</b> ${esc(formatDate(checkIn))}`,
+      `⏰ <b>Kirish vaqti:</b> ${esc(formatTime(checkOutTime))}`,
+      `🛏️ <b>Xona:</b> ${esc(roomKeyMap[rooms] || rooms || "-")}`,
+      `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
+      `💶 <b>Narx:</b> ${esc(price ? `${price}€` : "-")}`,
+      "",
+      `✅ <b> Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘sh xonaga joylashtiriladi</b>`,
+      `🌐 <b>Sayt:</b> khamsahotel.uz`,
+    ].join("\n");
 
     // 5) Telegram — dedup + retry
+    const telegramLockPayload = {
+      ...uniqIdentity,
+      channel: "group",
+      path: window.location.pathname,
+    };
+
     sendOnce({
       name: "telegram",
-      uniquePayload: {
-        ...uniq,
-        channel: "group",
-        path: window.location.pathname,
-      },
+      uniquePayload: telegramLockPayload,
       ttlMs: 1000 * 60 * 60 * 24 * 2,
       sender: () =>
         withRetry(() => sendTelegramMessage(telegramText), {
@@ -267,8 +272,8 @@ const PaymentSuccess = () => {
       }
     });
 
-    // 6) (Ixtiyoriy) Email yuborish backend orqali — faqat email bo‘lsa
-    if (latest?.email) {
+    // 6) Email yuborish (agar email bo‘lsa)
+    if (email) {
       const emailText = `
 Thank you for choosing to stay with us via Khamsahotel.uz!
 
@@ -300,24 +305,21 @@ Thank you for your reservation. We look forward to welcoming you!
 - Khamsa Sleep Lounge Team
       `.trim();
 
-      const idemKey = fastHash(
-        stableStringify({
-          to: latest.email,
-          subject: "Your Booking Confirmation – Khamsahotel.uz",
-          createdAt: createdAt || null,
-          checkIn: checkIn || null,
-          price: price || null,
-          id: id || null,
-        })
-      );
+      // Email uchun idempotent lock payload (TS yo‘q, barqaror)
+      const emailLockPayload = {
+        to: email,
+        subject: "Your Booking Confirmation – Khamsahotel.uz",
+        id: id || null,
+        createdAt: createdAt || null,
+        checkIn: checkIn || null,
+        price: price || null,
+      };
+
+      const idemKey = fastHash(stableStringify(emailLockPayload));
 
       sendOnce({
         name: "email",
-        uniquePayload: {
-          ...uniq,
-          to: latest.email,
-          subject: "Your Booking Confirmation – Khamsahotel.uz",
-        },
+        uniquePayload: emailLockPayload,
         ttlMs: 1000 * 60 * 60 * 24 * 2,
         sender: () =>
           withRetry(
@@ -329,7 +331,7 @@ Thank you for your reservation. We look forward to welcoming you!
                   "Idempotency-Key": idemKey,
                 },
                 body: JSON.stringify({
-                  to: latest.email,
+                  to: email,
                   subject: "Your Booking Confirmation – Khamsahotel.uz",
                   text: emailText,
                   idempotencyKey: idemKey,
