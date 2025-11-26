@@ -20,6 +20,7 @@ import MyBooking from "./pages/mybooking/Mybooking";
 import PaymentSuccess from "./pages/mybooking/components/Succes/PaymentSuccess";
 import Reklem from "./components/reklem/Reklem";
 import About from "./pages/about/About";
+import Cancel from "./pages/mybooking/components/Cancel/Cancel";
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
         <Route path="/mybooking" element={<MyBooking />} />
         <Route path="/ad2007" element={<Login />} />
         <Route path="/success" element={<PaymentSuccess />} />
+        <Route path="/cancelpayment" element={<Cancel />} />
         <Route path="/aboutus" element={<About />} />
       </Routes>
       <Footer />

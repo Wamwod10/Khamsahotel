@@ -77,7 +77,6 @@ app.use(
   })
 );
 
-
 // Yupqa preflight
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -615,7 +614,93 @@ app.post("/create-payment", async (req, res) => {
 
 // Octo qaytargan redirectni toza /success ga yo'naltiramiz
 app.get("/octo-return", (req, res) => {
-  return res.redirect(302, `${FRONTEND_URL}/success`);
+  try {
+    const q = req.query || {};
+    console.log("🔁 /octo-return query:", q);
+
+    const statusFields = [
+      q?.status,
+      q?.payment_status,
+      q?.transaction_status,
+      q?.result,
+    ].map((s) => String(s || "").toLowerCase());
+
+    const isSuccess =
+      statusFields.some((s) =>
+        [
+          "ok",
+          "success",
+          "succeeded",
+          "paid",
+          "captured",
+          "approved",
+          "done",
+        ].includes(s)
+      ) ||
+      String(q?.paid || "").toLowerCase() === "true" ||
+      String(q?.error || "") === "0" ||
+      String(q?.state || "").toUpperCase() === "CAPTURED";
+
+    // Har doim verifiedPayload izlaymiz (custom_data ichida json+sig yoki shop_transaction_id orqali)
+    let verifiedPayload = null;
+    try {
+      let custom =
+        q?.custom_data || q?.custom || (q.data && q.data.custom_data);
+      if (typeof custom === "string") {
+        try {
+          custom = JSON.parse(custom);
+        } catch {
+          // parse bo‘lmasa, custom string holatda qoladi
+        }
+      }
+
+      const json = custom?.booking_json || custom?.json;
+      const sig = custom?.booking_sig || custom?.sig;
+      if (json && sig && verifyData(json, sig)) {
+        try {
+          verifiedPayload = JSON.parse(json);
+        } catch {
+          // parse xatolik bo'lsa, davom etamiz
+        }
+      } else if (json && !sig) {
+        try {
+          verifiedPayload = JSON.parse(json);
+        } catch {
+          // parse xatolik bo'lsa, davom etamiz
+        }
+      }
+    } catch (e) {
+      console.warn("custom_data parse error (/octo-return):", e);
+    }
+
+    // Agar hali payload topilmagan bo'lsa, shop_transaction_id orqali pending dan o'qiymiz
+    if (!verifiedPayload) {
+      const stid =
+        q?.shop_transaction_id || (q.data && q.data.shop_transaction_id);
+      if (stid) {
+        try {
+          verifiedPayload = popPending(stid);
+        } catch (e) {
+          console.warn("popPending error (/octo-return):", e);
+        }
+      }
+    }
+
+    // Yo'naltirish manzili: success yoki cancelpayment
+    const redirectUrl =
+      isSuccess && verifiedPayload
+        ? `${FRONTEND_URL}/success`
+        : `${FRONTEND_URL}/cancelpayment`;
+
+    console.log(
+      `Redirecting to ${redirectUrl} (isSuccess=${isSuccess}, hasPayload=${!!verifiedPayload})`
+    );
+    return res.redirect(302, redirectUrl);
+  } catch (e) {
+    console.error("❌ /octo-return error:", e);
+    // Xato yuz bersa ham cancel sahifasiga yo'naltiramiz — route buzilmasin
+    return res.redirect(302, `${FRONTEND_URL}/cancelpayment`);
+  }
 });
 
 app.post("/payment-callback", async (req, res) => {
