@@ -21,10 +21,9 @@
     "nodemon": "^3.1.7"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   },
   "license": "ISC",
   "keywords": [],
-  "author": "",
-  "engines": { "node": "20.x" }
+  "author": ""
 }

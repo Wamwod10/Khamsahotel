@@ -830,6 +830,8 @@ app.post("/payment-callback", async (req, res) => {
         `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
         `💶 <b>Narx:</b> ${priceEur != null ? esc(`${priceEur}€`) : "-"}`,
         "",
+        `❕ <b>@freemustafa Send an Invoice to the guest!</b>`,
+        "",
         `✅ <b>Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘lgan bo‘sh xonaga joylashtiriladi</b>`,
         `🌐 <b>Sayt:</b> khamsahotel.uz`,
       ].join("\n");
