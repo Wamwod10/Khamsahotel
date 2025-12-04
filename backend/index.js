@@ -230,13 +230,28 @@ const savePending = (id, payload) =>
   PENDING.set(String(id), { payload, ts: Date.now() });
 const popPending = (id) => {
   const r = PENDING.get(String(id));
-  if (r) PENDING.delete(id);
+  if (r) PENDING.delete(String(id));
   return r?.payload || null;
 };
 setInterval(() => {
   const now = Date.now();
   for (const [k, v] of PENDING)
     if (now - (v?.ts || 0) > 86400000) PENDING.delete(k);
+}, 3600000);
+
+/* ====== Payment results (Octo redirect uchun) ====== */
+const PAYMENT_RESULTS = new Map();
+const savePaymentResult = (id, success) =>
+  PAYMENT_RESULTS.set(String(id), { success, ts: Date.now() });
+const takePaymentResult = (id) => {
+  const v = PAYMENT_RESULTS.get(String(id));
+  if (v) PAYMENT_RESULTS.delete(String(id));
+  return v || null;
+};
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of PAYMENT_RESULTS)
+    if (now - (v?.ts || 0) > 86400000) PAYMENT_RESULTS.delete(k);
 }, 3600000);
 
 /* =========================================================
@@ -563,6 +578,10 @@ app.post("/create-payment", async (req, res) => {
     const signed = signData(bookingPayload);
     const shopTransactionId = Date.now().toString();
 
+    const returnUrlWithTid = `${BASE_URL}/octo-return?stid=${encodeURIComponent(
+      shopTransactionId
+    )}`;
+
     const payload = {
       octo_shop_id: Number(OCTO_SHOP_ID),
       octo_secret: OCTO_SECRET,
@@ -573,7 +592,7 @@ app.post("/create-payment", async (req, res) => {
       total_sum: amountUZS,
       currency: "UZS",
       description: `${description} (${amt} EUR)`,
-      return_url: `${BASE_URL}/octo-return`,
+      return_url: returnUrlWithTid,
       notify_url: `${BASE_URL}/payment-callback`,
       language: "uz",
       custom_data: {
@@ -612,68 +631,28 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// Octo qaytargan redirectni endi statusga qarab success yoki cancelpayment ga yo'naltiramiz
+// Octo qaytargan redirect — endi callback’dan kelgan natijaga qarab yuboramiz
 app.get("/octo-return", (req, res) => {
   try {
-    const q = req.query || {};
+    const stid =
+      req.query.stid ||
+      req.query.shop_transaction_id ||
+      req.query.merchant_trans_id ||
+      req.query.merchantTransId;
 
-    const statusFields = [
-      q.status,
-      q.payment_status,
-      q.transaction_status,
-      q.result,
-    ].map((s) => String(s || "").toLowerCase());
-
-    const state = String(q.state || "").toUpperCase();
-    const errorCode = String(q.error ?? "").trim();
-    const paidFlag = String(q.paid ?? "").toLowerCase();
-
-    const hasSuccess =
-      statusFields.some((s) =>
-        [
-          "ok",
-          "success",
-          "succeeded",
-          "paid",
-          "captured",
-          "approved",
-          "done",
-        ].includes(s)
-      ) ||
-      paidFlag === "true" ||
-      state === "CAPTURED";
-
-    const hasFailure =
-      statusFields.some((s) =>
-        [
-          "fail",
-          "failed",
-          "error",
-          "declined",
-          "canceled",
-          "cancelled",
-          "rejected",
-        ].includes(s)
-      ) ||
-      (errorCode && errorCode !== "0") ||
-      [
-        "CANCEL",
-        "CANCELED",
-        "CANCELLED",
-        "FAILED",
-        "ERROR",
-        "DECLINED",
-      ].includes(state);
-
-    let target = `${FRONTEND_URL}/success`;
-    // Agar aniq failure bo'lsa (va success emas) → cancelpayment
-    if (hasFailure && !hasSuccess) {
-      target = `${FRONTEND_URL}/cancelpayment`;
+    if (stid) {
+      const result = takePaymentResult(stid);
+      if (result && result.success) {
+        return res.redirect(302, `${FRONTEND_URL}/success`);
+      }
+      // Agar result bor-u, success bo'lmasa YOKI result yo'q bo'lsa (no info) → cancel
+      return res.redirect(302, `${FRONTEND_URL}/cancelpayment`);
     }
 
-    return res.redirect(302, target);
-  } catch {
-    // Agar nimadir noto'g'ri bo'lsa, default holatda success emas, cancelpaymentga yuboramiz
+    // stid bo'lmasa ham xavfsiz tomoni — cancelpayment
+    return res.redirect(302, `${FRONTEND_URL}/cancelpayment`);
+  } catch (e) {
+    console.error("octo-return error:", e);
     return res.redirect(302, `${FRONTEND_URL}/cancelpayment`);
   }
 });
@@ -714,6 +693,16 @@ app.post("/payment-callback", async (req, res) => {
       body?.error === 0 ||
       String(body?.state || "").toUpperCase() === "CAPTURED";
 
+    const stid =
+      body?.shop_transaction_id ||
+      body?.data?.shop_transaction_id ||
+      body?.merchant_trans_id ||
+      body?.merchantTransId;
+
+    if (stid) {
+      savePaymentResult(stid, isSuccess);
+    }
+
     let verifiedPayload = null;
     try {
       let custom = body?.custom_data;
@@ -735,9 +724,8 @@ app.post("/payment-callback", async (req, res) => {
       console.warn("custom_data parse error:", e);
     }
 
-    if (!verifiedPayload) {
-      const stid = body?.shop_transaction_id || body?.data?.shop_transaction_id;
-      if (stid) verifiedPayload = popPending(stid);
+    if (!verifiedPayload && stid) {
+      verifiedPayload = popPending(stid);
     }
 
     if (isSuccess && verifiedPayload) {
