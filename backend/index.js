@@ -230,7 +230,7 @@ const savePending = (id, payload) =>
   PENDING.set(String(id), { payload, ts: Date.now() });
 const popPending = (id) => {
   const r = PENDING.get(String(id));
-  if (r) PENDING.delete(String(id));
+  if (r) PENDING.delete(id);
   return r?.payload || null;
 };
 setInterval(() => {
@@ -612,9 +612,70 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// Octo qaytargan redirectni toza /success ga yo'naltiramiz
+// Octo qaytargan redirectni endi statusga qarab success yoki cancelpayment ga yo'naltiramiz
 app.get("/octo-return", (req, res) => {
-  return res.redirect(302, `${FRONTEND_URL}/success`);
+  try {
+    const q = req.query || {};
+
+    const statusFields = [
+      q.status,
+      q.payment_status,
+      q.transaction_status,
+      q.result,
+    ].map((s) => String(s || "").toLowerCase());
+
+    const state = String(q.state || "").toUpperCase();
+    const errorCode = String(q.error ?? "").trim();
+    const paidFlag = String(q.paid ?? "").toLowerCase();
+
+    const hasSuccess =
+      statusFields.some((s) =>
+        [
+          "ok",
+          "success",
+          "succeeded",
+          "paid",
+          "captured",
+          "approved",
+          "done",
+        ].includes(s)
+      ) ||
+      paidFlag === "true" ||
+      state === "CAPTURED";
+
+    const hasFailure =
+      statusFields.some((s) =>
+        [
+          "fail",
+          "failed",
+          "error",
+          "declined",
+          "canceled",
+          "cancelled",
+          "rejected",
+        ].includes(s)
+      ) ||
+      (errorCode && errorCode !== "0") ||
+      [
+        "CANCEL",
+        "CANCELED",
+        "CANCELLED",
+        "FAILED",
+        "ERROR",
+        "DECLINED",
+      ].includes(state);
+
+    let target = `${FRONTEND_URL}/success`;
+    // Agar aniq failure bo'lsa (va success emas) → cancelpayment
+    if (hasFailure && !hasSuccess) {
+      target = `${FRONTEND_URL}/cancelpayment`;
+    }
+
+    return res.redirect(302, target);
+  } catch {
+    // Agar nimadir noto'g'ri bo'lsa, default holatda success emas, cancelpaymentga yuboramiz
+    return res.redirect(302, `${FRONTEND_URL}/cancelpayment`);
+  }
 });
 
 app.post("/payment-callback", async (req, res) => {
@@ -803,8 +864,6 @@ Bron:
     res.status(200).json({ ok: true });
   }
 });
-
-
 
 /* =======================
  *  CHECKINS (DB) — frontend
