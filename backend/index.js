@@ -420,11 +420,10 @@ async function ensureRoomTypes() {
   );
 }
 
-if (process.env.NODE_ENV !== "production") {
-  ensureSchema()
-    .then(ensureRoomTypes)
-    .catch((e) => console.error("schema error:", e));
-}
+ensureSchema()
+  .then(ensureRoomTypes)
+  .catch((e) => console.error("schema error:", e));
+
 
 /* ===== Tarif helpers ===== */
 async function getRoomTypeCfg(roomType) {
