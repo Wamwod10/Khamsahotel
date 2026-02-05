@@ -9,7 +9,7 @@ import { Pool } from "pg";
 import { checkAvailability, createBookingInBnovo } from "./bnovo.js";
 
 dotenv.config();
-
+console.log("DATABASE_URL =", process.env.DATABASE_URL);
 const app = express();
 const PORT = Number(process.env.PORT || 5004);
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(
@@ -265,29 +265,32 @@ const isInternal = /-internal\.render\.com/.test(
 const pgPool = new Pool(
   connectionString
     ? {
-        connectionString,
-        ssl: isInternal ? false : { rejectUnauthorized: false },
-        keepAlive: true,
-        max: 5,
-        connectionTimeoutMillis: 10000,
-        idleTimeoutMillis: 30000,
-      }
+      connectionString,
+      ssl: { rejectUnauthorized: false },
+      keepAlive: true,
+      max: 15,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+    }
     : {
-        host: process.env.PGHOST,
-        port: Number(process.env.PGPORT || 5432),
-        database: process.env.PGDATABASE,
-        user: process.env.PGUSER,
-        password: process.env.PGPASSWORD,
-        ssl:
-          String(process.env.PGSSLMODE || "disable").toLowerCase() === "require"
-            ? { rejectUnauthorized: false }
-            : undefined,
-        keepAlive: true,
-        max: 5,
-        connectionTimeoutMillis: 10000,
-        idleTimeoutMillis: 30000,
-      }
+      host: process.env.PGHOST,
+      port: Number(process.env.PGPORT || 5432),
+      database: process.env.PGDATABASE,
+      user: process.env.PGUSER,
+      password: process.env.PGPASSWORD,
+      ssl:
+        String(process.env.PGSSLMODE || "disable").toLowerCase() === "require"
+          ? { rejectUnauthorized: false }
+          : undefined,
+      keepAlive: true,
+      max: 5,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+    }
 );
+pgPool.on("error", (err) => {
+  console.error("🔥 PG POOL ERROR:", err.message);
+});
 pgPool
   .query("SELECT now() AS now")
   .then((r) => console.log("[DB] connected:", r.rows[0].now))
@@ -417,9 +420,11 @@ async function ensureRoomTypes() {
   );
 }
 
-ensureSchema()
-  .then(ensureRoomTypes)
-  .catch((e) => console.error("ensureSchema/room_types error:", e));
+if (process.env.NODE_ENV !== "production") {
+  ensureSchema()
+    .then(ensureRoomTypes)
+    .catch((e) => console.error("schema error:", e));
+}
 
 /* ===== Tarif helpers ===== */
 async function getRoomTypeCfg(roomType) {
@@ -662,12 +667,12 @@ app.post("/payment-callback", async (req, res) => {
     const body =
       typeof req.body === "string"
         ? (() => {
-            try {
-              return JSON.parse(req.body);
-            } catch {
-              return {};
-            }
-          })()
+          try {
+            return JSON.parse(req.body);
+          } catch {
+            return {};
+          }
+        })()
         : req.body || {};
     console.log("🔁 payment-callback body:", body);
 
@@ -709,7 +714,7 @@ app.post("/payment-callback", async (req, res) => {
       if (typeof custom === "string") {
         try {
           custom = JSON.parse(custom);
-        } catch {}
+        } catch { }
       }
       const json = custom?.booking_json,
         sig = custom?.booking_sig;
@@ -718,7 +723,7 @@ app.post("/payment-callback", async (req, res) => {
       else if (json && !sig) {
         try {
           verifiedPayload = JSON.parse(json);
-        } catch {}
+        } catch { }
       }
     } catch (e) {
       console.warn("custom_data parse error:", e);
@@ -836,11 +841,11 @@ Bron:
 
       try {
         await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", humanText);
-      } catch {}
+      } catch { }
 
       try {
         await notifyTelegramHtml(humanHtml);
-      } catch {}
+      } catch { }
 
       return res.json({ ok: true });
     }
@@ -1020,13 +1025,21 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
     if (!S)
       return res.status(400).json({ ok: false, error: "start ISO required" });
 
-    const cfg = await getRoomTypeCfg(roomType);
+    let cfg;
+    try {
+      cfg = await getRoomTypeCfg(roomType);
+    } catch {
+      cfg = {
+        capacity: STANDARD_CAPACITY,
+        pre_buffer_minutes: 0,
+        post_buffer_minutes: 0,
+      };
+    }
     const pre = cfg.pre_buffer_minutes || 0;
     const post = cfg.post_buffer_minutes || 0;
 
     const { p_end, n_start } = await getNeighbors(roomType, S);
 
-    // oldingi bron bilan urishmasin
     if (p_end) {
       const minStart = new Date(new Date(p_end).getTime() + pre * 60 * 1000);
       if (new Date(S) < minStart) {
@@ -1034,7 +1047,6 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
           ok: true,
           allowed: [],
           reason: "start_too_early_hits_previous",
-          details: { p_end, requiredEarliestStart: minStart.toISOString() },
         });
       }
     }
@@ -1045,38 +1057,33 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
       { code: "24h", hours: 24 },
     ];
 
+    const peakExisting = await getPeakConcurrency(
+      roomType,
+      new Date(S),
+      new Date(new Date(S).getTime() + 24 * 60 * 60 * 1000)
+    );
+
     const allowed = [];
     for (const t of tariffs) {
       const end = new Date(new Date(S).getTime() + t.hours * 60 * 60 * 1000);
       const endWithPost = new Date(end.getTime() + post * 60 * 1000);
 
       if (n_start && endWithPost > new Date(n_start)) continue;
-
-      const peakExisting = await getPeakConcurrency(
-        roomType,
-        new Date(S),
-        endWithPost
-      );
-      const peakWithUs = peakExisting + 1;
-      if (peakWithUs <= cfg.capacity) allowed.push(t.code);
+      if (peakExisting + 1 <= cfg.capacity) allowed.push(t.code);
     }
 
     res.json({
       ok: true,
       roomType,
       start: S,
-      neighbors: { p_end, n_start },
-      buffers: { pre, post },
       allowed,
     });
   } catch (e) {
     console.error("ALLOWED-TARIFFS ERR:", e);
-    // diagnostika uchun xabar ham qaytaramiz
-    res
-      .status(500)
-      .json({ ok: false, error: "server_error", message: e.message });
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
+
 
 /* === DELETE by id === */
 app.delete("/api/checkins/:id", async (req, res) => {
@@ -1109,8 +1116,7 @@ app.use((err, req, res, _next) => {
 app.listen(PORT, () => {
   console.log(`✅ Server juda yaxshi ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
-    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
-      process.env.BNOVO_AUTH_URL
+    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${process.env.BNOVO_AUTH_URL
     } id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD}`
   );
 });

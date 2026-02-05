@@ -27,7 +27,7 @@ const guestCountByCode = { STANDARD: 1, FAMILY: 3 };
 
 const priceTable = {
   STANDARD: { upTo3Hours: 40, upTo10Hours: 60, oneDay: 100 },
-  FAMILY: { upTo3Hours: 70, upTo10Hours: 100, oneDay: 150 },
+  FAMILY: { upTo3Hours: 80, upTo10Hours: 115, oneDay: 175 },
 };
 
 /** Duration → key (bardoshlilik kuchaytirildi) */
