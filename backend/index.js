@@ -9,7 +9,6 @@ import { Pool } from "pg";
 import { checkAvailability, createBookingInBnovo } from "./bnovo.js";
 
 dotenv.config();
-console.log("DATABASE_URL =", process.env.DATABASE_URL);
 const app = express();
 const PORT = Number(process.env.PORT || 5004);
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(
@@ -19,7 +18,7 @@ const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(
 const FRONTEND_URL = (
   process.env.FRONTEND_URL || "https://khamsahotel.uz"
 ).replace(/\/+$/, "");
-const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14000);
+const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14700);
 
 // Capacity/buffer defaults (env bilan boshqariladi)
 const FAMILY_CAPACITY = Number(
@@ -257,40 +256,26 @@ setInterval(() => {
 /* =========================================================
  *  Postgres
  * ========================================================= */
-const connectionString = process.env.DATABASE_URL || null;
-const isInternal = /-internal\.render\.com/.test(
-  String(connectionString || "")
-);
 
-const pgPool = new Pool(
-  connectionString
-    ? {
-      connectionString,
-      ssl: { rejectUnauthorized: false },
-      keepAlive: true,
-      max: 15,
-      connectionTimeoutMillis: 10000,
-      idleTimeoutMillis: 30000,
-    }
-    : {
-      host: process.env.PGHOST,
-      port: Number(process.env.PGPORT || 5432),
-      database: process.env.PGDATABASE,
-      user: process.env.PGUSER,
-      password: process.env.PGPASSWORD,
-      ssl:
-        String(process.env.PGSSLMODE || "disable").toLowerCase() === "require"
-          ? { rejectUnauthorized: false }
-          : undefined,
-      keepAlive: true,
-      max: 5,
-      connectionTimeoutMillis: 10000,
-      idleTimeoutMillis: 30000,
-    }
-);
-pgPool.on("error", (err) => {
-  console.error("🔥 PG POOL ERROR:", err.message);
+
+const pgPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+  keepAlive: true,
+  max: 10,
 });
+
+pgPool.on("connect", () => {
+  console.log("✅ Neon DB connected");
+});
+
+pgPool.on("error", (err) => {
+  console.error("🔥 Neon Pool error:", err.message);
+});
+
+
 pgPool
   .query("SELECT now() AS now")
   .then((r) => console.log("[DB] connected:", r.rows[0].now))
@@ -317,7 +302,6 @@ const toTz = (s) => {
 };
 
 async function ensureSchema() {
-  // asosiy jadval
   await pgPool.query(
     `CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`
   );
