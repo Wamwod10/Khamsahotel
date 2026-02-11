@@ -824,7 +824,18 @@ Bron:
 
       try {
         await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", humanText);
-      } catch { }
+
+        if (verifiedPayload.email) {
+          await sendEmail(
+            verifiedPayload.email,
+            "Your Booking Confirmation – Khamsa Hotel",
+            humanText
+          );
+        }
+
+      } catch (e) {
+        console.error("Email send error:", e);
+      }
 
       try {
         await notifyTelegramHtml(humanHtml);
