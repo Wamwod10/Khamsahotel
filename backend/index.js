@@ -268,7 +268,7 @@ const pgPool = new Pool({
 });
 
 pgPool.on("connect", () => {
-  console.log("✅ Neon DB connected");
+  console.log("✅ Neon Db good connected");
 });
 
 pgPool.on("error", (err) => {
