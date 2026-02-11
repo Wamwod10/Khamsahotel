@@ -3,7 +3,8 @@ import './login.scss';
 
 import { RxEyeOpen } from 'react-icons/rx';
 import { LuEyeClosed } from 'react-icons/lu';
-import Admin from '../Admin';
+import Checkin from '../checkin/Checkin';
+// import Admin from '../Admin';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -38,7 +39,7 @@ const Login = () => {
     };
 
     if (isLoggedIn) {
-        return <Admin />;
+        return <Checkin />;
     }
 
     return (

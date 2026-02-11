@@ -227,211 +227,210 @@ export default function Checkin() {
 
   return (
     <div className="ci-page">
-      <div className="ci-head">
-        <h1 className="ci-title">Check-in Blackout (Date/Time)</h1>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setOpen(true)}
-        >
-          + Add new interval
-        </button>
-      </div>
+      <div className="container">
+        <div className="ci-head">
+          <h1 className="ci-title">Check-in Blackout (Date/Time)</h1>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setOpen(true)}
+          >
+            + Add new interval
+          </button>
+        </div>
 
-      <div className="ci-card">
-        {loading ? (
-          <div className="ci-empty">Loading...</div>
-        ) : items.length === 0 ? (
-          <div className="ci-empty">
-            No dates added yet. Click <b>Add new interval</b>.
-          </div>
-        ) : (
-          <ul className="ci-list">
-            {items.map((it) => (
-              <li key={it.id} className="ci-row">
-                <span className="ci-date">
-                  {fmtHumanDT(it.start)} — {fmtHumanDT(it.end)}
-                </span>
+        <div className="ci-card">
+          {loading ? (
+            <div className="ci-empty">Loading...</div>
+          ) : items.length === 0 ? (
+            <div className="ci-empty">
+              No dates added yet. Click <b>Add new interval</b>.
+            </div>
+          ) : (
+            <ul className="ci-list">
+              {items.map((it) => (
+                <li key={it.id} className="ci-row">
+                  <span className="ci-date">
+                    {fmtHumanDT(it.start)} — {fmtHumanDT(it.end)}
+                  </span>
 
-                <span
-                  className={`ci-badge ${
-                    it.roomType === "FAMILY" ? "fam" : "std"
-                  }`}
-                >
-                  {/* FAMILY bo‘lsa, "Family" oldida delete tugma */}
-                  {it.roomType === "FAMILY" && (
-                    <button
-                      type="button"
-                      className="ci-del"
-                      title="Delete this interval"
-                      aria-label="Delete"
-                      onClick={() => deleteItem(it)}
-                      style={{
-                        border: "none",
-                        background: "transparent",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                        marginRight: "8px",
-                        lineHeight: 1,
-                      }}
-                    >
-                      🗑
-                    </button>
-                  )}
-                  {it.roomType === "FAMILY" ? "Family" : "Standard"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                  <span
+                    className={`ci-badge ${it.roomType === "FAMILY" ? "fam" : "std"
+                      }`}
+                  >
+                    {/* FAMILY bo‘lsa, "Family" oldida delete tugma */}
+                    {it.roomType === "FAMILY" && (
+                      <button
+                        type="button"
+                        className="ci-del"
+                        title="Delete this interval"
+                        aria-label="Delete"
+                        onClick={() => deleteItem(it)}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          marginRight: "8px",
+                          lineHeight: 1,
+                        }}
+                      >
+                        🗑
+                      </button>
+                    )}
+                    {it.roomType === "FAMILY" ? "Family" : "Standard"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
-      {open &&
-        createPortal(
-          <div className="ci-overlay" onClick={() => setOpen(false)}>
-            <div className="ci-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="ci-modal__head">
-                <h2>Add interval (with time)</h2>
-                <button
-                  type="button"
-                  className="ci-close"
-                  onClick={() => setOpen(false)}
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="ci-modal__body">
-                <label className="ci-label" htmlFor="ci-in">
-                  Start (check-in)
-                </label>
-                <input
-                  id="ci-in"
-                  type="datetime-local"
-                  className="ci-input"
-                  value={startAt}
-                  onChange={(e) => setStartAt(e.target.value)}
-                />
-
-                <label className="ci-label" htmlFor="ci-out">
-                  End (check-out)
-                </label>
-                <input
-                  id="ci-out"
-                  type="datetime-local"
-                  className="ci-input"
-                  value={endAt}
-                  onChange={(e) => setEndAt(e.target.value)}
-                />
-
-                <label className="ci-label">Room type</label>
-                <div className="ci-seg">
+        {open &&
+          createPortal(
+            <div className="ci-overlay" onClick={() => setOpen(false)}>
+              <div className="ci-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="ci-modal__head">
+                  <h2>Add interval (with time)</h2>
                   <button
                     type="button"
-                    className={`ci-seg__btn ${
-                      roomType === "FAMILY" ? "active" : ""
-                    }`}
-                    onClick={() => setRoomType("FAMILY")}
+                    className="ci-close"
+                    onClick={() => setOpen(false)}
                   >
-                    Family
-                  </button>
-                  <button
-                    type="button"
-                    className={`ci-seg__btn ${
-                      roomType === "STANDARD" ? "active" : ""
-                    }`}
-                    onClick={() => setRoomType("STANDARD")}
-                  >
-                    Standard
+                    ×
                   </button>
                 </div>
 
-                {/* YANGI: Admin preview — ushbu Start vaqtida qaysi tariflar sig‘adi */}
-                {isIsoDT(startAt) && (
-                  <div className="ci-hint" style={{ marginTop: 6 }}>
-                    {tariffLoading ? (
-                      "Tariffs: checking..."
-                    ) : allowedTariffs.length > 0 ? (
-                      <span className="ci-ok">
-                        Tariffs allowed: {allowedTariffs.join(", ")} ✓
-                      </span>
-                    ) : (
-                      <span className="ci-warn">Tariffs allowed: none</span>
-                    )}
+                <div className="ci-modal__body">
+                  <label className="ci-label" htmlFor="ci-in">
+                    Start (check-in)
+                  </label>
+                  <input
+                    id="ci-in"
+                    type="datetime-local"
+                    className="ci-input"
+                    value={startAt}
+                    onChange={(e) => setStartAt(e.target.value)}
+                  />
+
+                  <label className="ci-label" htmlFor="ci-out">
+                    End (check-out)
+                  </label>
+                  <input
+                    id="ci-out"
+                    type="datetime-local"
+                    className="ci-input"
+                    value={endAt}
+                    onChange={(e) => setEndAt(e.target.value)}
+                  />
+
+                  <label className="ci-label">Room type</label>
+                  <div className="ci-seg">
+                    <button
+                      type="button"
+                      className={`ci-seg__btn ${roomType === "FAMILY" ? "active" : ""
+                        }`}
+                      onClick={() => setRoomType("FAMILY")}
+                    >
+                      Family
+                    </button>
+                    <button
+                      type="button"
+                      className={`ci-seg__btn ${roomType === "STANDARD" ? "active" : ""
+                        }`}
+                      onClick={() => setRoomType("STANDARD")}
+                    >
+                      Standard
+                    </button>
                   </div>
-                )}
 
-                {isIsoDT(startAt) && isIsoDT(endAt) && (
-                  <div className="ci-hint" style={{ marginTop: 6 }}>
-                    {checking ? (
-                      "Checking..."
-                    ) : conflict ? (
-                      <span className="ci-warn">
-                        Busy: {fmtHumanDT(conflict.start_date)} —{" "}
-                        {fmtHumanDT(conflict.end_date)}
-                      </span>
-                    ) : (
-                      <span className="ci-ok">Selected interval is free ✓</span>
-                    )}
-                  </div>
-                )}
-              </div>
+                  {/* YANGI: Admin preview — ushbu Start vaqtida qaysi tariflar sig‘adi */}
+                  {isIsoDT(startAt) && (
+                    <div className="ci-hint" style={{ marginTop: 6 }}>
+                      {tariffLoading ? (
+                        "Tariffs: checking..."
+                      ) : allowedTariffs.length > 0 ? (
+                        <span className="ci-ok">
+                          Tariffs allowed: {allowedTariffs.join(", ")} ✓
+                        </span>
+                      ) : (
+                        <span className="ci-warn">Tariffs allowed: none</span>
+                      )}
+                    </div>
+                  )}
 
-              <div className="ci-modal__foot">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={saveRange}
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+                  {isIsoDT(startAt) && isIsoDT(endAt) && (
+                    <div className="ci-hint" style={{ marginTop: 6 }}>
+                      {checking ? (
+                        "Checking..."
+                      ) : conflict ? (
+                        <span className="ci-warn">
+                          Busy: {fmtHumanDT(conflict.start_date)} —{" "}
+                          {fmtHumanDT(conflict.end_date)}
+                        </span>
+                      ) : (
+                        <span className="ci-ok">Selected interval is free ✓</span>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-      {showConflict &&
-        conflict &&
-        createPortal(
-          <div className="ci-overlay" onClick={() => setShowConflict(false)}>
-            <div className="ci-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="ci-modal__head">
-                <h2>Busy interval</h2>
-                <button
-                  type="button"
-                  className="ci-close"
-                  onClick={() => setShowConflict(false)}
-                >
-                  ×
-                </button>
+                <div className="ci-modal__foot">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={saveRange}
+                  >
+                    Save
+                  </button>
+                </div>
               </div>
-              <div className="ci-modal__body">
-                <p>
-                  Xona <b>{roomType}</b> {fmtHumanDT(conflict.start_date)} —{" "}
-                  {fmtHumanDT(conflict.end_date)} oralig‘ida band.
-                </p>
+            </div>,
+            document.body
+          )}
+
+        {showConflict &&
+          conflict &&
+          createPortal(
+            <div className="ci-overlay" onClick={() => setShowConflict(false)}>
+              <div className="ci-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="ci-modal__head">
+                  <h2>Busy interval</h2>
+                  <button
+                    type="button"
+                    className="ci-close"
+                    onClick={() => setShowConflict(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="ci-modal__body">
+                  <p>
+                    Xona <b>{roomType}</b> {fmtHumanDT(conflict.start_date)} —{" "}
+                    {fmtHumanDT(conflict.end_date)} oralig‘ida band.
+                  </p>
+                </div>
+                <div className="ci-modal__foot">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => setShowConflict(false)}
+                  >
+                    OK
+                  </button>
+                </div>
               </div>
-              <div className="ci-modal__foot">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => setShowConflict(false)}
-                >
-                  OK
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+            </div>,
+            document.body
+          )}
+      </div>
     </div>
   );
 }
