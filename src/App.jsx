@@ -21,6 +21,8 @@ import PaymentSuccess from "./pages/mybooking/components/Succes/PaymentSuccess";
 import Reklem from "./components/reklem/Reklem";
 import About from "./pages/about/About";
 import Cancel from "./pages/mybooking/components/Cancel/Cancel";
+import StaffLogin from "./pages/staff/login/StaffLogin";
+import StaffBookings from "./pages/staff/bookings/StaffBookings";
 
 function App() {
   return (
@@ -46,6 +48,8 @@ function App() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/mybooking" element={<MyBooking />} />
         <Route path="/ad2007" element={<Login />} />
+        <Route path="/admin" element={<StaffLogin />} />
+        <Route path="/admin/bookings" element={<StaffBookings />} />
         <Route path="/success" element={<PaymentSuccess />} />
         <Route path="/cancelpayment" element={<Cancel />} />
         <Route path="/aboutus" element={<About />} />
