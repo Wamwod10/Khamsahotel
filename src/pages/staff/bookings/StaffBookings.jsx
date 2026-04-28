@@ -1,42 +1,89 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "./staffbooking.scss";
 import StaffAddModal from "../components/StaffAddModal";
 import StaffBookingModal from "../components/StaffBookingModal";
 import { FaCheckCircle } from "react-icons/fa";
 
+const API_URL = "https://khamsa-backend.onrender.com"; // 🔥 o'zgartir
+
 const StaffBookings = () => {
   const [openAdd, setOpenAdd] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [bookings, setBookings] = useState(() => {
+  /* ================= LOAD FROM BACKEND ================= */
+  const fetchBookings = async () => {
     try {
-      const saved = localStorage.getItem("staffBookings");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
+      setLoading(true);
+
+      const res = await fetch(`${API_URL}/api/checkins`);
+      const data = await res.json();
+
+      if (data.ok) {
+        const mapped = data.items.map((b) => ({
+          id: b.id,
+          firstName: b.first_name,
+          lastName: b.last_name,
+          phone: b.phone,
+          email: b.email,
+          date: b.check_in,
+          time: b.check_in_time,
+          room: b.rooms,
+          duration: b.duration ? `${b.duration} soat` : "-",
+          price: b.price || 0,
+          createdAt: b.created_at,
+        }));
+
+        setBookings(mapped);
+      }
+    } catch (e) {
+      console.error("Fetch error:", e);
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
   useEffect(() => {
-    localStorage.setItem("staffBookings", JSON.stringify(bookings));
-  }, [bookings]);
+    fetchBookings();
+  }, []);
 
-  const handleAdd = (newBooking) => {
-    setBookings((prev) => [
-      {
-        ...newBooking,
-        id: Date.now(),
-        createdAt: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
+  /* ================= ADD ================= */
+  const handleAdd = async (newBooking) => {
+    try {
+      await fetch(`${API_URL}/api/checkins/range`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          roomType: newBooking.room,
+          startAt: `${newBooking.date}T${newBooking.time || "00:00"}`,
+          endAt: `${newBooking.date}T${newBooking.time || "00:00"}`,
+        }),
+      });
+
+      fetchBookings(); // 🔥 refresh
+    } catch (e) {
+      console.error("Add error:", e);
+    }
   };
 
-  const handleDelete = (id) => {
-    setBookings((prev) => prev.filter((b) => b.id !== id));
-    setSelectedBooking(null);
+  /* ================= DELETE ================= */
+  const handleDelete = async (id) => {
+    try {
+      await fetch(`${API_URL}/api/checkins/${id}`, {
+        method: "DELETE",
+      });
+
+      setSelectedBooking(null);
+      fetchBookings(); // 🔥 refresh
+    } catch (e) {
+      console.error("Delete error:", e);
+    }
   };
 
+  /* ================= SORT ================= */
   const sortedBookings = useMemo(() => {
     return [...bookings].sort((a, b) => {
       const A = new Date(`${a.date}T${a.time || "00:00"}`);
@@ -45,6 +92,7 @@ const StaffBookings = () => {
     });
   }, [bookings]);
 
+  /* ================= FORMAT ================= */
   const formatDate = (date, time) => {
     if (!date) return "-";
     return `${date}${time ? ` (${time})` : ""}`;
@@ -52,8 +100,8 @@ const StaffBookings = () => {
 
   return (
     <div className="sb">
-      {/* HEADER */}
       <div className="container">
+        {/* HEADER */}
         <div className="sb-top">
           <div>
             <h1>Bookings</h1>
@@ -63,18 +111,10 @@ const StaffBookings = () => {
           <button onClick={() => setOpenAdd(true)}>+ Yangi bron</button>
         </div>
 
-        {/* HEADER DESKTOP */}
-        {/* <div className="sb-head">
-        <div className="col col-user">Ism</div>
-        <div className="col col-date">Kirish</div>
-        <div className="col col-room">Xona</div>
-        <div className="col col-duration">Davomiylik</div>
-        <div className="col col-price">Narx</div>
-        <div className="col col-action"></div>
-      </div> */}
-
-        {/* LIST */}
-        {sortedBookings.length === 0 ? (
+        {/* LOADING */}
+        {loading ? (
+          <div className="sb-empty">Yuklanmoqda...</div>
+        ) : sortedBookings.length === 0 ? (
           <div className="sb-empty">Hozircha bronlar yo‘q</div>
         ) : (
           sortedBookings.map((b, i) => (
@@ -115,7 +155,7 @@ const StaffBookings = () => {
                   <div className="chip">⏱ {b.duration}</div>
                 </div>
 
-                {/* ✅ PAYMENT STATUS */}
+                {/* STATUS */}
                 <div className="sb-card__status">
                   <FaCheckCircle />
                   <span>To‘lov tasdiqlangan</span>
@@ -131,6 +171,7 @@ const StaffBookings = () => {
           ))
         )}
 
+        {/* MODALS */}
         <StaffAddModal
           isOpen={openAdd}
           onClose={() => setOpenAdd(false)}

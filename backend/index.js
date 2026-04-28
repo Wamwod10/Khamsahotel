@@ -13,7 +13,7 @@ const app = express();
 const PORT = Number(process.env.PORT || 5004);
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(
   /\/+$/,
-  ""
+  "",
 );
 const FRONTEND_URL = (
   process.env.FRONTEND_URL || "https://khamsahotel.uz"
@@ -22,10 +22,10 @@ const EUR_TO_UZS = Number(process.env.EUR_TO_UZS || 14800);
 
 // Capacity/buffer defaults (env bilan boshqariladi)
 const FAMILY_CAPACITY = Number(
-  process.env.FAMILY_CAPACITY || process.env.FAMILY_STOCK || 1
+  process.env.FAMILY_CAPACITY || process.env.FAMILY_STOCK || 1,
 );
 const STANDARD_CAPACITY = Number(
-  process.env.STANDARD_CAPACITY || process.env.STANDARD_STOCK || 23
+  process.env.STANDARD_CAPACITY || process.env.STANDARD_STOCK || 23,
 );
 const FAMILY_PRE_BUFFER_MIN = Number(process.env.FAMILY_PRE_BUFFER_MIN || 0);
 const FAMILY_POST_BUFFER_MIN = Number(process.env.FAMILY_POST_BUFFER_MIN || 0);
@@ -73,7 +73,7 @@ app.use(
       "Idempotency-Key",
     ],
     credentials: false,
-  })
+  }),
 );
 
 // Yupqa preflight
@@ -85,7 +85,7 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Accept, Authorization, Idempotency-Key"
+    "Content-Type, Accept, Authorization, Idempotency-Key",
   );
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
@@ -103,7 +103,7 @@ app.get("/", (_req, res) =>
     name: "Khamsa backend",
     time: new Date().toISOString(),
     port: PORT,
-  })
+  }),
 );
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
@@ -127,7 +127,7 @@ if (EMAIL_USER && EMAIL_PASS) {
     });
 } else {
   console.warn(
-    "⚠️ EMAIL_USER yoki EMAIL_PASS .env da yo'q. Email transport ishlamaydi."
+    "⚠️ EMAIL_USER yoki EMAIL_PASS .env da yo'q. Email transport ishlamaydi.",
   );
 }
 
@@ -176,18 +176,34 @@ app.post("/send-email", async (req, res) => {
 
 /* ====== Telegram ====== */
 async function notifyTelegram(text) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.warn("⚠️ Telegram env yo'q");
+    return;
+  }
+
   try {
-    await fetch(
+    const res = await fetch(
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
-      }
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text,
+          parse_mode: "HTML",
+        }),
+      },
     );
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      console.error("❌ Telegram API error:", data);
+    } else {
+      console.log("✅ Telegram yuborildi");
+    }
   } catch (e) {
-    console.error("Telegram error:", e);
+    console.error("❌ Telegram fetch error:", e.message);
   }
 }
 
@@ -257,7 +273,6 @@ setInterval(() => {
  *  Postgres
  * ========================================================= */
 
-
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -274,7 +289,6 @@ pgPool.on("connect", () => {
 pgPool.on("error", (err) => {
   console.error("🔥 Neon Pool error:", err.message);
 });
-
 
 pgPool
   .query("SELECT now() AS now")
@@ -303,7 +317,7 @@ const toTz = (s) => {
 
 async function ensureSchema() {
   await pgPool.query(
-    `CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`
+    `CREATE TABLE IF NOT EXISTS public.khamsachekin (id SERIAL PRIMARY KEY);`,
   );
   await pgPool.query(`
     DO $$
@@ -390,7 +404,7 @@ async function ensureRoomTypes() {
            pre_buffer_minutes = EXCLUDED.pre_buffer_minutes,
            post_buffer_minutes = EXCLUDED.post_buffer_minutes,
            updated_at = now();`,
-    ["FAMILY", FAMILY_CAPACITY, FAMILY_PRE_BUFFER_MIN, FAMILY_POST_BUFFER_MIN]
+    ["FAMILY", FAMILY_CAPACITY, FAMILY_PRE_BUFFER_MIN, FAMILY_POST_BUFFER_MIN],
   );
 
   // STANDARD (buffer 0/0 default)
@@ -400,7 +414,7 @@ async function ensureRoomTypes() {
      ON CONFLICT (room_type) DO UPDATE
        SET capacity = EXCLUDED.capacity,
            updated_at = now();`,
-    ["STANDARD", STANDARD_CAPACITY]
+    ["STANDARD", STANDARD_CAPACITY],
   );
 }
 
@@ -408,12 +422,11 @@ ensureSchema()
   .then(ensureRoomTypes)
   .catch((e) => console.error("schema error:", e));
 
-
 /* ===== Tarif helpers ===== */
 async function getRoomTypeCfg(roomType) {
   const { rows } = await pgPool.query(
     `SELECT capacity, pre_buffer_minutes, post_buffer_minutes FROM public.room_types WHERE room_type=$1`,
-    [roomType]
+    [roomType],
   );
   if (!rows[0]) {
     // Fallback: agar jadval bo‘lmasa ham default qaytaramiz
@@ -437,13 +450,13 @@ async function getNeighbors(roomType, startISO) {
     `SELECT MAX(COALESCE(check_out_at, check_out::timestamp)) AS p_end
      FROM public.khamsachekin
      WHERE rooms=$1 AND COALESCE(check_out_at, check_out::timestamp) <= $2::timestamptz`,
-    [roomType, startISO]
+    [roomType, startISO],
   );
   const qNext = pgPool.query(
     `SELECT MIN(COALESCE(check_in_at, check_in::timestamp)) AS n_start
      FROM public.khamsachekin
      WHERE rooms=$1 AND COALESCE(check_in_at, check_in::timestamp) >= $2::timestamptz`,
-    [roomType, startISO]
+    [roomType, startISO],
   );
   const [r1, r2] = await Promise.all([qPrev, qNext]);
   return {
@@ -460,7 +473,7 @@ async function getPeakConcurrency(roomType, fromTs, toTs) {
      WHERE rooms=$1
        AND COALESCE(check_in_at,  check_in::timestamp)  < $3::timestamptz
        AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz`,
-    [roomType, fromTs, toTs]
+    [roomType, fromTs, toTs],
   );
   const events = [];
   for (const r of rows) {
@@ -567,7 +580,7 @@ app.post("/create-payment", async (req, res) => {
     const shopTransactionId = Date.now().toString();
 
     const returnUrlWithTid = `${BASE_URL}/octo-return?stid=${encodeURIComponent(
-      shopTransactionId
+      shopTransactionId,
     )}`;
 
     const payload = {
@@ -650,12 +663,12 @@ app.post("/payment-callback", async (req, res) => {
     const body =
       typeof req.body === "string"
         ? (() => {
-          try {
-            return JSON.parse(req.body);
-          } catch {
-            return {};
-          }
-        })()
+            try {
+              return JSON.parse(req.body);
+            } catch {
+              return {};
+            }
+          })()
         : req.body || {};
     console.log("🔁 payment-callback body:", body);
 
@@ -675,7 +688,7 @@ app.post("/payment-callback", async (req, res) => {
           "captured",
           "approved",
           "done",
-        ].includes(s)
+        ].includes(s),
       ) ||
       body?.paid === true ||
       body?.error === 0 ||
@@ -697,7 +710,7 @@ app.post("/payment-callback", async (req, res) => {
       if (typeof custom === "string") {
         try {
           custom = JSON.parse(custom);
-        } catch { }
+        } catch {}
       }
       const json = custom?.booking_json,
         sig = custom?.booking_sig;
@@ -706,7 +719,7 @@ app.post("/payment-callback", async (req, res) => {
       else if (json && !sig) {
         try {
           verifiedPayload = JSON.parse(json);
-        } catch { }
+        } catch {}
       }
     } catch (e) {
       console.warn("custom_data parse error:", e);
@@ -718,6 +731,38 @@ app.post("/payment-callback", async (req, res) => {
 
     if (isSuccess && verifiedPayload) {
       const pushRes = await createBookingInBnovo(verifiedPayload);
+
+      // 🔥 DATABASEGA SAQLASH
+      try {
+        const startAt = new Date(checkIn);
+        const endAt = new Date(checkOut);
+
+        await pgPool.query(
+          `
+    INSERT INTO public.khamsachekin
+    (rooms, check_in, check_out, check_in_at, check_out_at,
+     duration, price, first_name, last_name, phone, email)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    `,
+          [
+            roomType,
+            checkIn,
+            checkOut,
+            startAt,
+            endAt,
+            duration,
+            priceEur,
+            firstName,
+            lastName,
+            phone,
+            email,
+          ],
+        );
+
+        console.log("✅ Booking DB ga saqlandi");
+      } catch (dbErr) {
+        console.error("❌ DB insert error:", dbErr.message);
+      }
 
       // ==== Frontend uslubidagi HTML xabar (aniqlanmagan o‘zgaruvchilarsiz) ====
       const esc = (v) =>
@@ -732,7 +777,7 @@ app.post("/payment-callback", async (req, res) => {
         const d = new Date(isoLike);
         if (isNaN(d)) return esc(isoLike);
         return `${pad(d.getDate())}.${pad(
-          d.getMonth() + 1
+          d.getMonth() + 1,
         )}.${d.getFullYear()}`;
       };
       const formatDateTime = (isoLike) => {
@@ -740,7 +785,7 @@ app.post("/payment-callback", async (req, res) => {
         const d = new Date(isoLike);
         if (isNaN(d)) return "-";
         return `${pad(d.getDate())}.${pad(
-          d.getMonth() + 1
+          d.getMonth() + 1,
         )}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
       };
 
@@ -829,17 +874,16 @@ Bron:
           await sendEmail(
             verifiedPayload.email,
             "Your Booking Confirmation – Khamsa Hotel",
-            humanText
+            humanText,
           );
         }
-
       } catch (e) {
         console.error("Email send error:", e);
       }
 
       try {
         await notifyTelegramHtml(humanHtml);
-      } catch { }
+      } catch {}
 
       return res.json({ ok: true });
     }
@@ -903,7 +947,7 @@ app.get("/api/checkins/day", async (req, res) => {
         AND COALESCE(k.check_out,(k.check_in + (COALESCE(k.duration,0) * INTERVAL '1 day')))::date > s.d
       ORDER BY k.check_in DESC
       LIMIT 1;`,
-      [d, roomType]
+      [d, roomType],
     );
     res.json({ ok: true, free: !r.rows[0], block: r.rows[0] || null });
   } catch (e) {
@@ -937,7 +981,7 @@ app.get("/api/checkins/range/check", async (req, res) => {
         AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz
       ORDER BY start_date ASC
       LIMIT 1;`,
-      [roomType, A, B]
+      [roomType, A, B],
     );
     res.json({ ok: true, conflict: !!r.rows[0], block: r.rows[0] || null });
   } catch (e) {
@@ -961,7 +1005,7 @@ app.post("/api/checkins/range", async (req, res) => {
         AND COALESCE(check_in_at,  check_in::timestamp)  < $3::timestamptz
         AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz
       LIMIT 1;`,
-      [roomType, A, B]
+      [roomType, A, B],
     );
     if (q.rowCount) return res.status(409).json({ ok: false, error: "BUSY" });
 
@@ -976,7 +1020,7 @@ app.post("/api/checkins/range", async (req, res) => {
         ($1,   $2::date, $3::date,  $4::timestamptz, $5::timestamptz,
          GREATEST(1, ($3::date - $2::date)), $6)
       RETURNING id, rooms, check_in, check_out, check_in_at, check_out_at;`,
-      [roomType, dateOnlyStart, dateOnlyEnd, A, B, note || null]
+      [roomType, dateOnlyStart, dateOnlyEnd, A, B, note || null],
     );
     res.status(201).json({ ok: true, item: r.rows[0] });
   } catch (e) {
@@ -1003,7 +1047,7 @@ app.get("/api/checkins/next-block", async (req, res) => {
         AND COALESCE(check_out_at, check_out::timestamp) >  $2::timestamptz
       ORDER BY start_date DESC
       LIMIT 1;`,
-      [roomType, A]
+      [roomType, A],
     );
     res.json({ ok: true, block: r.rows[0] || null });
   } catch (e) {
@@ -1054,7 +1098,7 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
     const peakExisting = await getPeakConcurrency(
       roomType,
       new Date(S),
-      new Date(new Date(S).getTime() + 24 * 60 * 60 * 1000)
+      new Date(new Date(S).getTime() + 24 * 60 * 60 * 1000),
     );
 
     const allowed = [];
@@ -1078,7 +1122,6 @@ app.get("/api/availability/allowed-tariffs", async (req, res) => {
   }
 });
 
-
 /* === DELETE by id === */
 app.delete("/api/checkins/:id", async (req, res) => {
   const id = Number(req.params.id);
@@ -1087,7 +1130,7 @@ app.delete("/api/checkins/:id", async (req, res) => {
   try {
     const r = await pgPool.query(
       "DELETE FROM public.khamsachekin WHERE id = $1 RETURNING id;",
-      [id]
+      [id],
     );
     if (r.rowCount === 0)
       return res.status(404).json({ ok: false, error: "Not found" });
@@ -1099,7 +1142,7 @@ app.delete("/api/checkins/:id", async (req, res) => {
 
 /* ====== 404 & error handlers ====== */
 app.use((req, res) =>
-  res.status(404).json({ error: "Not Found", path: req.path })
+  res.status(404).json({ error: "Not Found", path: req.path }),
 );
 app.use((err, req, res, _next) => {
   console.error("Unhandled error:", err);
@@ -1110,7 +1153,8 @@ app.use((err, req, res, _next) => {
 app.listen(PORT, () => {
   console.log(`✅ Server juda yaxshi ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
-    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${process.env.BNOVO_AUTH_URL
-    } id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD}`
+    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
+      process.env.BNOVO_AUTH_URL
+    } id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD}`,
   );
 });

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import "./staff.scss";
 
+const API_URL = "https://khamsa-backend.onrender.com"; // 🔥 o'zgartir
+
 const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
+  const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -14,7 +18,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
     price: "",
   });
 
-  // 🔒 BODY SCROLL LOCK (modal ochilganda orqa scroll yopiladi)
+  /* 🔒 BODY LOCK */
   useEffect(() => {
     if (isOpen) {
       const prev = document.body.style.overflow;
@@ -32,7 +36,8 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  /* ================= SUBMIT ================= */
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.firstName || !form.phone || !form.date) {
@@ -40,28 +45,80 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
       return;
     }
 
-    const newBooking = {
-      id: Date.now(),
-      ...form,
-      price: Number(form.price) || 0,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      setLoading(true);
 
-    onAdd(newBooking);
-    onClose();
+      const startAt = `${form.date}T${form.time || "00:00"}`;
 
-    // reset
-    setForm({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      date: "",
-      time: "",
-      room: "STANDARD",
-      duration: "3 soat",
-      price: "",
-    });
+      // duration → soatga aylantirish
+      let hours = 3;
+      if (form.duration.includes("10")) hours = 10;
+      if (form.duration.includes("1 kun")) hours = 24;
+
+      const endDate = new Date(startAt);
+      endDate.setHours(endDate.getHours() + hours);
+
+      const endAt = endDate.toISOString();
+
+      const res = await fetch(`${API_URL}/api/checkins/range`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          roomType: form.room,
+          startAt,
+          endAt,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.ok) {
+        alert("Xona band yoki xatolik bor");
+        return;
+      }
+
+      // 🔥 EXTRA: USER DATA UPDATE (optional, lekin yaxshi)
+      await fetch(`${API_URL}/api/checkins`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          first_name: form.firstName,
+          last_name: form.lastName,
+          phone: form.phone,
+          email: form.email,
+          price: form.price,
+          rooms: form.room,
+          duration: hours,
+          check_in: form.date,
+          check_in_time: form.time,
+        }),
+      }).catch(() => {});
+
+      onAdd(); // 🔥 parent refresh
+      onClose();
+
+      // reset
+      setForm({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        date: "",
+        time: "",
+        room: "STANDARD",
+        duration: "3 soat",
+        price: "",
+      });
+    } catch (e) {
+      console.error("Add booking error:", e);
+      alert("Xatolik yuz berdi");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,7 +137,6 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
                 name="firstName"
                 value={form.firstName}
                 onChange={handleChange}
-                placeholder="Ism"
               />
             </div>
 
@@ -90,7 +146,6 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
                 name="lastName"
                 value={form.lastName}
                 onChange={handleChange}
-                placeholder="Familiya"
               />
             </div>
           </div>
@@ -102,7 +157,6 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
               name="phone"
               value={form.phone}
               onChange={handleChange}
-              placeholder="+998..."
             />
           </div>
 
@@ -112,7 +166,6 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
               name="email"
               value={form.email}
               onChange={handleChange}
-              placeholder="Email"
             />
           </div>
 
@@ -184,9 +237,10 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
 
           {/* ACTIONS */}
           <div className="staff-modal__actions">
-            <button type="submit" className="primary">
-              Saqlash
+            <button type="submit" className="primary" disabled={loading}>
+              {loading ? "Saqlanmoqda..." : "Saqlash"}
             </button>
+
             <button type="button" onClick={onClose}>
               Bekor qilish
             </button>
