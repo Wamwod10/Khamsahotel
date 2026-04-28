@@ -61,7 +61,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
       const endAt = endDate.toISOString();
 
       /* ✅ FAqat BITTA request */
-      const res = await fetch(`${API_URL}/api/checkins/range`, {
+      const res = await fetch(`${API_URL}/api/checkins/full`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -70,7 +70,12 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
           roomType: form.room,
           startAt,
           endAt,
-          note: form.duration,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          phone: form.phone,
+          email: form.email,
+          price: form.price,
+          duration: hours,
         }),
       });
 

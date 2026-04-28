@@ -1029,6 +1029,53 @@ app.post("/api/checkins/range", async (req, res) => {
   }
 });
 
+app.post("/api/checkins/full", async (req, res) => {
+  try {
+    const {
+      roomType,
+      startAt,
+      endAt,
+      firstName,
+      lastName,
+      phone,
+      email,
+      price,
+      duration,
+    } = req.body;
+
+    const startDate = startAt.slice(0, 10);
+    const endDate = endAt.slice(0, 10);
+
+    const r = await pgPool.query(
+      `
+      INSERT INTO public.khamsachekin
+      (rooms, check_in, check_out, check_in_at, check_out_at,
+       duration, price, first_name, last_name, phone, email)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      RETURNING *;
+      `,
+      [
+        roomType,
+        startDate,
+        endDate,
+        startAt,
+        endAt,
+        duration,
+        price,
+        firstName,
+        lastName,
+        phone,
+        email,
+      ],
+    );
+
+    res.json({ ok: true, item: r.rows[0] });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false });
+  }
+});
+
 app.get("/api/checkins/next-block", async (req, res) => {
   const { roomType = "", start = "", startAt = "" } = req.query;
   const A = toTz(startAt || start);

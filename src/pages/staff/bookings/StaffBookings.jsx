@@ -51,28 +51,22 @@ const StaffBookings = () => {
   /* ================= ADD ================= */
   const handleAdd = async (newBooking) => {
     try {
-      const start = `${newBooking.date}T${newBooking.time || "00:00"}`;
-
-      // duration parse
-      let hours = 3;
-      if (newBooking.duration.includes("10")) hours = 10;
-      if (newBooking.duration.includes("1 kun")) hours = 24;
-
-      const endDate = new Date(start);
-      endDate.setHours(endDate.getHours() + hours);
-
-      const end = endDate.toISOString();
-
-      await fetch(`${API_URL}/api/checkins/range`, {
+      await fetch(`${API_URL}/api/checkins/full`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           roomType: newBooking.room,
-          startAt: start,
-          endAt: end,
-          note: newBooking.duration,
+          startAt: `${newBooking.date}T${newBooking.time || "00:00"}`,
+          endAt: `${newBooking.date}T${newBooking.time || "00:00"}`,
+
+          firstName: newBooking.firstName,
+          lastName: newBooking.lastName,
+          phone: newBooking.phone,
+          email: newBooking.email,
+          price: newBooking.price,
+          duration: parseInt(newBooking.duration) || 1,
         }),
       });
 
@@ -114,7 +108,6 @@ const StaffBookings = () => {
   return (
     <div className="sb">
       <div className="container">
-
         {/* HEADER */}
         <div className="sb-top">
           <div>
@@ -122,9 +115,7 @@ const StaffBookings = () => {
             <p>Khamsa Hotel bronlar ro‘yxati</p>
           </div>
 
-          <button onClick={() => setOpenAdd(true)}>
-            + Yangi bron
-          </button>
+          <button onClick={() => setOpenAdd(true)}>+ Yangi bron</button>
         </div>
 
         {/* CONTENT */}
@@ -138,14 +129,15 @@ const StaffBookings = () => {
               <div className="sb-strip"></div>
 
               <div className="sb-card">
-
                 {/* TOP */}
                 <div className="sb-card__top">
                   <div className="user">
                     <span className="num">{i + 1}</span>
 
                     <div>
-                      <h3>{b.firstName} {b.lastName}</h3>
+                      <h3>
+                        {b.firstName} {b.lastName}
+                      </h3>
                       <p>{b.phone}</p>
                     </div>
                   </div>
@@ -181,7 +173,6 @@ const StaffBookings = () => {
                   <span>💶 Price</span>
                   <h1>{b.price}€</h1>
                 </div>
-
               </div>
             </div>
           ))
@@ -199,7 +190,6 @@ const StaffBookings = () => {
           onClose={() => setSelectedBooking(null)}
           onDelete={handleDelete}
         />
-
       </div>
     </div>
   );
