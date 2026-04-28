@@ -23,14 +23,14 @@ const StaffBookings = () => {
       if (data.ok) {
         const mapped = data.items.map((b) => ({
           id: b.id,
-          firstName: b.first_name,
-          lastName: b.last_name,
-          phone: b.phone,
-          email: b.email,
+          firstName: b.first_name || "",
+          lastName: b.last_name || "",
+          phone: b.phone || "",
+          email: b.email || "",
           date: b.check_in,
           time: b.check_in_time,
           room: b.rooms,
-          duration: b.duration ? `${b.duration} kun` : "-",
+          duration: b.duration ? `${b.duration} soat` : "-",
           price: b.price || 0,
           createdAt: b.created_at,
         }));
@@ -51,6 +51,19 @@ const StaffBookings = () => {
   /* ================= ADD ================= */
   const handleAdd = async (newBooking) => {
     try {
+      const startAt = `${newBooking.date}T${newBooking.time || "00:00"}`;
+
+      // 🔥 duration ni to‘g‘ri parse qilish
+      let hours = 24;
+      if (newBooking.duration.includes("3")) hours = 3;
+      else if (newBooking.duration.includes("10")) hours = 10;
+      else if (newBooking.duration.includes("kun")) hours = 24;
+
+      const endDate = new Date(startAt);
+      endDate.setHours(endDate.getHours() + hours);
+
+      const endAt = endDate.toISOString();
+
       await fetch(`${API_URL}/api/checkins/full`, {
         method: "POST",
         headers: {
@@ -58,15 +71,15 @@ const StaffBookings = () => {
         },
         body: JSON.stringify({
           roomType: newBooking.room,
-          startAt: `${newBooking.date}T${newBooking.time || "00:00"}`,
-          endAt: `${newBooking.date}T${newBooking.time || "00:00"}`,
+          startAt,
+          endAt,
 
           firstName: newBooking.firstName,
           lastName: newBooking.lastName,
           phone: newBooking.phone,
           email: newBooking.email,
           price: newBooking.price,
-          duration: parseInt(newBooking.duration) || 1,
+          duration: hours,
         }),
       });
 

@@ -60,23 +60,25 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
 
       const endAt = endDate.toISOString();
 
-      /* ✅ FAqat BITTA request */
+      const payload = {
+        roomType: form.room,
+        startAt,
+        endAt,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phone: form.phone,
+        email: form.email,
+        price: Number(form.price) || 0, // ✅ FIX
+        duration: hours,
+      };
+
+      /* ✅ REQUEST */
       const res = await fetch(`${API_URL}/api/checkins/full`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          roomType: form.room,
-          startAt,
-          endAt,
-          firstName: form.firstName,
-          lastName: form.lastName,
-          phone: form.phone,
-          email: form.email,
-          price: form.price,
-          duration: hours,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -86,8 +88,8 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
         return;
       }
 
-      /* 🔥 refresh */
-      onAdd();
+      /* 🔥 FIX: parent refresh */
+      onAdd(payload); // ✅ FIX
 
       /* 🔥 close */
       onClose();
