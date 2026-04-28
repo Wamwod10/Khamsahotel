@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import "./staff.scss";
 
 const StaffBookingModal = ({ booking, onClose, onDelete }) => {
   if (!booking) return null;

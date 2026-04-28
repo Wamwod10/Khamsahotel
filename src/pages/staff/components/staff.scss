@@ -1,108 +1,119 @@
-.staff-modal {
+/* ================= GLOBAL ================= */
+
+.staff-modal,
+.staff-detail {
   position: fixed;
   inset: 0;
   z-index: 9999;
+}
 
-  &__overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(3px);
+/* ================= OVERLAY ================= */
+
+.staff-modal__overlay,
+.staff-detail__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+}
+
+/* ================= ADD MODAL ================= */
+
+.staff-modal__content {
+  position: relative;
+  max-width: 520px;
+  width: 90%;
+  margin: 120px auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+
+  h2 {
+    margin-bottom: 20px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #222;
   }
+}
 
-  &__content {
-    position: relative;
-    max-width: 520px;
-    width: 90%;
-    margin: 120px auto;
-    background: #fff;
-    border-radius: 16px;
-    padding: 30px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-    animation: fadeIn 0.25s ease;
+.staff-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
-    h2 {
-      margin-bottom: 20px;
-      font-size: 22px;
-      font-weight: 600;
-      color: #222;
-    }
-  }
-
-  &__form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .grid {
-    display: flex;
-    gap: 12px;
-
-    .field {
-      flex: 1;
-    }
-  }
+/* GRID */
+.grid {
+  display: flex;
+  gap: 12px;
 
   .field {
-    display: flex;
-    flex-direction: column;
+    flex: 1;
+  }
+}
 
-    label {
-      font-size: 13px;
-      margin-bottom: 5px;
-      color: #555;
-    }
+/* FIELD */
+.field {
+  display: flex;
+  flex-direction: column;
 
-    input,
-    select {
-      padding: 11px 12px;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-      font-size: 14px;
-      transition: 0.2s;
-
-      &:focus {
-        outline: none;
-        border-color: #f7931e;
-        box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
-      }
-    }
+  label {
+    font-size: 13px;
+    margin-bottom: 5px;
+    color: #555;
   }
 
-  &__actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 10px;
+  input,
+  select {
+    padding: 11px 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    transition: 0.2s;
 
-    button {
-      padding: 10px 16px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .primary {
-      background: #f7931e;
-      color: #fff;
-
-      &:hover {
-        background: #e67e00;
-      }
-    }
-
-    button:not(.primary) {
-      background: #eee;
-
-      &:hover {
-        background: #ddd;
-      }
+    &:focus {
+      outline: none;
+      border-color: #f7931e;
+      box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
     }
   }
 }
 
+/* ACTION BUTTONS */
+.staff-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+
+  button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .primary {
+    background: #f7931e;
+    color: #fff;
+
+    &:hover {
+      background: #e67e00;
+    }
+  }
+
+  button:not(.primary) {
+    background: #eee;
+
+    &:hover {
+      background: #ddd;
+    }
+  }
+}
+
+/* PRICE BUTTONS */
 .price-options {
   display: flex;
   gap: 10px;
@@ -115,7 +126,6 @@
     background: #fff;
     cursor: pointer;
     font-weight: 500;
-    transition: 0.2s;
 
     &:hover {
       border-color: #f7931e;
@@ -130,9 +140,162 @@
   }
 }
 
-@keyframes fadeIn {
+/* ================= DETAIL MODAL ================= */
+
+.staff-detail__content {
+  position: relative;
+  max-width: 500px;
+  width: 90%;
+  margin: 100px auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25);
+
+  h2 {
+    margin-bottom: 20px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #222;
+  }
+}
+
+.staff-detail__info {
+  font-size: 14px;
+  color: #444;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  p {
+    line-height: 1.4;
+  }
+
+  hr {
+    margin: 10px 0;
+    border: none;
+    border-top: 1px solid #eee;
+  }
+}
+
+.staff-detail__actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    background: #eee;
+
+    &:hover {
+      background: #ddd;
+    }
+  }
+
+  .delete {
+    background: #e74c3c;
+    color: #fff;
+
+    &:hover {
+      background: #c0392b;
+    }
+  }
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 768px) {
+  /* BOTH MODALS */
+  .staff-modal,
+  .staff-detail {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  /* CONTENT */
+  .staff-modal__content,
+  .staff-detail__content {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    border-radius: 20px 20px 0 0;
+    padding: 20px;
+    animation: slideUp 1.25s ease;
+
+    h2 {
+      text-align: center;
+      font-size: 18px;
+    }
+  }
+
+  /* GRID → COLUMN */
+  .grid {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* INPUT */
+  input,
+  select {
+    font-size: 15px;
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  /* PRICE */
+  .price-options button {
+    flex: 1 1 48%;
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  /* ACTION BUTTONS */
+  .staff-modal__actions,
+  .staff-detail__actions {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+      padding: 14px;
+      font-size: 15px;
+    }
+  }
+
+  /* DETAIL TEXT */
+  .staff-detail__info {
+    font-size: 15px;
+
+    p {
+      display: flex;
+      gap: 10px;
+    }
+  }
+}
+
+/* SMALL DEVICES */
+@media (max-width: 420px) {
+  .staff-modal__content,
+  .staff-detail__content {
+    padding: 16px;
+  }
+
+  .price-options button {
+    font-size: 13px;
+  }
+}
+
+/* ANIMATION */
+@keyframes slideUp {
   from {
-    transform: translateY(20px);
+    transform: translateY(150px);
     opacity: 0;
   }
   to {
@@ -140,84 +303,3 @@
     opacity: 1;
   }
 }
-
-.staff-detail {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-
-  &__overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(3px);
-  }
-
-  &__content {
-    position: relative;
-    max-width: 500px;
-    width: 90%;
-    margin: 80px auto;
-    background: #fff;
-    border-radius: 16px;
-    padding: 30px;
-    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25);
-    animation: fadeIn 0.25s ease;
-
-    h2 {
-      margin-bottom: 20px;
-      font-size: 22px;
-      font-weight: 600;
-      color: #222;
-    }
-  }
-
-  &__info {
-    font-size: 14px;
-    color: #444;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-
-    p {
-      line-height: 1.4;
-    }
-
-    hr {
-      margin: 10px 0;
-      border: none;
-      border-top: 1px solid #eee;
-    }
-  }
-
-  &__actions {
-    margin-top: 20px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-
-    button {
-      padding: 10px 16px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
-      background: #eee;
-
-      &:hover {
-        background: #ddd;
-      }
-    }
-
-    .delete {
-      background: #e74c3c;
-      color: #fff;
-
-      &:hover {
-        background: #c0392b;
-      }
-    }
-  }
-}
-
-

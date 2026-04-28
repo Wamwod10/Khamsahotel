@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./staff.scss";
 
 const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
@@ -14,13 +14,22 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
     price: "",
   });
 
+  // 🔒 BODY SCROLL LOCK (modal ochilganda orqa scroll yopiladi)
+  useEffect(() => {
+    if (isOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev || "auto";
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleChange = (e) => {
-    setForm((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e) => {
@@ -63,6 +72,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
         <h2>Yangi bron qo‘shish</h2>
 
         <form onSubmit={handleSubmit} className="staff-modal__form">
+          {/* NAME */}
           <div className="grid">
             <div className="field">
               <label>Ism *</label>
@@ -85,16 +95,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
             </div>
           </div>
 
-          <div className="field">
-            <label>Email</label>
-            <input
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Email"
-            />
-          </div>
-
+          {/* CONTACT */}
           <div className="field">
             <label>Telefon *</label>
             <input
@@ -105,6 +106,17 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
             />
           </div>
 
+          <div className="field">
+            <label>Email</label>
+            <input
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Email"
+            />
+          </div>
+
+          {/* DATE */}
           <div className="grid">
             <div className="field">
               <label>Kirish sanasi *</label>
@@ -127,6 +139,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
             </div>
           </div>
 
+          {/* ROOM */}
           <div className="grid">
             <div className="field">
               <label>Xona</label>
@@ -150,20 +163,17 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
             </div>
           </div>
 
+          {/* PRICE */}
           <div className="field">
             <label>Narx (€)</label>
-
             <div className="price-options">
               {[45, 70, 80, 115, 175].map((p) => (
                 <button
-                  type="button"
                   key={p}
+                  type="button"
                   className={form.price == p ? "active" : ""}
                   onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      price: p,
-                    }))
+                    setForm((prev) => ({ ...prev, price: p }))
                   }
                 >
                   {p}€
@@ -172,6 +182,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
             </div>
           </div>
 
+          {/* ACTIONS */}
           <div className="staff-modal__actions">
             <button type="submit" className="primary">
               Saqlash
