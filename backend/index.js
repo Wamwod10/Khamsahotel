@@ -732,6 +732,20 @@ app.post("/payment-callback", async (req, res) => {
     if (isSuccess && verifiedPayload) {
       const pushRes = await createBookingInBnovo(verifiedPayload);
 
+      // ✅ AVVAL destruct qilish kerak
+      const {
+        firstName,
+        lastName,
+        phone,
+        email,
+        roomType,
+        checkIn,
+        checkOut,
+        guests,
+        priceEur,
+        duration,
+      } = verifiedPayload;
+
       // 🔥 DATABASEGA SAQLASH
       try {
         const startAt = new Date(checkIn);
@@ -796,19 +810,6 @@ app.post("/payment-callback", async (req, res) => {
         CAPSULE: "Capsule",
         DELUXE: "Deluxe",
       };
-
-      const {
-        firstName,
-        lastName,
-        phone,
-        email,
-        roomType,
-        checkIn,
-        checkOut,
-        guests,
-        priceEur,
-        duration,
-      } = verifiedPayload;
 
       const createdAt = new Date().toISOString();
 
