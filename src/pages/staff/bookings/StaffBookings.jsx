@@ -4,7 +4,7 @@ import StaffAddModal from "../components/StaffAddModal";
 import StaffBookingModal from "../components/StaffBookingModal";
 import { FaCheckCircle } from "react-icons/fa";
 
-const API_URL = "https://khamsa-backend.onrender.com"; // 🔥 o'zgartir
+const API_URL = "https://khamsa-backend.onrender.com";
 
 const StaffBookings = () => {
   const [openAdd, setOpenAdd] = useState(false);
@@ -12,7 +12,7 @@ const StaffBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /* ================= LOAD FROM BACKEND ================= */
+  /* ================= LOAD ================= */
   const fetchBookings = async () => {
     try {
       setLoading(true);
@@ -30,7 +30,7 @@ const StaffBookings = () => {
           date: b.check_in,
           time: b.check_in_time,
           room: b.rooms,
-          duration: b.duration ? `${b.duration} soat` : "-",
+          duration: b.duration ? `${b.duration} kun` : "-",
           price: b.price || 0,
           createdAt: b.created_at,
         }));
@@ -51,6 +51,18 @@ const StaffBookings = () => {
   /* ================= ADD ================= */
   const handleAdd = async (newBooking) => {
     try {
+      const start = `${newBooking.date}T${newBooking.time || "00:00"}`;
+
+      // duration parse
+      let hours = 3;
+      if (newBooking.duration.includes("10")) hours = 10;
+      if (newBooking.duration.includes("1 kun")) hours = 24;
+
+      const endDate = new Date(start);
+      endDate.setHours(endDate.getHours() + hours);
+
+      const end = endDate.toISOString();
+
       await fetch(`${API_URL}/api/checkins/range`, {
         method: "POST",
         headers: {
@@ -58,12 +70,13 @@ const StaffBookings = () => {
         },
         body: JSON.stringify({
           roomType: newBooking.room,
-          startAt: `${newBooking.date}T${newBooking.time || "00:00"}`,
-          endAt: `${newBooking.date}T${newBooking.time || "00:00"}`,
+          startAt: start,
+          endAt: end,
+          note: newBooking.duration,
         }),
       });
 
-      fetchBookings(); // 🔥 refresh
+      fetchBookings();
     } catch (e) {
       console.error("Add error:", e);
     }
@@ -77,7 +90,7 @@ const StaffBookings = () => {
       });
 
       setSelectedBooking(null);
-      fetchBookings(); // 🔥 refresh
+      fetchBookings();
     } catch (e) {
       console.error("Delete error:", e);
     }
@@ -101,6 +114,7 @@ const StaffBookings = () => {
   return (
     <div className="sb">
       <div className="container">
+
         {/* HEADER */}
         <div className="sb-top">
           <div>
@@ -108,10 +122,12 @@ const StaffBookings = () => {
             <p>Khamsa Hotel bronlar ro‘yxati</p>
           </div>
 
-          <button onClick={() => setOpenAdd(true)}>+ Yangi bron</button>
+          <button onClick={() => setOpenAdd(true)}>
+            + Yangi bron
+          </button>
         </div>
 
-        {/* LOADING */}
+        {/* CONTENT */}
         {loading ? (
           <div className="sb-empty">Yuklanmoqda...</div>
         ) : sortedBookings.length === 0 ? (
@@ -122,15 +138,14 @@ const StaffBookings = () => {
               <div className="sb-strip"></div>
 
               <div className="sb-card">
+
                 {/* TOP */}
                 <div className="sb-card__top">
                   <div className="user">
                     <span className="num">{i + 1}</span>
 
                     <div>
-                      <h3>
-                        {b.firstName} {b.lastName}
-                      </h3>
+                      <h3>{b.firstName} {b.lastName}</h3>
                       <p>{b.phone}</p>
                     </div>
                   </div>
@@ -149,7 +164,7 @@ const StaffBookings = () => {
                   <h2>{formatDate(b.date, b.time)}</h2>
                 </div>
 
-                {/* CHIPS */}
+                {/* INFO */}
                 <div className="sb-card__chips">
                   <div className="chip">🛏 {b.room}</div>
                   <div className="chip">⏱ {b.duration}</div>
@@ -166,6 +181,7 @@ const StaffBookings = () => {
                   <span>💶 Price</span>
                   <h1>{b.price}€</h1>
                 </div>
+
               </div>
             </div>
           ))
@@ -183,6 +199,7 @@ const StaffBookings = () => {
           onClose={() => setSelectedBooking(null)}
           onDelete={handleDelete}
         />
+
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./staff.scss";
 
-const API_URL = "https://khamsa-backend.onrender.com"; // 🔥 o'zgartir
+const API_URL = "https://khamsa-backend.onrender.com";
 
 const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
 
       const startAt = `${form.date}T${form.time || "00:00"}`;
 
-      // duration → soatga aylantirish
+      /* 🔥 duration → hours */
       let hours = 3;
       if (form.duration.includes("10")) hours = 10;
       if (form.duration.includes("1 kun")) hours = 24;
@@ -60,6 +60,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
 
       const endAt = endDate.toISOString();
 
+      /* ✅ FAqat BITTA request */
       const res = await fetch(`${API_URL}/api/checkins/range`, {
         method: "POST",
         headers: {
@@ -69,6 +70,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
           roomType: form.room,
           startAt,
           endAt,
+          note: form.duration,
         }),
       });
 
@@ -79,29 +81,13 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
         return;
       }
 
-      // 🔥 EXTRA: USER DATA UPDATE (optional, lekin yaxshi)
-      await fetch(`${API_URL}/api/checkins`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          first_name: form.firstName,
-          last_name: form.lastName,
-          phone: form.phone,
-          email: form.email,
-          price: form.price,
-          rooms: form.room,
-          duration: hours,
-          check_in: form.date,
-          check_in_time: form.time,
-        }),
-      }).catch(() => {});
+      /* 🔥 refresh */
+      onAdd();
 
-      onAdd(); // 🔥 parent refresh
+      /* 🔥 close */
       onClose();
 
-      // reset
+      /* 🔥 reset */
       setForm({
         firstName: "",
         lastName: "",
@@ -153,20 +139,12 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
           {/* CONTACT */}
           <div className="field">
             <label>Telefon *</label>
-            <input
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-            />
+            <input name="phone" value={form.phone} onChange={handleChange} />
           </div>
 
           <div className="field">
             <label>Email</label>
-            <input
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-            />
+            <input name="email" value={form.email} onChange={handleChange} />
           </div>
 
           {/* DATE */}
@@ -225,9 +203,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
                   key={p}
                   type="button"
                   className={form.price == p ? "active" : ""}
-                  onClick={() =>
-                    setForm((prev) => ({ ...prev, price: p }))
-                  }
+                  onClick={() => setForm((prev) => ({ ...prev, price: p }))}
                 >
                   {p}€
                 </button>
