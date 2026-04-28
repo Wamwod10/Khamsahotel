@@ -1048,18 +1048,18 @@ app.post("/api/checkins/full", async (req, res) => {
 
     const r = await pgPool.query(
       `
-      INSERT INTO public.khamsachekin
-      (rooms, check_in, check_out, check_in_at, check_out_at,
-       duration, price, first_name, last_name, phone, email)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-      RETURNING *;
-      `,
+  INSERT INTO public.khamsachekin
+  (rooms, check_in, check_out, check_in_at, check_out_at,
+   duration, price, first_name, last_name, phone, email)
+  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+  RETURNING *;
+  `,
       [
         roomType,
         startDate,
         endDate,
-        startAt,
-        endAt,
+        new Date(startAt), // 🔥 MUHIM
+        new Date(endAt), // 🔥 MUHIM
         duration,
         price,
         firstName,
