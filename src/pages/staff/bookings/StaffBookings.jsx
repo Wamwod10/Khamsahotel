@@ -27,8 +27,12 @@ const StaffBookings = () => {
           lastName: b.last_name || "",
           phone: b.phone || "",
           email: b.email || "",
-          date: b.check_in,
-          time: b.check_in_time,
+          date: b.check_in ? b.check_in.split("T")[0] : "",
+          time:
+            b.check_in_time ||
+            (b.check_in_at
+              ? new Date(b.check_in_at).toTimeString().slice(0, 5)
+              : ""),
           room: b.rooms,
           duration: b.duration ? `${b.duration} soat` : "-",
           price: b.price || 0,
