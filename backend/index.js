@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { Pool } from "pg";
-import { checkAvailability, createBookingInBnovo } from "./bnovo.js";
+import { checkAvailability } from "./bnovo.js";
 
 dotenv.config();
 const app = express();
@@ -368,6 +368,15 @@ async function ensureSchema() {
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='email') THEN
         EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN email TEXT';
       END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+WHERE table_schema='public' AND table_name=_t AND column_name='transaction_id') THEN
+  EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN transaction_id TEXT';
+END IF;
+
+IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+WHERE table_schema='public' AND table_name=_t AND column_name='status') THEN
+  EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN status TEXT DEFAULT ''pending''';
+END IF;
       IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='khamsachekin_time_idx') THEN
         EXECUTE 'CREATE INDEX khamsachekin_time_idx ON public.'||_t||'(rooms, check_in, check_out)';
       END IF;
@@ -540,6 +549,9 @@ app.post("/create-payment", async (req, res) => {
     if (!OCTO_SHOP_ID || !OCTO_SECRET)
       return res.status(500).json({ error: "Payment sozlanmagan (env yo'q)" });
 
+    const shopTransactionId =
+      Date.now().toString() + "_" + Math.random().toString(36).slice(2, 8);
+
     const {
       amount,
       description = "Mehmonxona to'lovi",
@@ -586,20 +598,22 @@ app.post("/create-payment", async (req, res) => {
     /* =========================================================
        🔥 MUHIM: PAYMENT DAN OLDIN DB GA YOZAMIZ
     ========================================================= */
+
     try {
       await pgPool.query(
         `
-        INSERT INTO public.khamsachekin
-        (rooms, check_in, check_out, check_in_at, check_out_at,
-         duration, price, first_name, last_name, phone, email)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-        `,
+    INSERT INTO public.khamsachekin
+    (transaction_id, status, rooms, check_in, check_out, check_in_at, check_out_at,
+     duration, price, first_name, last_name, phone, email)
+    VALUES ($1,'pending',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    `,
         [
+          shopTransactionId,
           booking.rooms,
           booking.checkIn,
           checkOut,
-          new Date(booking.checkIn), // 🔥 MUHIM
-          new Date(checkOut), // 🔥 MUHIM
+          new Date(booking.checkIn),
+          new Date(checkOut),
           booking.duration,
           amt,
           booking.firstName,
@@ -609,14 +623,18 @@ app.post("/create-payment", async (req, res) => {
         ],
       );
 
-      console.log("✅ TEMP booking saqlandi");
+      console.log("✅ PENDING booking saqlandi");
     } catch (e) {
-      console.error("❌ TEMP booking error:", e.message);
+      console.error("❌ DB insert error:", e.message);
+
+      // 🔥 MUHIM: requestni to‘xtatamiz
+      return res.status(500).json({
+        error: "Bookingni saqlashda xatolik (DB error)",
+      });
     }
 
     /* ===== OCTO ===== */
     const signed = signData(bookingPayload);
-    const shopTransactionId = Date.now().toString();
 
     const returnUrlWithTid = `${BASE_URL}/octo-return?stid=${encodeURIComponent(
       shopTransactionId,
@@ -637,11 +655,11 @@ app.post("/create-payment", async (req, res) => {
       language: "uz",
 
       // 🔥 STRING bo‘lishi kerak
-      custom_data: JSON.stringify({
-        email,
-        booking_json: signed.json,
-        booking_sig: signed.sig,
-      }),
+      // custom_data: JSON.stringify({
+      //   email,
+      //   booking_json: signed.json,
+      //   booking_sig: signed.sig,
+      // }),
     };
 
     const controller = new AbortController();
@@ -746,83 +764,63 @@ app.post("/payment-callback", async (req, res) => {
       body?.merchant_trans_id ||
       body?.merchantTransId;
 
+    if (!stid) {
+      console.error("❌ stid yo'q");
+      return res.json({ ok: true });
+    }
+    
+
+    if (!isSuccess) {
+      await pgPool.query(
+        `UPDATE public.khamsachekin 
+     SET status='failed' 
+     WHERE transaction_id=$1`,
+        [stid],
+      );
+
+      console.log("❌ STATUS → FAILED");
+
+      return res.json({ ok: true });
+    }
+
+    const bookingRes = await pgPool.query(
+      `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1`,
+      [stid],
+    );
+
     if (stid) {
       savePaymentResult(stid, isSuccess);
     }
 
-    let verifiedPayload = null;
-    try {
-      let custom = body?.custom_data;
-      if (typeof custom === "string") {
-        try {
-          custom = JSON.parse(custom);
-        } catch {}
-      }
-      const json = custom?.booking_json,
-        sig = custom?.booking_sig;
-      if (json && sig && verifyData(json, sig))
-        verifiedPayload = JSON.parse(json);
-      else if (json && !sig) {
-        try {
-          verifiedPayload = JSON.parse(json);
-        } catch {}
-      }
-    } catch (e) {
-      console.warn("custom_data parse error:", e);
+    const booking = bookingRes.rows[0];
+
+    if (!booking) {
+      console.error("❌ Booking topilmadi:", stid);
+      return res.json({ ok: true });
     }
 
-    if (!verifiedPayload && stid) {
-      verifiedPayload = popPending(stid);
-    }
-
-    if (isSuccess && verifiedPayload) {
-      const pushRes = await createBookingInBnovo(verifiedPayload);
-
+    if (isSuccess) {
       // ✅ AVVAL destruct qilish kerak
       const {
-        firstName,
-        lastName,
+        first_name,
+        last_name,
         phone,
         email,
-        roomType,
-        checkIn,
-        checkOut,
-        guests,
-        priceEur,
+        rooms,
+        check_in,
+        check_out,
         duration,
-      } = verifiedPayload;
+        price,
+      } = booking;
+
+      await pgPool.query(
+        `UPDATE public.khamsachekin SET status='paid' WHERE transaction_id=$1`,
+        [stid],
+      );
+
+      console.log("✅ STATUS → PAID");
 
       // 🔥 DATABASEGA SAQLASH
-      try {
-        const startAt = new Date(checkIn);
-        const endAt = new Date(checkOut);
-
-        await pgPool.query(
-          `
-    INSERT INTO public.khamsachekin
-    (rooms, check_in, check_out, check_in_at, check_out_at,
-     duration, price, first_name, last_name, phone, email)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-    `,
-          [
-            roomType,
-            checkIn,
-            checkOut,
-            startAt,
-            endAt,
-            duration,
-            priceEur,
-            firstName,
-            lastName,
-            phone,
-            email,
-          ],
-        );
-
-        console.log("✅ Booking DB ga saqlandi");
-      } catch (dbErr) {
-        console.error("❌ DB insert error:", dbErr.message);
-      }
 
       // ==== Frontend uslubidagi HTML xabar (aniqlanmagan o‘zgaruvchilarsiz) ====
       const esc = (v) =>
@@ -862,16 +860,16 @@ app.post("/payment-callback", async (req, res) => {
       const humanHtml = [
         "📢 <b>Yangi bron qabul qilindi</b>",
         "",
-        `👤 <b>Ism:</b> ${esc(firstName || "-")} ${esc(lastName || "")}`,
+        `👤 <b>Ism:</b> ${esc(first_name || "-")} ${esc(last_name || "")}`,
         `📧 <b>Email:</b> ${esc(email || "-")}`,
         `📞 <b>Telefon:</b> ${esc(phone || "-")}`,
         "",
         `🗓️ <b>Bron vaqti:</b> ${esc(formatDateTime(createdAt))}`,
-        `📅 <b>Kirish sanasi:</b> ${esc(formatDate(checkIn))}`,
-        `📅 <b>Chiqish sanasi:</b> ${esc(formatDate(checkOut))}`,
-        `🛏️ <b>Xona:</b> ${esc(roomKeyMap[roomType] || roomType || "-")}`,
+        `📅 <b>Kirish sanasi:</b> ${esc(formatDate(check_in))}`,
+        `📅 <b>Chiqish sanasi:</b> ${esc(formatDate(check_out))}`,
+        `🛏️ <b>Xona:</b> ${esc(roomKeyMap[rooms] || rooms || "-")}`,
         `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
-        `💶 <b>Narx:</b> ${priceEur != null ? esc(`${priceEur}€`) : "-"}`,
+        `💶 <b>Narx:</b> ${price != null ? esc(`${price}€`) : "-"}`,
         "",
         `❕ <b>@freemustafa Send an Invoice to the guest!</b>`,
         `✅ <b>Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘lgan bo‘sh xonaga joylashtiriladi</b>`,
@@ -881,14 +879,13 @@ app.post("/payment-callback", async (req, res) => {
       const humanText = `
 To'lov muvaffaqiyatli.
 Bron:
-- Ism: ${firstName || "-"} ${lastName || ""}
+- Ism: ${first_name || "-"} ${last_name || ""}
 - Tel: ${phone || "-"}
 - Email: ${email || "-"}
-- Xona: ${roomType || "-"}
-- Check-in: ${checkIn || "-"}
-- Check-out: ${checkOut || "-"}
-- Mehmonlar: ${guests || 1}
-- Narx (EUR): ${priceEur != null ? priceEur : "-"}
+- Xona: ${rooms || "-"}
+- Check-in: ${check_in || "-"}
+- Check-out: ${check_out || "-"}
+- Narx (EUR): ${price != null ? price : "-"}
 `.trim();
 
       // Lokal HTML yuboruvchi helper (notifyTelegram ni o'zgartirmadik)
@@ -917,9 +914,9 @@ Bron:
       try {
         await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", humanText);
 
-        if (verifiedPayload.email) {
+        if (email) {
           await sendEmail(
-            verifiedPayload.email,
+            email,
             "Your Booking Confirmation – Khamsa Hotel",
             humanText,
           );
