@@ -176,6 +176,8 @@ app.post("/send-email", async (req, res) => {
 
 /* ====== Telegram ====== */
 async function notifyTelegram(text) {
+  console.log("📨 notifyTelegram FUNCTION ISHLADI");
+
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
     console.warn("⚠️ Telegram env yo'q");
     return;
@@ -742,21 +744,15 @@ app.post("/payment-callback", async (req, res) => {
       body?.transaction_status,
       body?.result,
     ].map((s) => String(s || "").toLowerCase());
+    const rawStatus = String(
+      body?.status || body?.payment_status || body?.result || "",
+    ).toLowerCase();
+
     const isSuccess =
-      statusFields.some((s) =>
-        [
-          "ok",
-          "success",
-          "succeeded",
-          "paid",
-          "captured",
-          "approved",
-          "done",
-        ].includes(s),
-      ) ||
-      body?.paid === true ||
+      rawStatus === "success" ||
+      rawStatus === "paid" ||
       body?.error === 0 ||
-      String(body?.state || "").toUpperCase() === "CAPTURED";
+      body?.paid === true;
 
     const stid =
       body?.shop_transaction_id ||
@@ -768,7 +764,6 @@ app.post("/payment-callback", async (req, res) => {
       console.error("❌ stid yo'q");
       return res.json({ ok: true });
     }
-    
 
     if (!isSuccess) {
       await pgPool.query(
@@ -783,6 +778,9 @@ app.post("/payment-callback", async (req, res) => {
       return res.json({ ok: true });
     }
 
+    console.log("IS SUCCESS:", isSuccess);
+    console.log("STATUS FIELDS:", statusFields);
+
     const bookingRes = await pgPool.query(
       `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1`,
       [stid],
@@ -794,10 +792,18 @@ app.post("/payment-callback", async (req, res) => {
 
     const booking = bookingRes.rows[0];
 
+    // booking topilmasa ham Telegram yuborilsin
     if (!booking) {
-      console.error("❌ Booking topilmadi:", stid);
+      await notifyTelegram(
+        `❗ Booking topilmadi\n🆔 ${stid}\n📦 ${JSON.stringify(body)}`,
+      );
       return res.json({ ok: true });
     }
+
+    // booking topilsa — to'liq ma'lumot yuborilsin
+
+    console.log("IS SUCCESS:", isSuccess);
+    console.log("STID:", stid);
 
     if (isSuccess) {
       // ✅ AVVAL destruct qilish kerak
@@ -926,7 +932,12 @@ Bron:
       }
 
       try {
-        await notifyTelegramHtml(humanHtml);
+        console.log("📨 ASOSIY TELEGRAM YUBORILMOQDA");
+
+        await notifyTelegram(humanHtml);
+
+        console.log("✅ ASOSIY TELEGRAM YUBORILDI");
+        console.log("📩 TELEGRAMGA YUBORILYAPTI");
       } catch {}
 
       return res.json({ ok: true });
@@ -1238,6 +1249,17 @@ app.use((req, res) =>
 app.use((err, req, res, _next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: "Internal Server Error" });
+});
+
+app.get("/debug-last-booking", async (req, res) => {
+  try {
+    const r = await pgPool.query(
+      "SELECT * FROM khamsachekin ORDER BY id DESC LIMIT 1",
+    );
+    res.json(r.rows[0] || {});
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 /* ====== Start ====== */
