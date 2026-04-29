@@ -539,29 +539,37 @@ app.post("/create-payment", async (req, res) => {
   try {
     if (!OCTO_SHOP_ID || !OCTO_SECRET)
       return res.status(500).json({ error: "Payment sozlanmagan (env yo'q)" });
+
     const {
       amount,
       description = "Mehmonxona to'lovi",
       email,
       booking = {},
     } = req.body || {};
+
     const amt = Number(amount);
+
     if (!Number.isFinite(amt) || amt <= 0 || !email)
       return res
         .status(400)
         .json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
 
+    /* ===== CHECKOUT HISOB ===== */
     const computeCheckOut = (checkInStr, durationStr) => {
       const d = new Date(checkInStr);
+
       if (durationStr?.includes("3")) d.setHours(d.getHours() + 3);
       else if (durationStr?.includes("10")) d.setHours(d.getHours() + 10);
       else d.setDate(d.getDate() + 1);
+
       return d.toISOString().split("T")[0];
     };
 
     const checkOut = computeCheckOut(booking.checkIn, booking.duration);
+
     const amountUZS = Math.max(1000, Math.round(amt * EUR_TO_UZS));
 
+    /* ===== BOOKING PAYLOAD ===== */
     const bookingPayload = {
       checkIn: booking.checkIn,
       checkOut,
@@ -573,9 +581,40 @@ app.post("/create-payment", async (req, res) => {
       phone: booking.phone,
       email: booking.email,
       priceEur: amt,
-      note: "Khamsa website payment success → push to Bnovo",
     };
 
+    /* =========================================================
+       🔥 MUHIM: PAYMENT DAN OLDIN DB GA YOZAMIZ
+    ========================================================= */
+    try {
+      await pgPool.query(
+        `
+        INSERT INTO public.khamsachekin
+        (rooms, check_in, check_out, check_in_at, check_out_at,
+         duration, price, first_name, last_name, phone, email)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        `,
+        [
+          booking.rooms,
+          booking.checkIn,
+          checkOut,
+          new Date(booking.checkIn), // 🔥 MUHIM
+          new Date(checkOut), // 🔥 MUHIM
+          booking.duration,
+          amt,
+          booking.firstName,
+          booking.lastName,
+          booking.phone,
+          booking.email,
+        ],
+      );
+
+      console.log("✅ TEMP booking saqlandi");
+    } catch (e) {
+      console.error("❌ TEMP booking error:", e.message);
+    }
+
+    /* ===== OCTO ===== */
     const signed = signData(bookingPayload);
     const shopTransactionId = Date.now().toString();
 
@@ -596,6 +635,8 @@ app.post("/create-payment", async (req, res) => {
       return_url: returnUrlWithTid,
       notify_url: `${BASE_URL}/payment-callback`,
       language: "uz",
+
+      // 🔥 STRING bo‘lishi kerak
       custom_data: JSON.stringify({
         email,
         booking_json: signed.json,
@@ -603,10 +644,9 @@ app.post("/create-payment", async (req, res) => {
       }),
     };
 
-    savePending(shopTransactionId, bookingPayload);
-
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 20000);
+
     const octoRes = await fetch("https://secure.octo.uz/prepare_payment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -615,16 +655,21 @@ app.post("/create-payment", async (req, res) => {
     }).catch((e) => {
       throw new Error(`Octo fetch failed: ${e?.message || e}`);
     });
+
     clearTimeout(t);
 
     const data = await safeParseResponse(octoRes);
-    if (octoRes.ok && data?.error === 0 && data?.data?.octo_pay_url)
+
+    if (octoRes.ok && data?.error === 0 && data?.data?.octo_pay_url) {
       return res.json({ paymentUrl: data.data.octo_pay_url });
+    }
 
     console.error("Octo error:", { status: octoRes.status, data });
+
     const msg =
       (data && (data.errMessage || data.message)) ||
       `Octo error (status ${octoRes.status})`;
+
     return res.status(400).json({ error: msg });
   } catch (err) {
     console.error("❌ create-payment:", err);
