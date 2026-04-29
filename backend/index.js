@@ -596,11 +596,11 @@ app.post("/create-payment", async (req, res) => {
       return_url: returnUrlWithTid,
       notify_url: `${BASE_URL}/payment-callback`,
       language: "uz",
-      custom_data: {
+      custom_data: JSON.stringify({
         email,
         booking_json: signed.json,
         booking_sig: signed.sig,
-      },
+      }),
     };
 
     savePending(shopTransactionId, bookingPayload);
@@ -671,6 +671,7 @@ app.post("/payment-callback", async (req, res) => {
           })()
         : req.body || {};
     console.log("🔁 payment-callback body:", body);
+    console.log("🔥 FULL BODY:", JSON.stringify(body, null, 2));
 
     const statusFields = [
       body?.status,
