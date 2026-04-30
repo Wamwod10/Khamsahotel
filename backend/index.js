@@ -91,6 +91,8 @@ app.use((req, res, next) => {
   next();
 });
 
+startServer();
+
 /* ====== Parsers ====== */
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
@@ -263,6 +265,79 @@ function normalizePaymentCallbackPayload(body) {
     nested?.paid === true;
 
   return { rawStatus, stid, isSuccess, errorCode };
+}
+
+function normalizeBookingDuration(durationValue) {
+  if (Number.isFinite(durationValue)) {
+    const n = Number(durationValue);
+    if (n === 10) return { dbValue: 10, label: "10 soat", kind: "hours" };
+    if (n === 3 || n === 2) return { dbValue: 3, label: "3 soat", kind: "hours" };
+    if (n === 24 || n === 1) return { dbValue: 1, label: "1 kun", kind: "days" };
+    return { dbValue: Math.max(1, Math.round(n)), label: String(n), kind: "days" };
+  }
+
+  const raw = String(durationValue || "").trim();
+  const lower = raw.toLowerCase();
+
+  if (lower.includes("10")) {
+    return { dbValue: 10, label: raw || "10 soat", kind: "hours" };
+  }
+  if (
+    lower.includes("3") ||
+    lower.includes("2") ||
+    lower.includes("hour") ||
+    lower.includes("soat") ||
+    lower.includes("час")
+  ) {
+    return { dbValue: 3, label: raw || "3 soat", kind: "hours" };
+  }
+  if (
+    lower.includes("day") ||
+    lower.includes("kun") ||
+    lower.includes("день") ||
+    lower.includes("сут")
+  ) {
+    return { dbValue: 1, label: raw || "1 kun", kind: "days" };
+  }
+
+  return { dbValue: 1, label: raw || "1 kun", kind: "days" };
+}
+
+function computeBookingWindow(checkInStr, durationValue) {
+  const startAt = new Date(
+    String(checkInStr || "").includes("T")
+      ? checkInStr
+      : `${String(checkInStr || "").slice(0, 10)}T00:00:00`,
+  );
+
+  if (Number.isNaN(startAt.getTime())) {
+    return {
+      startAt: null,
+      endAt: null,
+      checkOutDate: null,
+      duration: normalizeBookingDuration(durationValue),
+    };
+  }
+
+  const duration = normalizeBookingDuration(durationValue);
+  const endAt = new Date(startAt);
+
+  if (duration.kind === "hours") {
+    endAt.setHours(endAt.getHours() + duration.dbValue);
+  } else {
+    endAt.setDate(endAt.getDate() + duration.dbValue);
+  }
+
+  return {
+    startAt,
+    endAt,
+    checkOutDate: endAt.toISOString().slice(0, 10),
+    duration,
+  };
+}
+
+function formatDurationLabel(durationValue) {
+  return normalizeBookingDuration(durationValue).label;
 }
 
 /* ====== Helpers ====== */
@@ -485,10 +560,6 @@ async function ensureRoomTypes() {
   );
 }
 
-ensureSchema()
-  .then(ensureRoomTypes)
-  .catch((e) => console.error("schema error:", e));
-
 /* ===== Tarif helpers ===== */
 async function getRoomTypeCfg(roomType) {
   const { rows } = await pgPool.query(
@@ -624,18 +695,20 @@ app.post("/create-payment", async (req, res) => {
         .status(400)
         .json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
 
-    /* ===== CHECKOUT HISOB ===== */
-    const computeCheckOut = (checkInStr, durationStr) => {
-      const d = new Date(checkInStr);
+    const bookingWindow = computeBookingWindow(
+      booking.checkIn,
+      booking.duration,
+    );
+    const checkOut = bookingWindow.checkOutDate;
+    const checkInAt = bookingWindow.startAt;
+    const checkOutAt = bookingWindow.endAt;
+    const normalizedDuration = bookingWindow.duration;
 
-      if (durationStr?.includes("3")) d.setHours(d.getHours() + 3);
-      else if (durationStr?.includes("10")) d.setHours(d.getHours() + 10);
-      else d.setDate(d.getDate() + 1);
-
-      return d.toISOString().split("T")[0];
-    };
-
-    const checkOut = computeCheckOut(booking.checkIn, booking.duration);
+    if (!booking.checkIn || !checkOut || !checkInAt || !checkOutAt) {
+      return res.status(400).json({
+        error: "Booking sanasi noto'g'ri",
+      });
+    }
 
     const amountUZS = Math.max(1000, Math.round(amt * EUR_TO_UZS));
 
@@ -643,7 +716,7 @@ app.post("/create-payment", async (req, res) => {
     const bookingPayload = {
       checkIn: booking.checkIn,
       checkOut,
-      duration: booking.duration,
+      duration: normalizedDuration.label,
       roomType: booking.rooms,
       guests: booking.guests,
       firstName: booking.firstName,
@@ -670,9 +743,9 @@ app.post("/create-payment", async (req, res) => {
           booking.rooms,
           booking.checkIn,
           checkOut,
-          new Date(booking.checkIn),
-          new Date(checkOut),
-          booking.duration,
+          checkInAt,
+          checkOutAt,
+          normalizedDuration.dbValue,
           amt,
           booking.firstName,
           booking.lastName,
@@ -688,6 +761,7 @@ app.post("/create-payment", async (req, res) => {
       // 🔥 MUHIM: requestni to‘xtatamiz
       return res.status(500).json({
         error: "Bookingni saqlashda xatolik (DB error)",
+        detail: e?.message || String(e),
       });
     }
 
@@ -1328,11 +1402,23 @@ app.get("/debug-last-booking", async (req, res) => {
 });
 
 /* ====== Start ====== */
-app.listen(PORT, () => {
+async function startServer() {
+  try {
+    await ensureSchema();
+    await ensureRoomTypes();
+
+    app.listen(PORT, () => {
   console.log(`✅ Server juda zor ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
     `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
       process.env.BNOVO_AUTH_URL
     } id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD}`,
   );
-});
+    });
+  } catch (e) {
+    console.error("startup schema error:", e);
+    process.exit(1);
+  }
+}
+
+startServer();
