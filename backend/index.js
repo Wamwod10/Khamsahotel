@@ -209,6 +209,62 @@ async function notifyTelegram(text) {
   }
 }
 
+function firstNonEmpty(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function normalizePaymentCallbackPayload(body) {
+  const nested = body?.data && typeof body.data === "object" ? body.data : {};
+
+  const rawStatus = String(
+    firstNonEmpty(
+      body?.status,
+      body?.payment_status,
+      body?.transaction_status,
+      body?.result,
+      nested?.status,
+      nested?.payment_status,
+      nested?.transaction_status,
+      nested?.result,
+    ) || "",
+  ).toLowerCase();
+
+  const stid = firstNonEmpty(
+    body?.shop_transaction_id,
+    nested?.shop_transaction_id,
+    body?.merchant_trans_id,
+    nested?.merchant_trans_id,
+    body?.merchantTransId,
+    nested?.merchantTransId,
+    body?.shopTransactionId,
+    nested?.shopTransactionId,
+  );
+
+  const errorCode = Number(firstNonEmpty(body?.error, nested?.error));
+  const successStatuses = new Set([
+    "success",
+    "successful",
+    "succeeded",
+    "paid",
+    "captured",
+    "completed",
+    "approved",
+  ]);
+
+  const isSuccess =
+    successStatuses.has(rawStatus) ||
+    errorCode === 0 ||
+    body?.paid === true ||
+    nested?.paid === true;
+
+  return { rawStatus, stid, isSuccess, errorCode };
+}
+
 /* ====== Helpers ====== */
 async function safeParseResponse(res) {
   const ct = (res.headers.get("content-type") || "").toLowerCase();
@@ -760,17 +816,23 @@ app.post("/payment-callback", async (req, res) => {
       body?.merchant_trans_id ||
       body?.merchantTransId;
 
-    if (!stid) {
+    const normalizedCallback = normalizePaymentCallbackPayload(body);
+    const effectiveStid = normalizedCallback.stid || stid;
+    const effectiveSuccess = normalizedCallback.isSuccess;
+    const effectiveRawStatus = normalizedCallback.rawStatus;
+    const effectiveErrorCode = normalizedCallback.errorCode;
+
+    if (!effectiveStid) {
       console.error("❌ stid yo'q");
       return res.json({ ok: true });
     }
 
-    if (!isSuccess) {
+    if (!effectiveSuccess) {
       await pgPool.query(
         `UPDATE public.khamsachekin 
      SET status='failed' 
      WHERE transaction_id=$1`,
-        [stid],
+        [effectiveStid],
       );
 
       console.log("❌ STATUS → FAILED");
@@ -778,16 +840,17 @@ app.post("/payment-callback", async (req, res) => {
       return res.json({ ok: true });
     }
 
-    console.log("IS SUCCESS:", isSuccess);
-    console.log("STATUS FIELDS:", statusFields);
+    console.log("IS SUCCESS:", effectiveSuccess);
+    console.log("RAW STATUS:", effectiveRawStatus);
+    console.log("ERROR CODE:", effectiveErrorCode);
 
     const bookingRes = await pgPool.query(
       `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1`,
-      [stid],
+      [effectiveStid],
     );
 
-    if (stid) {
-      savePaymentResult(stid, isSuccess);
+    if (effectiveStid) {
+      savePaymentResult(effectiveStid, effectiveSuccess);
     }
 
     const booking = bookingRes.rows[0];
@@ -802,10 +865,10 @@ app.post("/payment-callback", async (req, res) => {
 
     // booking topilsa — to'liq ma'lumot yuborilsin
 
-    console.log("IS SUCCESS:", isSuccess);
-    console.log("STID:", stid);
+    console.log("IS SUCCESS:", effectiveSuccess);
+    console.log("STID:", effectiveStid);
 
-    if (isSuccess) {
+    if (effectiveSuccess) {
       // ✅ AVVAL destruct qilish kerak
       const {
         first_name,
@@ -821,7 +884,7 @@ app.post("/payment-callback", async (req, res) => {
 
       await pgPool.query(
         `UPDATE public.khamsachekin SET status='paid' WHERE transaction_id=$1`,
-        [stid],
+        [effectiveStid],
       );
 
       console.log("✅ STATUS → PAID");
@@ -934,11 +997,13 @@ Bron:
       try {
         console.log("📨 ASOSIY TELEGRAM YUBORILMOQDA");
 
-        await notifyTelegram(humanHtml);
+        await notifyTelegramHtml(humanHtml);
 
         console.log("✅ ASOSIY TELEGRAM YUBORILDI");
         console.log("📩 TELEGRAMGA YUBORILYAPTI");
-      } catch {}
+      } catch (e) {
+        console.error("Telegram notify wrapper error:", e);
+      }
 
       return res.json({ ok: true });
     }
