@@ -209,6 +209,148 @@ async function notifyTelegram(text) {
   }
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+
+function formatDisplayDate(isoLike) {
+  if (!isoLike) return "-";
+  const d = new Date(isoLike);
+  if (Number.isNaN(d.getTime())) return escapeHtml(isoLike);
+  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
+
+function formatDisplayDateTime(isoLike) {
+  if (!isoLike) return "-";
+  const d = new Date(isoLike);
+  if (Number.isNaN(d.getTime())) return "-";
+  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function roomLabel(roomCode) {
+  const roomKeyMap = {
+    STANDARD: "Standard Room",
+    FAMILY: "Family Room",
+    SMART: "Smart Capsule",
+    CAPSULE: "Capsule",
+    DELUXE: "Deluxe",
+  };
+  return roomKeyMap[roomCode] || roomCode || "-";
+}
+
+async function notifyTelegramHtml(html) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.warn("Telegram env yo'q");
+    return { ok: false, skipped: true, reason: "missing_env" };
+  }
+
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const payload = {
+    chat_id: TELEGRAM_CHAT_ID,
+    text: html,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  };
+
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!data?.ok) {
+      console.error("Telegram send error:", data);
+      return { ok: false, data };
+    }
+    console.log("Telegram HTML yuborildi");
+    return { ok: true, data };
+  } catch (e) {
+    console.error("Telegram error:", e);
+    return { ok: false, error: e };
+  }
+}
+
+function buildBookingTelegramHtml(booking) {
+  const createdAt = booking?.created_at || new Date().toISOString();
+  return [
+    "📢 <b>Yangi bron qabul qilindi</b>",
+    "",
+    `👤 <b>Ism:</b> ${escapeHtml(booking?.first_name || "-")} ${escapeHtml(booking?.last_name || "")}`,
+    `📧 <b>Email:</b> ${escapeHtml(booking?.email || "-")}`,
+    `📞 <b>Telefon:</b> ${escapeHtml(booking?.phone || "-")}`,
+    "",
+    `🗓️ <b>Bron vaqti:</b> ${escapeHtml(formatDisplayDateTime(createdAt))}`,
+    `📅 <b>Kirish sanasi:</b> ${escapeHtml(formatDisplayDate(booking?.check_in))}`,
+    `📅 <b>Chiqish sanasi:</b> ${escapeHtml(formatDisplayDate(booking?.check_out))}`,
+    `🛏️ <b>Xona:</b> ${escapeHtml(roomLabel(booking?.rooms))}`,
+    `📆 <b>Davomiylik:</b> ${escapeHtml(formatDurationLabel(booking?.duration || "-"))}`,
+    `💶 <b>Narx:</b> ${booking?.price != null ? escapeHtml(`${booking.price}€`) : "-"}`,
+    "",
+    `❕ <b>@freemustafa Send an Invoice to the guest!</b>`,
+    `✅ <b>Mijoz kelganda, mavjud bo‘sh xonaga joylashtiriladi</b>`,
+    `🌐 <b>Sayt:</b> khamsahotel.uz`,
+  ].join("\n");
+}
+
+function buildBookingHumanText(booking) {
+  return `
+To'lov muvaffaqiyatli.
+Bron:
+- Ism: ${booking?.first_name || "-"} ${booking?.last_name || ""}
+- Tel: ${booking?.phone || "-"}
+- Email: ${booking?.email || "-"}
+- Xona: ${booking?.rooms || "-"}
+- Check-in: ${booking?.check_in || "-"}
+- Check-out: ${booking?.check_out || "-"}
+- Davomiylik: ${formatDurationLabel(booking?.duration || "-")}
+- Narx (EUR): ${booking?.price != null ? booking.price : "-"}
+`.trim();
+}
+
+async function sendBookingTelegramIfNeeded(transactionId) {
+  const { rows } = await pgPool.query(
+    `SELECT *
+       FROM public.khamsachekin
+      WHERE transaction_id=$1
+      LIMIT 1`,
+    [transactionId],
+  );
+
+  const booking = rows[0];
+  if (!booking) {
+    await notifyTelegram(
+      `❗ Booking topilmadi\n🆔 ${transactionId}\n📦 Telegram fallback ishladi`,
+    );
+    return { ok: false, reason: "booking_not_found" };
+  }
+
+  if (booking.telegram_notified_at) {
+    console.log("Telegram allaqachon yuborilgan:", transactionId);
+    return { ok: true, skipped: true, booking };
+  }
+
+  const html = buildBookingTelegramHtml(booking);
+  const tg = await notifyTelegramHtml(html);
+  if (!tg.ok) return { ok: false, reason: "telegram_send_failed", booking };
+
+  await pgPool.query(
+    `UPDATE public.khamsachekin
+        SET telegram_notified_at = now()
+      WHERE transaction_id=$1`,
+    [transactionId],
+  );
+
+  return { ok: true, booking };
+}
+
 function firstNonEmpty(...values) {
   for (const value of values) {
     if (value !== undefined && value !== null && String(value).trim() !== "") {
@@ -508,6 +650,9 @@ IF NOT EXISTS (SELECT 1 FROM information_schema.columns
 WHERE table_schema='public' AND table_name=_t AND column_name='status') THEN
   EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN status TEXT DEFAULT ''pending''';
 END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='telegram_notified_at') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN telegram_notified_at TIMESTAMPTZ';
+      END IF;
       IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='khamsachekin_time_idx') THEN
         EXECUTE 'CREATE INDEX khamsachekin_time_idx ON public.'||_t||'(rooms, check_in, check_out)';
       END IF;
@@ -826,7 +971,7 @@ app.post("/create-payment", async (req, res) => {
 });
 
 // Octo qaytargan redirect — endi callback’dan kelgan natijaga qarab yuboramiz
-app.get("/octo-return", (req, res) => {
+app.get("/octo-return", async (req, res) => {
   try {
     const stid =
       req.query.stid ||
@@ -837,6 +982,23 @@ app.get("/octo-return", (req, res) => {
     if (stid) {
       const result = takePaymentResult(stid);
       if (result && result.success) {
+        try {
+          await sendBookingTelegramIfNeeded(stid);
+        } catch (e) {
+          console.error("octo-return telegram fallback error:", e);
+        }
+        return res.redirect(302, `${FRONTEND_URL}/success`);
+      }
+      const { rows } = await pgPool.query(
+        `SELECT status FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1`,
+        [stid],
+      );
+      if (rows[0]?.status === "paid") {
+        try {
+          await sendBookingTelegramIfNeeded(stid);
+        } catch (e) {
+          console.error("octo-return paid-status telegram fallback error:", e);
+        }
         return res.redirect(302, `${FRONTEND_URL}/success`);
       }
       // Agar result bor-u, success bo'lmasa YOKI result yo'q bo'lsa (no info) → cancel
@@ -921,10 +1083,6 @@ app.post("/payment-callback", async (req, res) => {
       [effectiveStid],
     );
 
-    if (effectiveStid) {
-      savePaymentResult(effectiveStid, effectiveSuccess);
-    }
-
     const booking = bookingRes.rows[0];
 
     // booking topilmasa ham Telegram yuborilsin
@@ -941,6 +1099,42 @@ app.post("/payment-callback", async (req, res) => {
     console.log("STID:", effectiveStid);
 
     if (effectiveSuccess) {
+      await pgPool.query(
+        `UPDATE public.khamsachekin SET status='paid' WHERE transaction_id=$1`,
+        [effectiveStid],
+      );
+
+      console.log("PAID status saqlandi, Telegram helper ishga tushyapti");
+
+      const refreshedRes = await pgPool.query(
+        `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1`,
+        [effectiveStid],
+      );
+      const paidBooking = refreshedRes.rows[0] || booking;
+      const confirmationText = buildBookingHumanText(paidBooking);
+
+      try {
+        await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", confirmationText);
+        if (paidBooking?.email) {
+          await sendEmail(
+            paidBooking.email,
+            "Your Booking Confirmation вЂ“ Khamsa Hotel",
+            confirmationText,
+          );
+        }
+      } catch (e) {
+        console.error("Email send error:", e);
+      }
+
+      try {
+        const tgResult = await sendBookingTelegramIfNeeded(effectiveStid);
+        console.log("Telegram notify result:", tgResult);
+      } catch (e) {
+        console.error("Telegram notify wrapper error:", e);
+      }
+
+      savePaymentResult(effectiveStid, effectiveSuccess);
+      return res.json({ ok: true });
       // ✅ AVVAL destruct qilish kerak
       const {
         first_name,
