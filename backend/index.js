@@ -1408,7 +1408,7 @@ async function startServer() {
     await ensureRoomTypes();
 
     app.listen(PORT, () => {
-  console.log(`✅ Server juda zor ishlayapti: ${BASE_URL} (port: ${PORT})`);
+  console.log(`✅ Server juda yaxshi ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
     `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
       process.env.BNOVO_AUTH_URL
