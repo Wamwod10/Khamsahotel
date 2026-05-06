@@ -234,6 +234,17 @@ function formatDisplayDateTime(isoLike) {
   return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+function formatDisplayTime(value) {
+  if (!value) return "-";
+  if (String(value).includes("T")) {
+    const d = new Date(value);
+    if (!Number.isNaN(d.getTime())) {
+      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+  }
+  return String(value).slice(0, 5);
+}
+
 function roomLabel(roomCode) {
   const roomKeyMap = {
     STANDARD: "Standard Room",
@@ -289,7 +300,7 @@ function buildBookingTelegramHtml(booking) {
     "",
     `🗓️ <b>Bron vaqti:</b> ${escapeHtml(formatDisplayDateTime(createdAt))}`,
     `📅 <b>Kirish sanasi:</b> ${escapeHtml(formatDisplayDate(booking?.check_in))}`,
-    `📅 <b>Chiqish sanasi:</b> ${escapeHtml(formatDisplayDate(booking?.check_out))}`,
+    `🕒 <b>Kirish vaqti:</b> ${escapeHtml(formatDisplayTime(booking?.check_in_at || booking?.check_in_time))}`,
     `🛏️ <b>Xona:</b> ${escapeHtml(roomLabel(booking?.rooms))}`,
     `📆 <b>Davomiylik:</b> ${escapeHtml(formatDurationLabel(booking?.duration || "-"))}`,
     `💶 <b>Narx:</b> ${booking?.price != null ? escapeHtml(`${booking.price}€`) : "-"}`,
@@ -1025,52 +1036,33 @@ app.post("/payment-callback", async (req, res) => {
             }
           })()
         : req.body || {};
-    console.log("🔁 payment-callback body:", body);
-    console.log("🔥 FULL BODY:", JSON.stringify(body, null, 2));
 
-    const statusFields = [
-      body?.status,
-      body?.payment_status,
-      body?.transaction_status,
-      body?.result,
-    ].map((s) => String(s || "").toLowerCase());
-    const rawStatus = String(
-      body?.status || body?.payment_status || body?.result || "",
-    ).toLowerCase();
-
-    const isSuccess =
-      rawStatus === "success" ||
-      rawStatus === "paid" ||
-      body?.error === 0 ||
-      body?.paid === true;
-
-    const stid =
-      body?.shop_transaction_id ||
-      body?.data?.shop_transaction_id ||
-      body?.merchant_trans_id ||
-      body?.merchantTransId;
+    console.log("payment-callback body:", body);
+    console.log("FULL BODY:", JSON.stringify(body, null, 2));
 
     const normalizedCallback = normalizePaymentCallbackPayload(body);
-    const effectiveStid = normalizedCallback.stid || stid;
+    const effectiveStid = normalizedCallback.stid;
     const effectiveSuccess = normalizedCallback.isSuccess;
     const effectiveRawStatus = normalizedCallback.rawStatus;
     const effectiveErrorCode = normalizedCallback.errorCode;
 
     if (!effectiveStid) {
-      console.error("❌ stid yo'q");
+      console.error("payment-callback: stid yo'q", body);
       return res.json({ ok: true });
     }
 
     if (!effectiveSuccess) {
       await pgPool.query(
-        `UPDATE public.khamsachekin 
-     SET status='failed' 
-     WHERE transaction_id=$1`,
+        `UPDATE public.khamsachekin
+            SET status='failed'
+          WHERE transaction_id=$1`,
         [effectiveStid],
       );
-
-      console.log("❌ STATUS → FAILED");
-
+      console.log("STATUS -> FAILED", {
+        effectiveStid,
+        effectiveRawStatus,
+        effectiveErrorCode,
+      });
       return res.json({ ok: true });
     }
 
@@ -1082,202 +1074,51 @@ app.post("/payment-callback", async (req, res) => {
       `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1`,
       [effectiveStid],
     );
-
     const booking = bookingRes.rows[0];
 
-    // booking topilmasa ham Telegram yuborilsin
     if (!booking) {
       await notifyTelegram(
-        `❗ Booking topilmadi\n🆔 ${stid}\n📦 ${JSON.stringify(body)}`,
+        `Booking topilmadi\nID ${effectiveStid}\nPayload ${JSON.stringify(body)}`,
       );
       return res.json({ ok: true });
     }
 
-    // booking topilsa — to'liq ma'lumot yuborilsin
+    await pgPool.query(
+      `UPDATE public.khamsachekin SET status='paid' WHERE transaction_id=$1`,
+      [effectiveStid],
+    );
 
-    console.log("IS SUCCESS:", effectiveSuccess);
-    console.log("STID:", effectiveStid);
+    const refreshedRes = await pgPool.query(
+      `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1`,
+      [effectiveStid],
+    );
+    const paidBooking = refreshedRes.rows[0] || booking;
+    const confirmationText = buildBookingHumanText(paidBooking);
 
-    if (effectiveSuccess) {
-      await pgPool.query(
-        `UPDATE public.khamsachekin SET status='paid' WHERE transaction_id=$1`,
-        [effectiveStid],
-      );
-
-      console.log("PAID status saqlandi, Telegram helper ishga tushyapti");
-
-      const refreshedRes = await pgPool.query(
-        `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1`,
-        [effectiveStid],
-      );
-      const paidBooking = refreshedRes.rows[0] || booking;
-      const confirmationText = buildBookingHumanText(paidBooking);
-
-      try {
-        await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", confirmationText);
-        if (paidBooking?.email) {
-          await sendEmail(
-            paidBooking.email,
-            "Your Booking Confirmation вЂ“ Khamsa Hotel",
-            confirmationText,
-          );
-        }
-      } catch (e) {
-        console.error("Email send error:", e);
+    try {
+      await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", confirmationText);
+      if (paidBooking?.email) {
+        await sendEmail(
+          paidBooking.email,
+          "Your Booking Confirmation - Khamsa Hotel",
+          confirmationText,
+        );
       }
-
-      try {
-        const tgResult = await sendBookingTelegramIfNeeded(effectiveStid);
-        console.log("Telegram notify result:", tgResult);
-      } catch (e) {
-        console.error("Telegram notify wrapper error:", e);
-      }
-
-      savePaymentResult(effectiveStid, effectiveSuccess);
-      return res.json({ ok: true });
-      // ✅ AVVAL destruct qilish kerak
-      const {
-        first_name,
-        last_name,
-        phone,
-        email,
-        rooms,
-        check_in,
-        check_out,
-        duration,
-        price,
-      } = booking;
-
-      await pgPool.query(
-        `UPDATE public.khamsachekin SET status='paid' WHERE transaction_id=$1`,
-        [effectiveStid],
-      );
-
-      console.log("✅ STATUS → PAID");
-
-      // 🔥 DATABASEGA SAQLASH
-
-      // ==== Frontend uslubidagi HTML xabar (aniqlanmagan o‘zgaruvchilarsiz) ====
-      const esc = (v) =>
-        String(v ?? "")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;");
-
-      const pad = (n) => String(n).padStart(2, "0");
-      const formatDate = (isoLike) => {
-        if (!isoLike) return "-";
-        const d = new Date(isoLike);
-        if (isNaN(d)) return esc(isoLike);
-        return `${pad(d.getDate())}.${pad(
-          d.getMonth() + 1,
-        )}.${d.getFullYear()}`;
-      };
-      const formatDateTime = (isoLike) => {
-        if (!isoLike) return "-";
-        const d = new Date(isoLike);
-        if (isNaN(d)) return "-";
-        return `${pad(d.getDate())}.${pad(
-          d.getMonth() + 1,
-        )}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      };
-
-      const roomKeyMap = {
-        STANDARD: "Standard Room",
-        FAMILY: "Family Room",
-        SMART: "Smart Capsule",
-        CAPSULE: "Capsule",
-        DELUXE: "Deluxe",
-      };
-
-      const createdAt = new Date().toISOString();
-
-      const humanHtml = [
-        "📢 <b>Yangi bron qabul qilindi</b>",
-        "",
-        `👤 <b>Ism:</b> ${esc(first_name || "-")} ${esc(last_name || "")}`,
-        `📧 <b>Email:</b> ${esc(email || "-")}`,
-        `📞 <b>Telefon:</b> ${esc(phone || "-")}`,
-        "",
-        `🗓️ <b>Bron vaqti:</b> ${esc(formatDateTime(createdAt))}`,
-        `📅 <b>Kirish sanasi:</b> ${esc(formatDate(check_in))}`,
-        `📅 <b>Chiqish sanasi:</b> ${esc(formatDate(check_out))}`,
-        `🛏️ <b>Xona:</b> ${esc(roomKeyMap[rooms] || rooms || "-")}`,
-        `📆 <b>Davomiylik:</b> ${esc(duration || "-")}`,
-        `💶 <b>Narx:</b> ${price != null ? esc(`${price}€`) : "-"}`,
-        "",
-        `❕ <b>@freemustafa Send an Invoice to the guest!</b>`,
-        `✅ <b>Mijoz kelganda, mavjud bo‘lgan ixtiyoriy bo‘lgan bo‘sh xonaga joylashtiriladi</b>`,
-        `🌐 <b>Sayt:</b> khamsahotel.uz`,
-      ].join("\n");
-
-      const humanText = `
-To'lov muvaffaqiyatli.
-Bron:
-- Ism: ${first_name || "-"} ${last_name || ""}
-- Tel: ${phone || "-"}
-- Email: ${email || "-"}
-- Xona: ${rooms || "-"}
-- Check-in: ${check_in || "-"}
-- Check-out: ${check_out || "-"}
-- Narx (EUR): ${price != null ? price : "-"}
-`.trim();
-
-      // Lokal HTML yuboruvchi helper (notifyTelegram ni o'zgartirmadik)
-      async function notifyTelegramHtml(html) {
-        if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
-        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-        const payload = {
-          chat_id: TELEGRAM_CHAT_ID,
-          text: html,
-          parse_mode: "HTML",
-          disable_web_page_preview: true,
-        };
-        try {
-          const r = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          const data = await r.json().catch(() => ({}));
-          if (!data?.ok) console.error("Telegram send error:", data);
-        } catch (e) {
-          console.error("Telegram error:", e);
-        }
-      }
-
-      try {
-        await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", humanText);
-
-        if (email) {
-          await sendEmail(
-            email,
-            "Your Booking Confirmation – Khamsa Hotel",
-            humanText,
-          );
-        }
-      } catch (e) {
-        console.error("Email send error:", e);
-      }
-
-      try {
-        console.log("📨 ASOSIY TELEGRAM YUBORILMOQDA");
-
-        await notifyTelegramHtml(humanHtml);
-
-        console.log("✅ ASOSIY TELEGRAM YUBORILDI");
-        console.log("📩 TELEGRAMGA YUBORILYAPTI");
-      } catch (e) {
-        console.error("Telegram notify wrapper error:", e);
-      }
-
-      return res.json({ ok: true });
+    } catch (e) {
+      console.error("Email send error:", e);
     }
 
-    console.warn("⚠️ Payment not success yoki payload topilmadi");
+    try {
+      const tgResult = await sendBookingTelegramIfNeeded(effectiveStid);
+      console.log("Telegram notify result:", tgResult);
+    } catch (e) {
+      console.error("Telegram notify wrapper error:", e);
+    }
+
+    savePaymentResult(effectiveStid, effectiveSuccess);
     return res.json({ ok: true });
   } catch (e) {
-    console.error("❌ /payment-callback:", e);
+    console.error("/payment-callback:", e);
     res.status(200).json({ ok: true });
   }
 });
