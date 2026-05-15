@@ -17,7 +17,7 @@ const StaffBookings = () => {
     try {
       setLoading(true);
 
-      const res = await fetch(`${API_URL}/api/checkins`);
+      const res = await fetch(`${API_URL}/api/checkins?type=booking`);
       const data = await res.json();
 
       if (data.ok) {

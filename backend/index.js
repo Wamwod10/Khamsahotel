@@ -1128,9 +1128,19 @@ app.post("/payment-callback", async (req, res) => {
  * ======================= */
 app.get("/api/checkins", async (req, res) => {
   const { roomType = "", limit = "300" } = req.query;
+  const type = String(req.query.type || "").toLowerCase();
   try {
     const params = [];
     const where = [];
+    if (type === "booking") {
+      where.push(
+        `(first_name IS NOT NULL OR email IS NOT NULL OR phone IS NOT NULL)`
+      );
+    } else if (type === "block") {
+      where.push(
+        `first_name IS NULL AND last_name IS NULL AND email IS NULL AND phone IS NULL`
+      );
+    }
     if (roomType) {
       params.push(roomType);
       where.push(`rooms = $${params.length}`);

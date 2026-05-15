@@ -94,7 +94,7 @@ export default function Checkin() {
   async function loadList() {
     try {
       setLoading(true);
-      const qs = new URLSearchParams({ limit: "300", roomType }).toString();
+      const qs = new URLSearchParams({ limit: "300", roomType, type: "block" }).toString();
       const d = await fetchJson(`${API}/api/checkins?${qs}`);
       const rows = (d.items || []).map((r) => {
         const start =
