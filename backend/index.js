@@ -256,6 +256,110 @@ function roomLabel(roomCode) {
   return roomKeyMap[roomCode] || roomCode || "-";
 }
 
+function normalizeRoomCode(value) {
+  const s = String(value || "").toUpperCase().trim();
+  if (s.includes("FAMILY")) return "FAMILY";
+  if (s.includes("STANDARD")) return "STANDARD";
+  return s;
+}
+
+function formatEuro(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value == null ? "-" : `${value} EUR`;
+  const formatted = Number.isInteger(n) ? String(n) : n.toFixed(2);
+  return `${formatted} EUR`;
+}
+
+function buildCheckInValue(checkIn, checkInTime) {
+  const date = String(checkIn || "").slice(0, 10);
+  if (!date) return checkIn;
+
+  const rawTime = String(checkInTime || "").trim();
+  if (!rawTime) return date;
+  if (rawTime.includes("T")) return rawTime;
+
+  const time = rawTime.slice(0, 5);
+  if (!/^\d{2}:\d{2}$/.test(time)) return date;
+  return `${date}T${time}:00`;
+}
+
+function getBookingRows(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return value ? [value] : [];
+}
+
+function getBookingGroups(bookings) {
+  const groups = new Map();
+
+  for (const booking of getBookingRows(bookings)) {
+    const durationLabel = formatDurationLabel(booking?.duration || "-");
+    const key = [
+      booking?.rooms || "",
+      booking?.check_in || "",
+      booking?.check_in_at || booking?.check_in_time || "",
+      durationLabel,
+    ].join("|");
+
+    const current =
+      groups.get(key) || {
+        rooms: booking?.rooms,
+        check_in: booking?.check_in,
+        check_in_at: booking?.check_in_at,
+        check_in_time: booking?.check_in_time,
+        duration: booking?.duration,
+        durationLabel,
+        count: 0,
+        total: 0,
+      };
+
+    current.count += 1;
+    current.total += Number(booking?.price) || 0;
+    groups.set(key, current);
+  }
+
+  return Array.from(groups.values());
+}
+
+function normalizePaymentItems(booking, fallbackAmount) {
+  const rawItems = Array.isArray(booking?.items) && booking.items.length
+    ? booking.items
+    : [booking || {}];
+
+  return rawItems.map((item) => {
+    const checkInValue = buildCheckInValue(
+      firstNonEmpty(item?.checkIn, booking?.checkIn),
+      firstNonEmpty(
+        item?.checkOutTime,
+        item?.checkInTime,
+        item?.check_in_time,
+        booking?.checkOutTime,
+        booking?.checkInTime,
+      ),
+    );
+    const bookingWindow = computeBookingWindow(
+      checkInValue,
+      firstNonEmpty(item?.duration, booking?.duration),
+    );
+    const price = Number(firstNonEmpty(item?.price, fallbackAmount));
+
+    return {
+      raw: item,
+      checkIn: String(firstNonEmpty(item?.checkIn, booking?.checkIn) || "").slice(0, 10),
+      checkInAt: bookingWindow.startAt,
+      checkOut: bookingWindow.checkOutDate,
+      checkOutAt: bookingWindow.endAt,
+      duration: bookingWindow.duration,
+      rooms: normalizeRoomCode(firstNonEmpty(item?.rooms, booking?.rooms)),
+      guests: firstNonEmpty(item?.guests, booking?.guests),
+      firstName: firstNonEmpty(item?.firstName, booking?.firstName),
+      lastName: firstNonEmpty(item?.lastName, booking?.lastName),
+      phone: firstNonEmpty(item?.phone, booking?.phone),
+      email: firstNonEmpty(item?.email, booking?.email),
+      price,
+    };
+  });
+}
+
 async function notifyTelegramHtml(html) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
     console.warn("Telegram env yo'q");
@@ -326,31 +430,91 @@ Bron:
 `.trim();
 }
 
+function buildBookingTelegramHtmlForRows(bookings) {
+  const rows = getBookingRows(bookings);
+  const booking = rows[0] || {};
+  const createdAt = booking?.created_at || new Date().toISOString();
+  const groups = getBookingGroups(rows);
+  const totalPrice = rows.reduce((sum, item) => sum + (Number(item?.price) || 0), 0);
+  const roomLines = groups.map((group) => {
+    const roomText = `${roomLabel(group.rooms)} ${group.count}x`;
+    const dateText = formatDisplayDate(group.check_in);
+    const timeText = formatDisplayTime(group.check_in_at || group.check_in_time);
+    return `- ${escapeHtml(roomText)} | ${escapeHtml(dateText)} ${escapeHtml(timeText)} | ${escapeHtml(group.durationLabel)} | ${escapeHtml(formatEuro(group.total))}`;
+  });
+
+  return [
+    "<b>Yangi bron qabul qilindi</b>",
+    "",
+    `<b>Ism:</b> ${escapeHtml(booking?.first_name || "-")} ${escapeHtml(booking?.last_name || "")}`,
+    `<b>Email:</b> ${escapeHtml(booking?.email || "-")}`,
+    `<b>Telefon:</b> ${escapeHtml(booking?.phone || "-")}`,
+    "",
+    `<b>Bron vaqti:</b> ${escapeHtml(formatDisplayDateTime(createdAt))}`,
+    "<b>Xonalar:</b>",
+    ...roomLines,
+    `<b>Jami:</b> ${escapeHtml(formatEuro(totalPrice))}`,
+    "",
+    "<b>@freemustafa Send an Invoice to the guest!</b>",
+    "<b>Mijoz kelganda, mavjud bosh xonaga joylashtiriladi</b>",
+    "<b>Sayt:</b> khamsahotel.uz",
+  ].join("\n");
+}
+
+function buildBookingHumanTextForRows(bookings) {
+  const rows = getBookingRows(bookings);
+  const booking = rows[0] || {};
+  const groups = getBookingGroups(rows);
+  const totalPrice = rows.reduce((sum, item) => sum + (Number(item?.price) || 0), 0);
+  const roomLines = groups
+    .map((group) => {
+      const roomText = `${roomLabel(group.rooms)} ${group.count}x`;
+      const dateText = formatDisplayDate(group.check_in);
+      const timeText = formatDisplayTime(group.check_in_at || group.check_in_time);
+      return `  - ${roomText} | ${dateText} ${timeText} | ${group.durationLabel} | ${formatEuro(group.total)}`;
+    })
+    .join("\n");
+
+  return `
+To'lov muvaffaqiyatli.
+Bron:
+- Ism: ${booking?.first_name || "-"} ${booking?.last_name || ""}
+- Tel: ${booking?.phone || "-"}
+- Email: ${booking?.email || "-"}
+- Xonalar:
+${roomLines || "  - -"}
+- Jami: ${formatEuro(totalPrice)}
+`.trim();
+}
+
 async function sendBookingTelegramIfNeeded(transactionId) {
   const { rows } = await pgPool.query(
     `SELECT *
        FROM public.khamsachekin
       WHERE transaction_id=$1
-      LIMIT 1`,
+      ORDER BY id ASC`,
     [transactionId],
   );
 
   const booking = rows[0];
-  if (!booking) {
+  if (!rows.length) {
     await notifyTelegram(
       `❗ Booking topilmadi\n🆔 ${transactionId}\n📦 Telegram fallback ishladi`,
     );
     return { ok: false, reason: "booking_not_found" };
   }
 
-  if (booking.telegram_notified_at) {
+  if (rows.some((item) => item.telegram_notified_at)) {
     console.log("Telegram allaqachon yuborilgan:", transactionId);
-    return { ok: true, skipped: true, booking };
+    return { ok: true, skipped: true, bookings: rows };
   }
 
-  const html = buildBookingTelegramHtml(booking);
+  const html =
+    rows.length === 1
+      ? buildBookingTelegramHtml(rows[0])
+      : buildBookingTelegramHtmlForRows(rows);
   const tg = await notifyTelegramHtml(html);
-  if (!tg.ok) return { ok: false, reason: "telegram_send_failed", booking };
+  if (!tg.ok) return { ok: false, reason: "telegram_send_failed", bookings: rows };
 
   await pgPool.query(
     `UPDATE public.khamsachekin
@@ -359,7 +523,7 @@ async function sendBookingTelegramIfNeeded(transactionId) {
     [transactionId],
   );
 
-  return { ok: true, booking };
+  return { ok: true, bookings: rows };
 }
 
 function firstNonEmpty(...values) {
@@ -842,29 +1006,45 @@ app.post("/create-payment", async (req, res) => {
       booking = {},
     } = req.body || {};
 
-    const amt = Number(amount);
+    const requestedAmount = Number(amount);
+    const paymentItems = normalizePaymentItems(booking, requestedAmount);
+    const hasInvalidItem = paymentItems.some(
+      (item) =>
+        !item.rooms ||
+        !item.checkIn ||
+        !item.checkOut ||
+        !item.checkInAt ||
+        !item.checkOutAt ||
+        !Number.isFinite(item.price) ||
+        item.price <= 0,
+    );
+    const effectiveAmount = paymentItems.reduce((sum, item) => sum + item.price, 0);
+    const payerEmail = email || paymentItems.find((item) => item.email)?.email;
 
-    if (!Number.isFinite(amt) || amt <= 0 || !email)
+    if (
+      !Number.isFinite(requestedAmount) ||
+      requestedAmount <= 0 ||
+      !payerEmail ||
+      !paymentItems.length ||
+      hasInvalidItem ||
+      !Number.isFinite(effectiveAmount) ||
+      effectiveAmount <= 0
+    )
       return res
         .status(400)
         .json({ error: "Ma'lumot yetarli emas yoki amount noto‘g‘ri" });
 
-    const bookingWindow = computeBookingWindow(
-      booking.checkIn,
-      booking.duration,
-    );
-    const checkOut = bookingWindow.checkOutDate;
-    const checkInAt = bookingWindow.startAt;
-    const checkOutAt = bookingWindow.endAt;
-    const normalizedDuration = bookingWindow.duration;
+    const firstPaymentItem = paymentItems[0];
+    const checkOut = firstPaymentItem.checkOut;
+    const normalizedDuration = firstPaymentItem.duration;
 
-    if (!booking.checkIn || !checkOut || !checkInAt || !checkOutAt) {
+    if (!firstPaymentItem.checkIn || !checkOut || !firstPaymentItem.checkInAt || !firstPaymentItem.checkOutAt) {
       return res.status(400).json({
         error: "Booking sanasi noto'g'ri",
       });
     }
 
-    const amountUZS = Math.max(1000, Math.round(amt * EUR_TO_UZS));
+    const amountUZS = Math.max(1000, Math.round(effectiveAmount * EUR_TO_UZS));
 
     /* ===== BOOKING PAYLOAD ===== */
     const bookingPayload = {
@@ -877,15 +1057,19 @@ app.post("/create-payment", async (req, res) => {
       lastName: booking.lastName,
       phone: booking.phone,
       email: booking.email,
-      priceEur: amt,
+      priceEur: effectiveAmount,
     };
 
     /* =========================================================
        🔥 MUHIM: PAYMENT DAN OLDIN DB GA YOZAMIZ
     ========================================================= */
 
+    const client = await pgPool.connect();
     try {
-      await pgPool.query(
+      await client.query("BEGIN");
+
+      for (const item of paymentItems) {
+        await client.query(
         `
     INSERT INTO public.khamsachekin
     (transaction_id, status, rooms, check_in, check_out, check_in_at, check_out_at,
@@ -894,25 +1078,31 @@ app.post("/create-payment", async (req, res) => {
     `,
         [
           shopTransactionId,
-          booking.rooms,
-          booking.checkIn,
-          checkOut,
-          checkInAt,
-          checkOutAt,
-          normalizedDuration.dbValue,
-          amt,
-          booking.firstName,
-          booking.lastName,
-          booking.phone,
-          booking.email,
+          item.rooms,
+          item.checkIn,
+          item.checkOut,
+          item.checkInAt,
+          item.checkOutAt,
+          item.duration.dbValue,
+          item.price,
+          item.firstName,
+          item.lastName,
+          item.phone,
+          item.email || payerEmail,
         ],
-      );
+        );
+      }
+
+      await client.query("COMMIT");
+      client.release();
 
       console.log("✅ PENDING booking saqlandi");
     } catch (e) {
       console.error("❌ DB insert error:", e.message);
 
       // 🔥 MUHIM: requestni to‘xtatamiz
+      await client.query("ROLLBACK").catch(() => {});
+      client.release();
       return res.status(500).json({
         error: "Bookingni saqlashda xatolik (DB error)",
         detail: e?.message || String(e),
@@ -935,7 +1125,7 @@ app.post("/create-payment", async (req, res) => {
       init_time: new Date().toISOString().replace("T", " ").substring(0, 19),
       total_sum: amountUZS,
       currency: "UZS",
-      description: `${description} (${amt} EUR)`,
+      description: `${description} (${effectiveAmount} EUR)`,
       return_url: returnUrlWithTid,
       notify_url: `${BASE_URL}/payment-callback`,
       language: "uz",
@@ -1071,7 +1261,7 @@ app.post("/payment-callback", async (req, res) => {
     console.log("ERROR CODE:", effectiveErrorCode);
 
     const bookingRes = await pgPool.query(
-      `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1`,
+      `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 ORDER BY id ASC`,
       [effectiveStid],
     );
     const booking = bookingRes.rows[0];
@@ -1089,11 +1279,12 @@ app.post("/payment-callback", async (req, res) => {
     );
 
     const refreshedRes = await pgPool.query(
-      `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1`,
+      `SELECT * FROM public.khamsachekin WHERE transaction_id=$1 ORDER BY id ASC`,
       [effectiveStid],
     );
-    const paidBooking = refreshedRes.rows[0] || booking;
-    const confirmationText = buildBookingHumanText(paidBooking);
+    const paidBookings = refreshedRes.rows.length ? refreshedRes.rows : [booking];
+    const paidBooking = paidBookings[0];
+    const confirmationText = buildBookingHumanTextForRows(paidBookings);
 
     try {
       await sendEmail(ADMIN_EMAIL, "Khamsa: Payment Success", confirmationText);
