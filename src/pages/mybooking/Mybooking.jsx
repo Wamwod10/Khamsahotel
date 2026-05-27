@@ -69,6 +69,19 @@ function roomCodeToLabel(code) {
   return "-";
 }
 
+function summarizeRooms(items) {
+  const counts = items.reduce((acc, item) => {
+    const code = toRoomCode(item.rooms);
+    if (!code) return acc;
+    acc[code] = (acc[code] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([code, count]) => `${roomCodeToLabel(code)} ${count}x`)
+    .join(" + ");
+}
+
 /** Narxni son ko‘rinishiga keltirish */
 function normalizePrice(p) {
   if (typeof p === "number") return Number.isFinite(p) ? p : 0;
@@ -198,8 +211,8 @@ const MyBooking = () => {
       alert("To‘lov uchun summa mavjud emas.");
       return;
     }
-    const latestBooking = bookings.at(-1);
-    if (!latestBooking?.email) {
+    const payerBooking = bookings.find((b) => b?.email) || bookings[0];
+    if (!payerBooking?.email) {
       alert("Email maʼlumoti mavjud emas.");
       return;
     }
@@ -209,23 +222,39 @@ const MyBooking = () => {
     try {
       await quickHealth(); // diagnostika uchun, xato bo‘lsa ham davom etadi
 
-      const durationKey = normalizeDuration(latestBooking.duration);
+      const paymentItems = bookings.map((booking) => ({
+        checkIn: booking.checkIn,
+        checkOutTime: booking.checkOutTime,
+        duration: booking.duration,
+        rooms: booking.rooms,
+        guests: booking.guests,
+        firstName: booking.firstName,
+        lastName: booking.lastName,
+        phone: booking.phone,
+        email: booking.email,
+        price: Number(booking.price) || 0,
+      }));
+
+      const durationKey = normalizeDuration(payerBooking.duration);
+      const roomSummary = summarizeRooms(paymentItems);
       const body = {
         amount: Number(totalAmount), // EUR
-        description: `Booking Payment (${roomCodeToLabel(
-          latestBooking.rooms
-        )} / ${durationKey || latestBooking.duration || ""})`,
-        email: latestBooking.email,
+        description: `Booking Payment (${
+          roomSummary || roomCodeToLabel(payerBooking.rooms)
+        } / ${durationKey || payerBooking.duration || ""})`,
+        email: payerBooking.email,
         booking: {
-          checkIn: latestBooking.checkIn,
-          duration: latestBooking.duration,
-          rooms: latestBooking.rooms,
-          guests: latestBooking.guests,
-          firstName: latestBooking.firstName,
-          lastName: latestBooking.lastName,
-          phone: latestBooking.phone,
-          email: latestBooking.email,
-          price: Number(latestBooking.price),
+          checkIn: payerBooking.checkIn,
+          checkOutTime: payerBooking.checkOutTime,
+          duration: payerBooking.duration,
+          rooms: payerBooking.rooms,
+          guests: payerBooking.guests,
+          firstName: payerBooking.firstName,
+          lastName: payerBooking.lastName,
+          phone: payerBooking.phone,
+          email: payerBooking.email,
+          price: Number(totalAmount),
+          items: paymentItems,
         },
       };
 
