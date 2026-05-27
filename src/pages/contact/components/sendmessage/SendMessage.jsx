@@ -14,7 +14,7 @@ const SendMessage = () => {
     message: "",
   });
 
-  const BOT_TOKEN = "8266378942:AAGYLpPRnn9g_n6QB6acyPNYTUIOa-QGIfM";
+  const BOT_TOKEN = "8905006741:AAEP3sJ7NJg-TXxlLDiCEsV3IpZK1Yl8NFE";
   const CHAT_ID = "-1002944437298"; // O'zingning Telegram ID
 
   const handleChange = (e) => {

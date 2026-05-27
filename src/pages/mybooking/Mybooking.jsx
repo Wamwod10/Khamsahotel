@@ -304,9 +304,9 @@ const MyBooking = () => {
           <div className="my-booking-buttons">
             <button
               className="btn btn-pay"
-              // onClick={handlePayment}
-              // disabled={totalAmount <= 0 || paying}
-              // aria-busy={paying ? "true" : "false"}
+              onClick={handlePayment}
+              disabled={totalAmount <= 0 || paying}
+              aria-busy={paying ? "true" : "false"}
             >
               {paying
                 ? "Processing..."
