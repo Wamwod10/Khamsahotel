@@ -444,20 +444,20 @@ function buildBookingTelegramHtmlForRows(bookings) {
   });
 
   return [
-    "<b>Yangi bron qabul qilindi</b>",
+    "📢 <b>Yangi bron qabul qilindi</b>",
     "",
-    `<b>Ism:</b> ${escapeHtml(booking?.first_name || "-")} ${escapeHtml(booking?.last_name || "")}`,
-    `<b>Email:</b> ${escapeHtml(booking?.email || "-")}`,
-    `<b>Telefon:</b> ${escapeHtml(booking?.phone || "-")}`,
+    `👤 <b>Ism:</b> ${escapeHtml(booking?.first_name || "-")} ${escapeHtml(booking?.last_name || "")}`,
+    `📧 <b>Email:</b> ${escapeHtml(booking?.email || "-")}`,
+    `📞 <b>Telefon:</b> ${escapeHtml(booking?.phone || "-")}`,
     "",
-    `<b>Bron vaqti:</b> ${escapeHtml(formatDisplayDateTime(createdAt))}`,
-    "<b>Xonalar:</b>",
+    `🗓️ <b>Bron vaqti:</b> ${escapeHtml(formatDisplayDateTime(createdAt))}`,
+    "🛏️ <b>Xonalar:</b>",
     ...roomLines,
-    `<b>Jami:</b> ${escapeHtml(formatEuro(totalPrice))}`,
+    `💶 <b>Jami:</b> ${escapeHtml(formatEuro(totalPrice))}`,
     "",
-    "<b>@freemustafa Send an Invoice to the guest!</b>",
-    "<b>Mijoz kelganda, mavjud bosh xonaga joylashtiriladi</b>",
-    "<b>Sayt:</b> khamsahotel.uz",
+    "❕ <b>@freemustafa Send an Invoice to the guest!</b>",
+    "✅ <b>Mijoz kelganda, mavjud bosh xonaga joylashtiriladi</b>",
+    "🌐 <b>Sayt:</b> khamsahotel.uz",
   ].join("\n");
 }
 
