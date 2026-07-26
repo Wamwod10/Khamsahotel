@@ -4,6 +4,11 @@ import { useTranslation } from "react-i18next";
 
 /** API bazasini aniqlash — Vite/CRA uchun mos */
 function getApiBase() {
+  const isKhamsaProduction =
+    typeof window !== "undefined" &&
+    /(^|\.)khamsahotel\.uz$/i.test(window.location.hostname);
+  if (isKhamsaProduction) return "/backend-api";
+
   const env =
     (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
     (process.env && process.env.REACT_APP_API_BASE_URL) ||

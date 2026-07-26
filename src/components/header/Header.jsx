@@ -20,6 +20,11 @@ function getApiBase() {
       window.location.hostname === "127.0.0.1");
   if (isLocal) return "http://127.0.0.1:5004";
 
+  const isKhamsaProduction =
+    typeof window !== "undefined" &&
+    /(^|\.)khamsahotel\.uz$/i.test(window.location.hostname);
+  if (isKhamsaProduction) return "/backend-api";
+
   const env =
     (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
     (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||

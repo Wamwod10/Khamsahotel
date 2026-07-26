@@ -4,8 +4,13 @@ import "./PaymentSuccess.scss";
 /* ===================== Helpers ===================== */
 
 function getApiBase() {
+  const isKhamsaProduction =
+    typeof window !== "undefined" &&
+    /(^|\.)khamsahotel\.uz$/i.test(window.location.hostname);
+  if (isKhamsaProduction) return "/backend-api";
+
   const env = (import.meta?.env && import.meta.env.VITE_API_BASE_URL) || "";
-  const fallback = "https://khamsa-backend.onrender.com";
+  const fallback = "/backend-api";
   return (env || fallback).replace(/\/+$/, "");
 }
 

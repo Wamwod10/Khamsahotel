@@ -8,23 +8,32 @@ import { useTranslation } from "react-i18next";
 
 /* ===================== Helpers ===================== */
 
-/** API bazasi — .env (VITE_API_BASE_URL) dan, HTTPS majburiy */
+/** API bazasi — .env (VITE_API_BASE_URL) dan */
 function getApiBase() {
+  const isKhamsaProduction =
+    typeof window !== "undefined" &&
+    /(^|\.)khamsahotel\.uz$/i.test(window.location.hostname);
+  if (isKhamsaProduction) return "/backend-api";
+
   let base = (import.meta?.env?.VITE_API_BASE_URL || "").trim();
   if (!base) {
-    console.error("VITE_API_BASE_URL topilmadi! .env faylini tekshiring.");
-    base = "https://khamsa-backend.onrender.com";
+    console.warn("VITE_API_BASE_URL topilmadi, /backend-api ishlatiladi.");
+    base = "/backend-api";
   }
   base = base.replace(/\/+$/, "");
-  try {
-    const u = new URL(base);
-    if (u.protocol !== "https:") {
-      console.warn(
-        "API_BASE HTTPS emas — brauzer CORS/MixedContent bloklashi mumkin."
-      );
+  if (/^https?:\/\//i.test(base)) {
+    try {
+      const u = new URL(base);
+      if (u.protocol !== "https:" && window.location.protocol === "https:") {
+        console.warn(
+          "API_BASE HTTPS emas — brauzer MixedContent bloklashi mumkin."
+        );
+      }
+    } catch {
+      console.error("API_BASE noto‘g‘ri URL:", base);
     }
-  } catch {
-    console.error("API_BASE noto‘g‘ri URL:", base);
+  } else if (!base.startsWith("/")) {
+    console.error("API_BASE relative yo'l / bilan boshlanishi kerak:", base);
   }
   return base;
 }
@@ -285,7 +294,7 @@ const MyBooking = () => {
       console.error("create-payment fetch error:", err);
       const guess =
         err?.name === "TypeError"
-          ? "Tarmoq yoki CORS xatosi. HTTPS domenlari va CORS ruxsatlarini tekshiring."
+          ? "Backend serverga ulanish yopildi. Sayt /backend-api proxy orqali qayta deploy qilinganini va Render backend ishlayotganini tekshiring."
           : err?.message || String(err);
       alert(`To‘lov yaratishda xatolik yuz berdi: ${guess}`);
     } finally {
