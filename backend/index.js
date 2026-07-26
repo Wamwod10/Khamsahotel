@@ -51,35 +51,76 @@ if (missing.length)
 app.set("trust proxy", 1);
 
 /* ====== CORS ====== */
-const ALLOWED_ORIGINS = [
-  FRONTEND_URL,
-  "https://www.khamsahotel.uz",
-  "http://localhost:5173",
-  "http://localhost:3000",
-].filter(Boolean);
+function normalizeOrigin(value) {
+  if (!value) return "";
+  try {
+    return new URL(value).origin;
+  } catch {
+    return String(value).trim().replace(/\/+$/, "");
+  }
+}
 
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-      console.warn("CORS block:", origin);
-      return cb(new Error("Not allowed by CORS"));
-    },
-    methods: ["GET", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Accept",
-      "Authorization",
-      "Idempotency-Key",
-    ],
-    credentials: false,
-  }),
+const ENV_ALLOWED_ORIGINS = String(
+  process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS || "",
+)
+  .split(",")
+  .map(normalizeOrigin)
+  .filter(Boolean);
+
+const ALLOWED_ORIGINS = new Set(
+  [
+    FRONTEND_URL,
+    "https://khamsahotel.uz",
+    "https://www.khamsahotel.uz",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    ...ENV_ALLOWED_ORIGINS,
+  ]
+    .map(normalizeOrigin)
+    .filter(Boolean),
 );
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+
+  const normalized = normalizeOrigin(origin);
+  if (ALLOWED_ORIGINS.has(normalized)) return true;
+
+  try {
+    const { protocol, hostname } = new URL(normalized);
+    const isKhamsaDomain =
+      protocol === "https:" &&
+      (hostname === "khamsahotel.uz" || hostname.endsWith(".khamsahotel.uz"));
+    const isLocalDev = hostname === "localhost" || hostname === "127.0.0.1";
+    return isKhamsaDomain || isLocalDev;
+  } catch {
+    return false;
+  }
+}
+
+const corsOptions = {
+  origin(origin, cb) {
+    if (isAllowedOrigin(origin)) return cb(null, true);
+    console.warn("CORS block:", origin);
+    return cb(null, false);
+  },
+  methods: ["GET", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Accept",
+    "Authorization",
+    "Idempotency-Key",
+  ],
+  credentials: false,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
 
 // Yupqa preflight
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin))
+  if (origin && isAllowedOrigin(origin))
     res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
