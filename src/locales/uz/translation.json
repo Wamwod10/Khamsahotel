@@ -1,4 +1,8 @@
 {
+  "directionsLink": "Yo‘l-yo‘riq",
+  "directionsTitle": "Bizni qanday topish mumkin",
+  "directionsSubtitle": "Khamsa Hotel’ga oson yetib borish uchun quyidagi bosqichlarni kuzating.",
+  "directionsStep": "{{number}}-qadam",
   "khamsa": "Khamsa Hotel: Parvozingizdan oldin dam oling",
   "notselected": "Tanlanmagan",
   "uz": "DD.MM.YYYY",

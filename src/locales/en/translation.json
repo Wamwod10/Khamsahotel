@@ -1,4 +1,8 @@
 {
+  "directionsLink": "Directions",
+  "directionsTitle": "How to Find Us",
+  "directionsSubtitle": "Follow the steps below to reach Khamsa Hotel easily.",
+  "directionsStep": "Step {{number}}",
   "khamsa": "Khamsa Hotel: Relax before your flight",
   "en": "DD.MM.YYYY",
   "available": "Available",

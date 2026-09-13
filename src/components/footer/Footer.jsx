@@ -81,6 +81,11 @@ const Footer = () => {
                 {t("aboutus")}
               </NavLink>
             </li>
+            <li>
+              <NavLink to="/directions" className="footer__link">
+                {t("directionsLink")}
+              </NavLink>
+            </li>
           </ul>
         </div>
 

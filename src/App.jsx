@@ -23,6 +23,7 @@ import About from "./pages/about/About";
 import Cancel from "./pages/mybooking/components/Cancel/Cancel";
 import StaffLogin from "./pages/staff/login/StaffLogin";
 import StaffBookings from "./pages/staff/bookings/StaffBookings";
+import Directions from "./pages/directions/Directions";
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
         <Route path="/success" element={<PaymentSuccess />} />
         <Route path="/cancelpayment" element={<Cancel />} />
         <Route path="/aboutus" element={<About />} />
+        <Route path="/directions" element={<Directions />} />
       </Routes>
       <Footer />
       <ToastContainer

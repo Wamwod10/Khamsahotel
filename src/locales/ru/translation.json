@@ -1,4 +1,8 @@
 {
+  "directionsLink": "Как нас найти",
+  "directionsTitle": "Как нас найти",
+  "directionsSubtitle": "Следуйте инструкциям ниже, чтобы легко добраться до Khamsa Hotel.",
+  "directionsStep": "Шаг {{number}}",
   "khamsa": "Khamsa Hotel: Отдохните перед полётом",
   "notselected": "Не выбрано",
   "available": "Доступный",
