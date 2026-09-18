@@ -1,86 +1,56 @@
-import React, { useState } from 'react';
-import './login.scss';
-
-import { RxEyeOpen } from 'react-icons/rx';
-import { LuEyeClosed } from 'react-icons/lu';
-import Checkin from '../checkin/Checkin';
-// import Admin from '../Admin';
+import React, { useEffect, useState } from "react";
+import "./login.scss";
+import { RxEyeOpen } from "react-icons/rx";
+import { LuEyeClosed } from "react-icons/lu";
+import Checkin from "../checkin/Checkin";
+import { adminLogin, getAdminToken } from "../../staff/staffApi";
 
 const Login = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [error, setError] = useState('');
-    const [isLoggedIn, setIsLoggedIn] = useState(false); // Faqat session uchun ishlatiladi
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(getAdminToken()));
+  const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+  useEffect(() => setIsLoggedIn(Boolean(getAdminToken())), []);
 
-        if (!email || !password) {
-            setError('Iltimos, barcha maydonlarni to‘ldiring.');
-            return;
-        }
-
-        if (!email.endsWith('@gmail.com')) {
-            setError('Faqat @gmail.com email qabul qilinadi.');
-            return;
-        }
-
-        if (password.length < 8) {
-            setError('Parol kamida 8 ta belgidan iborat bo‘lishi kerak.');
-            return;
-        }
-
-        if (email === '1234567890@gmail.com' && password === '1234567890') {
-            setIsLoggedIn(true); // ✅ Faqat xotirada saqlanadi
-        } else {
-            setError("Email yoki parol noto‘g‘ri!");
-        }
-    };
-
-    if (isLoggedIn) {
-        return <Checkin />;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setError("Iltimos, barcha maydonlarni to‘ldiring.");
+      return;
     }
+    setLoading(true);
+    setError("");
+    try {
+      await adminLogin(username, password);
+      setIsLoggedIn(true);
+    } catch {
+      setError("Username yoki parol noto‘g‘ri!");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="login">
-            <form className="form" onSubmit={handleSubmit}>
-                <p className="form-title">Sign in to your account</p>
-                {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
+  if (isLoggedIn) return <Checkin />;
 
-                <div className="input-container">
-                    <input
-                        placeholder="Enter email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => {
-                            setError('');
-                            setEmail(e.target.value);
-                        }}
-                    />
-                </div>
-
-                <div className="input-container">
-                    <input
-                        placeholder="Enter password"
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => {
-                            setError('');
-                            setPassword(e.target.value);
-                        }}
-                    />
-                    <span onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer' }}>
-                        {showPassword ? <LuEyeClosed /> : <RxEyeOpen />}
-                    </span>
-                </div>
-
-                <button className="submit" type="submit">
-                    Sign in
-                </button>
-            </form>
+  return (
+    <div className="login">
+      <form className="form" onSubmit={handleSubmit}>
+        <p className="form-title">Sign in to your account</p>
+        {error && <p style={{ color: "red", textAlign: "center" }}>{error}</p>}
+        <div className="input-container">
+          <input placeholder="Enter username" type="text" value={username} autoComplete="username" onChange={(e) => { setError(""); setUsername(e.target.value); }} />
         </div>
-    );
+        <div className="input-container">
+          <input placeholder="Enter password" type={showPassword ? "text" : "password"} value={password} autoComplete="current-password" onChange={(e) => { setError(""); setPassword(e.target.value); }} />
+          <span onClick={() => setShowPassword(!showPassword)} style={{ cursor: "pointer" }}>{showPassword ? <LuEyeClosed /> : <RxEyeOpen />}</span>
+        </div>
+        <button className="submit" type="submit" disabled={loading}>{loading ? "Signing in..." : "Sign in"}</button>
+      </form>
+    </div>
+  );
 };
 
 export default Login;

@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import "./header.scss";
 import "./headerMedia.scss";
-import { FaWifi, FaChevronDown } from "react-icons/fa";
+import { FaWifi, FaChevronDown, FaShieldAlt } from "react-icons/fa";
 import { IoTimeOutline } from "react-icons/io5";
 import { useTranslation } from "react-i18next";
 import { AiOutlineSafety } from "react-icons/ai";
@@ -26,9 +26,7 @@ function getApiBase() {
   if (isKhamsaProduction) return "/backend-api";
 
   const env =
-    (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
-    (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||
-    "";
+    (import.meta.env.VITE_API_BASE_URL || "");
   const cleaned = String(env || "").replace(/\/+$/, "");
   return (
     cleaned || (typeof window !== "undefined" ? window.location.origin : "")
@@ -367,6 +365,9 @@ const Header = () => {
       )}
 
       <header className="header">
+        <button type="button" className="header__security-link" onClick={() => document.getElementById("security-notice")?.scrollIntoView({ behavior: "smooth", block: "start" })} aria-label={t("fraudJump")}>
+          <FaShieldAlt /> {t("fraudJump")}
+        </button>
         <div className="container">
           <div className="header__big-box">
             <div className="header__box">

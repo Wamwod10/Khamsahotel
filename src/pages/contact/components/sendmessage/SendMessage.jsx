@@ -14,9 +14,6 @@ const SendMessage = () => {
     message: "",
   });
 
-  const BOT_TOKEN = "8905006741:AAEP3sJ7NJg-TXxlLDiCEsV3IpZK1Yl8NFE";
-  const CHAT_ID = "-1002944437298"; // O'zingning Telegram ID
-
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -24,32 +21,42 @@ const SendMessage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const text = `
-📩 Yangi xabar:
-👤 Ism: ${formData.fullName}
-📧 Email: ${formData.email}
-📞 Telefon: ${formData.phone}
-💬 Aloqa usuli: ${formData.method}
-📝 Xabar: ${formData.message}
-    `;
+    try {
+      const isKhamsaProduction = /(^|\.)khamsahotel\.uz$/i.test(
+        window.location.hostname,
+      );
+      const apiBase = isKhamsaProduction
+        ? "/backend-api"
+        : String(import.meta.env.VITE_API_BASE_URL || "/backend-api").replace(
+            /\/+$/,
+            "",
+          );
 
-await fetch("https://khamsa-backend.onrender.com/notify/telegram", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ text })
-});
+      const response = await fetch(`${apiBase}/notify/telegram`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
 
-    alert("Xabaringiz yuborildi ✅");
+      if (!response.ok) {
+        throw new Error("Message delivery failed");
+      }
 
-    // Formani tozalash
-    setFormData({
-      fullName: "",
-      email: "",
-      phone: "",
-      method: "",
-      message: "",
-    });
-    e.target.reset();
+      alert("Xabaringiz yuborildi ✅");
+
+      // Formani tozalash
+      setFormData({
+        fullName: "",
+        email: "",
+        phone: "",
+        method: "",
+        message: "",
+      });
+      e.target.reset();
+    } catch (error) {
+      console.error("Contact message error:", error);
+      alert("Xabarni yuborishda xatolik yuz berdi. Iltimos, qayta urinib ko‘ring.");
+    }
   };
 
   // 🔹 Barcha inputlar to‘ldirilganini tekshirish

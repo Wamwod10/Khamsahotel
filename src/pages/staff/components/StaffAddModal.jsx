@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./staff.scss";
 
-const API_URL = "https://khamsa-backend.onrender.com";
-
 const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
   const [loading, setLoading] = useState(false);
 
@@ -72,24 +70,7 @@ const StaffAddModal = ({ isOpen, onClose, onAdd }) => {
         duration: hours,
       };
 
-      /* ✅ REQUEST */
-      const res = await fetch(`${API_URL}/api/checkins/full`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!data.ok) {
-        alert("Xona band yoki xatolik bor");
-        return;
-      }
-
-      /* 🔥 FIX: parent refresh */
-      onAdd(payload); // ✅ FIX
+      await onAdd(payload);
 
       /* 🔥 close */
       onClose();

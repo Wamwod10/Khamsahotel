@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import "./staffbooking.scss";
 import StaffAddModal from "../components/StaffAddModal";
 import StaffBookingModal from "../components/StaffBookingModal";
 import { FaCheckCircle } from "react-icons/fa";
-
-const API_URL = "https://khamsa-backend.onrender.com";
+import { adminFetch, clearAdminToken, getAdminToken } from "../staffApi";
 
 const StaffBookings = () => {
+  const navigate = useNavigate();
   const [openAdd, setOpenAdd] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [bookings, setBookings] = useState([]);
@@ -17,8 +18,9 @@ const StaffBookings = () => {
     try {
       setLoading(true);
 
-      const res = await fetch(`${API_URL}/api/checkins?type=booking`);
-      const data = await res.json();
+      const res = await adminFetch(`/api/checkins?type=booking`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) throw new Error(data?.error || "Bookings load failed");
 
       if (data.ok) {
         const mapped = data.items.map((b) => ({
@@ -42,6 +44,11 @@ const StaffBookings = () => {
         setBookings(mapped);
       }
     } catch (e) {
+      if (e?.status === 401 || String(e?.message || "").includes("Unauthorized")) {
+        clearAdminToken();
+        navigate("/admin", { replace: true });
+        return;
+      }
       console.error("Fetch error:", e);
     } finally {
       setLoading(false);
@@ -49,56 +56,35 @@ const StaffBookings = () => {
   };
 
   useEffect(() => {
+    if (!getAdminToken()) {
+      navigate("/admin", { replace: true });
+      return;
+    }
     fetchBookings();
-  }, []);
+  }, [navigate]);
 
   /* ================= ADD ================= */
-  const handleAdd = async (newBooking) => {
-    try {
-      const startAt = `${newBooking.date}T${newBooking.time || "00:00"}`;
-
-      // 🔥 duration ni to‘g‘ri parse qilish
-      let hours = 24;
-      if (newBooking.duration.includes("3")) hours = 3;
-      else if (newBooking.duration.includes("10")) hours = 10;
-      else if (newBooking.duration.includes("kun")) hours = 24;
-
-      const endDate = new Date(startAt);
-      endDate.setHours(endDate.getHours() + hours);
-
-      const endAt = endDate.toISOString();
-
-      await fetch(`${API_URL}/api/checkins/full`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          roomType: newBooking.room,
-          startAt,
-          endAt,
-
-          firstName: newBooking.firstName,
-          lastName: newBooking.lastName,
-          phone: newBooking.phone,
-          email: newBooking.email,
-          price: newBooking.price,
-          duration: hours,
-        }),
-      });
-
-      fetchBookings();
-    } catch (e) {
-      console.error("Add error:", e);
-    }
+  const handleAdd = async (payload) => {
+    const res = await adminFetch(`/api/checkins/full`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.ok) throw new Error(data?.error || "Add booking failed");
+    await fetchBookings();
   };
 
   /* ================= DELETE ================= */
   const handleDelete = async (id) => {
     try {
-      await fetch(`${API_URL}/api/checkins/${id}`, {
+      const res = await adminFetch(`/api/checkins/${id}`, {
         method: "DELETE",
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Delete booking failed");
+      }
 
       setSelectedBooking(null);
       fetchBookings();

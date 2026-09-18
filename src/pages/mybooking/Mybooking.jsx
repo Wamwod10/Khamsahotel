@@ -15,7 +15,7 @@ function getApiBase() {
     /(^|\.)khamsahotel\.uz$/i.test(window.location.hostname);
   if (isKhamsaProduction) return "/backend-api";
 
-  let base = (import.meta?.env?.VITE_API_BASE_URL || "").trim();
+  let base = (import.meta.env.VITE_API_BASE_URL || "").trim();
   if (!base) {
     console.warn("VITE_API_BASE_URL topilmadi, /backend-api ishlatiladi.");
     base = "/backend-api";

@@ -24,6 +24,7 @@ import Cancel from "./pages/mybooking/components/Cancel/Cancel";
 import StaffLogin from "./pages/staff/login/StaffLogin";
 import StaffBookings from "./pages/staff/bookings/StaffBookings";
 import Directions from "./pages/directions/Directions";
+import AntiFraud from "./components/antifraud/AntiFraud";
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
               <Bookingform />
               <Gallery />
               <Near />
+              <AntiFraud />
             </>
           }
         />

@@ -2,40 +2,31 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import "./checkin.scss";
+import { adminFetch, getStaffApiBase } from "../../staff/staffApi";
 
-/* ===== API base (dev -> 127.0.0.1:5004 majburan) ===== */
-function getApiBase() {
-  const isLocal =
-    typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1");
-  if (isLocal) return "http://127.0.0.1:5004"; // DEV: pgAdmin.cjs yoki index.js
-
-  const isKhamsaProduction =
-    typeof window !== "undefined" &&
-    /(^|\.)khamsahotel\.uz$/i.test(window.location.hostname);
-  if (isKhamsaProduction) return "/backend-api";
-
-  const env =
-    (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
-    (typeof process !== "undefined" && process.env?.REACT_APP_API_BASE_URL) ||
-    "";
-  const base = String(env || "").replace(/\/+$/, "");
-  return base || (typeof window !== "undefined" ? window.location.origin : "");
-}
-
-async function fetchJson(url, init) {
-  const res = await fetch(url, init);
+/* ===== Protected admin API helpers ===== */
+async function fetchJson(url, init = {}) {
+  let res;
+  try {
+    res = await adminFetch(url, init);
+  } catch (error) {
+    if (error?.status === 401 || error?.status === 403) {
+      if (typeof window !== "undefined") window.location.assign("/ad2007");
+    }
+    throw error;
+  }
   const ct = res.headers.get("content-type") || "";
   const data = ct.includes("application/json")
     ? await res.json()
     : await res.text();
+
   if (!res.ok) {
     const msg =
       (data && (data.error || data.message)) ||
       (typeof data === "string" ? data : res.statusText);
     throw new Error(msg);
   }
+
   return data;
 }
 
@@ -74,7 +65,7 @@ function nowLocalInput(stepMin = 5) {
 }
 
 export default function Checkin() {
-  const API = useMemo(() => getApiBase(), []);
+  const API = useMemo(() => getStaffApiBase(), []);
 
   // UI
   const [open, setOpen] = useState(false);

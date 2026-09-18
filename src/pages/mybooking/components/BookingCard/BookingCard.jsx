@@ -9,10 +9,7 @@ function getApiBase() {
     /(^|\.)khamsahotel\.uz$/i.test(window.location.hostname);
   if (isKhamsaProduction) return "/backend-api";
 
-  const env =
-    (import.meta?.env && import.meta.env.VITE_API_BASE_URL) ||
-    (process.env && process.env.REACT_APP_API_BASE_URL) ||
-    "";
+  const env = import.meta.env.VITE_API_BASE_URL || "";
   const cleaned = (env || "").replace(/\/+$/, "");
   return cleaned || window.location.origin;
 }

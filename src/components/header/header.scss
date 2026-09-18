@@ -10,6 +10,17 @@
     padding: 0;
   }
 
+  &__security-link {
+    position: absolute; top: 16px; right: 22px; z-index: 15; display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 12px; border: 1px solid rgba(255,255,255,.38); border-radius: 999px; background: rgba(20,29,43,.38);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; transition: .2s ease;
+    &:hover { background: #ffa930; border-color: #ffa930; transform: translateY(-1px); }
+  }
+
+  @media (max-width: 768px) {
+    &__security-link { top: 12px; right: 12px; font-size: 12px; padding: 7px 10px; }
+  }
+
   &__big-box {
     width: 100%;
     height: 91.1vh;
