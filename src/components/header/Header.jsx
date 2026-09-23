@@ -11,6 +11,7 @@ import { MdOutlineCancel } from "react-icons/md";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TbAirConditioning } from "react-icons/tb";
 import { RiDrinks2Fill } from "react-icons/ri";
+import { hasOverlappingFamilyBooking } from "../../utils/familyBookingAvailability.js";
 
 /* ===== Helpers ===== */
 function getApiBase() {
@@ -264,6 +265,33 @@ const Header = () => {
 
     // FAMILY: duration ruxsatini tekshirish
     if (rooms === "FAMILY") {
+      let myBookings = [];
+      try {
+        const saved =
+          sessionStorage.getItem("allBookings") ||
+          localStorage.getItem("allBookings") ||
+          "[]";
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) myBookings = parsed;
+      } catch {
+        myBookings = [];
+      }
+
+      if (
+        hasOverlappingFamilyBooking(myBookings, {
+          rooms,
+          checkIn,
+          checkOutTime,
+          duration,
+        })
+      ) {
+        openModal(
+          t("familyAlreadySelected") ||
+            "A Family room is already selected for this time in My bookings."
+        );
+        return;
+      }
+
       const pickedCode = codeFromLabel(duration);
       if (
         !pickedCode ||

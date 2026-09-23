@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
 import "./roomModalMedia.scss";
+import { hasOverlappingFamilyBooking } from "../../../../utils/familyBookingAvailability.js";
 
 function normalizeRoomCode(v) {
   const s = String(v || "").toLowerCase().trim();
@@ -219,7 +220,16 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     };
 
     try {
-      const existing = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
+      const parsed = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
+      const existing = Array.isArray(parsed) ? parsed : [];
+      if (hasOverlappingFamilyBooking(existing, full)) {
+        toast.error(
+          t("familyAlreadySelected") ||
+            "A Family room is already selected for this time in My bookings.",
+          { position: "top-center", autoClose: 4000 }
+        );
+        return;
+      }
       const updated = [full, ...existing];
       sessionStorage.setItem("allBookings", JSON.stringify(updated));
       sessionStorage.setItem("bookingInfo", JSON.stringify(full));

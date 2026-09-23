@@ -48,6 +48,7 @@
   "oneDay": "1 Day",
   "fillAllFields": "Please fill in all fields!",
   "familyNotAvailable": "Unfortunately, the room is unavailable for the dates you selected. Please consider other dates or room types!",
+  "familyAlreadySelected": "A Family room overlapping this time is already selected in My bookings. Please choose another time or room type!",
   "understand": "Understandable",
   "searchrooms": "Searching Room...",
   "child": "Child under 7",

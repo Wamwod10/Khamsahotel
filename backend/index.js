@@ -7,6 +7,7 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { Pool } from "pg";
 import { checkAvailability } from "./bnovo.js";
+import { countOverlappingRoomItems, validateRoomCapacity } from "./bookingCapacity.js";
 
 dotenv.config();
 const app = express();
@@ -1339,6 +1340,39 @@ async function getPeakConcurrency(roomType, fromTs, toTs) {
   return peak;
 }
 
+async function validatePaymentCapacity(paymentItems) {
+  const roomTypes = [...new Set(paymentItems.map((item) => item.rooms).filter(Boolean))];
+  const capacityEntries = await Promise.all(
+    roomTypes.map(async (roomType) => {
+      const cfg = await getRoomTypeCfg(roomType);
+      return [roomType, Number(cfg.capacity)];
+    }),
+  );
+  const capacities = Object.fromEntries(capacityEntries);
+
+  const requestCapacity = validateRoomCapacity(paymentItems, capacities);
+  if (!requestCapacity.ok) return requestCapacity;
+
+  for (const item of paymentItems) {
+    const capacity = capacities[item.rooms];
+    if (!Number.isFinite(capacity)) continue;
+
+    const existing = await getPeakConcurrency(item.rooms, item.checkInAt, item.checkOutAt);
+    const requested = countOverlappingRoomItems(paymentItems, item);
+    if (existing + requested > capacity) {
+      return {
+        ok: false,
+        roomType: item.rooms,
+        capacity,
+        requested,
+        existing,
+      };
+    }
+  }
+
+  return { ok: true };
+}
+
 /* =======================
  *  BNOVO ROUTES
  * ======================= */
@@ -1442,6 +1476,15 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     if (Math.abs(requestedAmount - effectiveAmount) > 0.01) {
       return res.status(409).json({
         error: "Booking narxi yangilangan. Sahifani yangilab qayta urinib ko‘ring.",
+      });
+    }
+
+    const capacityCheck = await validatePaymentCapacity(paymentItems);
+    if (!capacityCheck.ok) {
+      const roomName =
+        capacityCheck.roomType === "FAMILY" ? "Family room" : capacityCheck.roomType;
+      return res.status(409).json({
+        error: `${roomName} uchun bo'sh xona yo'q. Bizda bu turdagi xona soni: ${capacityCheck.capacity}.`,
       });
     }
 
