@@ -2099,7 +2099,7 @@ async function startServer() {
     emailRetryTimer.unref?.();
 
     app.listen(PORT, () => {
-  console.log(`✅ Server alo darajada ishlayapti: ${BASE_URL} (port: ${PORT})`);
+  console.log(`✅ Server yaxshi ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
     `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
       process.env.BNOVO_AUTH_URL
