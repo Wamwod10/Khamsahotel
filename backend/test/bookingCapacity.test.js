@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { validateRoomCapacity } from "../bookingCapacity.js";
+import {
+  getAllowedTariffCodes,
+  validateRoomCapacity,
+} from "../bookingCapacity.js";
 
 const baseItem = {
   rooms: "FAMILY",
@@ -21,4 +24,19 @@ test("rejects booking more family rooms than capacity in the same payment", () =
   assert.equal(result.ok, false);
   assert.equal(result.roomType, "FAMILY");
   assert.equal(result.capacity, 1);
+});
+
+test("allows a 3-hour family tariff ending exactly when the next block starts", async () => {
+  const nextBlockStart = new Date("2026-10-01T14:00:00.000Z");
+  const allowed = await getAllowedTariffCodes({
+    roomType: "FAMILY",
+    startAt: new Date("2026-10-01T11:00:00.000Z"),
+    nextBlockStart,
+    postBufferMinutes: 0,
+    capacity: 1,
+    getPeakConcurrency: async (_roomType, _start, end) =>
+      end <= nextBlockStart ? 0 : 1,
+  });
+
+  assert.deepEqual(allowed, ["3h"]);
 });

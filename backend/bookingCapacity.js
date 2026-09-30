@@ -39,3 +39,36 @@ export function validateRoomCapacity(items, capacities) {
 
   return { ok: true };
 }
+
+const BOOKING_TARIFFS = [
+  { code: "3h", hours: 3 },
+  { code: "10h", hours: 10 },
+  { code: "24h", hours: 24 },
+];
+
+export async function getAllowedTariffCodes({
+  roomType,
+  startAt,
+  nextBlockStart,
+  postBufferMinutes = 0,
+  capacity,
+  getPeakConcurrency,
+}) {
+  const start = new Date(startAt);
+  const nextStart = nextBlockStart ? new Date(nextBlockStart) : null;
+  const allowed = [];
+
+  for (const tariff of BOOKING_TARIFFS) {
+    const end = new Date(start.getTime() + tariff.hours * 60 * 60 * 1000);
+    const endWithPost = new Date(
+      end.getTime() + Number(postBufferMinutes || 0) * 60 * 1000,
+    );
+
+    if (nextStart && endWithPost > nextStart) continue;
+
+    const peakExisting = await getPeakConcurrency(roomType, start, endWithPost);
+    if (peakExisting + 1 <= Number(capacity)) allowed.push(tariff.code);
+  }
+
+  return allowed;
+}

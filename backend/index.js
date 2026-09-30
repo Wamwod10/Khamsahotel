@@ -7,7 +7,11 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { Pool } from "pg";
 import { checkAvailability } from "./bnovo.js";
-import { countOverlappingRoomItems, validateRoomCapacity } from "./bookingCapacity.js";
+import {
+  countOverlappingRoomItems,
+  getAllowedTariffCodes,
+  validateRoomCapacity,
+} from "./bookingCapacity.js";
 
 dotenv.config();
 const app = express();
@@ -2015,26 +2019,14 @@ app.get("/api/availability/allowed-tariffs", availabilityLimiter, async (req, re
       }
     }
 
-    const tariffs = [
-      { code: "3h", hours: 3 },
-      { code: "10h", hours: 10 },
-      { code: "24h", hours: 24 },
-    ];
-
-    const peakExisting = await getPeakConcurrency(
+    const allowed = await getAllowedTariffCodes({
       roomType,
-      new Date(S),
-      new Date(new Date(S).getTime() + 24 * 60 * 60 * 1000),
-    );
-
-    const allowed = [];
-    for (const t of tariffs) {
-      const end = new Date(new Date(S).getTime() + t.hours * 60 * 60 * 1000);
-      const endWithPost = new Date(end.getTime() + post * 60 * 1000);
-
-      if (n_start && endWithPost > new Date(n_start)) continue;
-      if (peakExisting + 1 <= cfg.capacity) allowed.push(t.code);
-    }
+      startAt: S,
+      nextBlockStart: n_start,
+      postBufferMinutes: post,
+      capacity: cfg.capacity,
+      getPeakConcurrency,
+    });
 
     res.json({
       ok: true,
