@@ -5,6 +5,7 @@ import StaffAddModal from "../components/StaffAddModal";
 import StaffBookingModal from "../components/StaffBookingModal";
 import { FaCheckCircle } from "react-icons/fa";
 import { adminFetch, clearAdminToken, getAdminToken } from "../staffApi";
+import { loadAllStaffBookings } from "./loadAllStaffBookings.js";
 
 const StaffBookings = () => {
   const navigate = useNavigate();
@@ -18,12 +19,8 @@ const StaffBookings = () => {
     try {
       setLoading(true);
 
-      const res = await adminFetch(`/api/checkins?type=booking`);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.ok) throw new Error(data?.error || "Bookings load failed");
-
-      if (data.ok) {
-        const mapped = data.items.map((b) => ({
+      const items = await loadAllStaffBookings(adminFetch);
+      const mapped = items.map((b) => ({
           id: b.id,
           firstName: b.first_name || "",
           lastName: b.last_name || "",
@@ -41,8 +38,7 @@ const StaffBookings = () => {
           createdAt: b.created_at,
         }));
 
-        setBookings(mapped);
-      }
+      setBookings(mapped);
     } catch (e) {
       if (e?.status === 401 || String(e?.message || "").includes("Unauthorized")) {
         clearAdminToken();

@@ -12,6 +12,7 @@ import {
   getAllowedTariffCodes,
   validateRoomCapacity,
 } from "./bookingCapacity.js";
+import { normalizeCheckinsPagination } from "./checkinsPagination.js";
 
 dotenv.config();
 const app = express();
@@ -1773,7 +1774,8 @@ app.post(
  *  CHECKINS (DB) — frontend
  * ======================= */
 app.get("/api/checkins", requireAdmin, async (req, res) => {
-  const { roomType = "", limit = "300" } = req.query;
+  const { roomType = "" } = req.query;
+  const { limit, offset } = normalizeCheckinsPagination(req.query);
   const type = String(req.query.type || "").toLowerCase();
   try {
     const params = [];
@@ -1791,7 +1793,10 @@ app.get("/api/checkins", requireAdmin, async (req, res) => {
       params.push(roomType);
       where.push(`rooms = $${params.length}`);
     }
-    params.push(Math.min(Math.max(Number(limit) || 300, 1), 500));
+    params.push(limit);
+    const limitParam = params.length;
+    params.push(offset);
+    const offsetParam = params.length;
     const sql = `
       SELECT id, rooms,
              check_in, check_out,
@@ -1802,8 +1807,9 @@ app.get("/api/checkins", requireAdmin, async (req, res) => {
              first_name, last_name, phone, email, check_in_time, created_at
       FROM public.khamsachekin
       ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-      ORDER BY COALESCE(check_in_at, check_in::timestamp) ASC
-      LIMIT $${params.length};`;
+      ORDER BY COALESCE(check_in_at, check_in::timestamp) ASC, id ASC
+      LIMIT $${limitParam}
+      OFFSET $${offsetParam};`;
     const r = await pgPool.query(sql, params);
     res.json({ ok: true, items: r.rows });
   } catch (e) {
