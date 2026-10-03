@@ -22,7 +22,7 @@ const Near = () => {
         </p>
         <div className="near__box">
           <div className="near__box-card">
-            <img src="/15.jpg" width={"100%"} height={"200px"} alt="" />
+            <img src="/near-railway.jpg" width={"100%"} height={"200px"} alt="" loading="lazy" decoding="async" />
             <div className="near__box-absolute">
               <p className="near__absolute-text">
                 <MdLocalCafe />
@@ -54,7 +54,7 @@ const Near = () => {
             </a>
           </div>
           <div className="near__box-card">
-            <img src="/16.png" width={"100%"} height={"200px"} alt="" />
+            <img src="/near-medical.jpg" width={"100%"} height={"200px"} alt="" loading="lazy" decoding="async" />
             <div className="near__box-absolute">
               <p className="near__absolute-text">
                 <FaBriefcaseMedical />
@@ -87,7 +87,7 @@ const Near = () => {
             </a>
           </div>
           <div className="near__box-card">
-            <img src="/17.jpg" width={"100%"} height={"200px"} alt="" />
+            <img src="/near-religious.jpg" width={"100%"} height={"200px"} alt="" loading="lazy" decoding="async" />
             <div className="near__box-absolute">
               <p className="near__absolute-text">
                 <FaBookOpen />
@@ -120,7 +120,7 @@ const Near = () => {
             </a>
           </div>
           <div className="near__box-card">
-            <img src="/18.jpg" width={"100%"} height={"200px"} alt="" />
+            <img src="/near-park.jpg" width={"100%"} height={"200px"} alt="" loading="lazy" decoding="async" />
             <div className="near__box-absolute">
               <p className="near__absolute-text">
                 <FaShoppingBag />

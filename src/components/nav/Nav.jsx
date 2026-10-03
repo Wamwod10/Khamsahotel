@@ -85,7 +85,14 @@ const Nav = () => {
       <div className="container">
         <div className={`nav__box ${isActive ? "active" : ""}`}>
           <h2 className="nav__logo">
-            <img className="nav__logo-img" src="/logo.png" alt="Logo" />
+            <img
+              className="nav__logo-img"
+              src="/logo-small.png"
+              alt="Logo"
+              width="110"
+              height="133"
+              decoding="async"
+            />
             <div className="nav__khamsa">
               <NavLink to="/">Khamsa Hotel</NavLink>
               <div className="nav__by">

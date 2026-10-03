@@ -36,7 +36,13 @@ const Roomcard = () => {
                 <span>{t("roomprice2")}</span>
                 <span>{t("roomprice3")}</span>
               </div>
-              <img className="roomcard__boxes-img" src="/5.jpg" alt="" />
+              <img
+                className="roomcard__boxes-img"
+                src="/room-standard.jpg"
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
               <div className="roomcard__title-box">
                 <h2 className="roomcard__boxes-title">{t("standard1")}</h2>
                 <div className="roomcard__boxes-spans">
@@ -87,7 +93,13 @@ const Roomcard = () => {
                 <span>{t("roomprice5")}</span>
                 <span>{t("roomprice6")}</span>
               </div>
-              <img className="roomcard__boxes-img" src="/4.jpg" alt="" />
+              <img
+                className="roomcard__boxes-img"
+                src="/room-family.jpg"
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
               <div className="roomcard__title-box">
                 <h2 className="roomcard__boxes-title">{t("family1")}</h2>
                 <div className="roomcard__boxes-spans">
@@ -133,7 +145,13 @@ const Roomcard = () => {
               </div>
             </div>
             <div className="roomcard__boxes-card card-color">
-              <img className="roomcard__boxes-img img-radius" src="/35.jpg" alt="" />
+              <img
+                className="roomcard__boxes-img img-radius"
+                src="/35.jpg"
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
               <div className="roomcard__title-box">
                 <h2 className="roomcard__boxes-title title-color">Qo'noq Railway Hotel</h2>
               </div>
