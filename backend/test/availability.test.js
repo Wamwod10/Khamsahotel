@@ -119,15 +119,46 @@ test("same-day hourly Bnovo booking blocks an overlapping website time window", 
   });
 
   const result = await service.check({
-    checkIn: "2026-10-10",
-    checkOut: "2026-10-11",
+    checkInDate: "2026-10-10",
+    checkInTime: "12:00",
+    durationHours: 3,
     roomType: "FAMILY",
-    startAt: "2026-10-10T12:00:00+05:00",
-    endAt: "2026-10-10T15:00:00+05:00",
   });
 
   assert.equal(result.available, false);
   assert.equal(result.occupiedCount.bnovo, 1);
+});
+
+test("Bnovo and local bookings both use exact time and duration can change availability", async () => {
+  const service = createAvailabilityService({
+    bnovoClient: makeBnovoClient([{
+      room_name: "F1",
+      status: { name: "Confirmed" },
+      dates: {
+        arrival: "2026-10-26 08:00:00+05:00",
+        departure: "2026-10-26 11:00:00+05:00",
+      },
+    }]),
+    loadLocalBookings: async () => [{
+      source: "local", roomType: "FAMILY", status: "paid",
+      checkIn: "2026-10-26", checkOut: "2026-10-27",
+      checkInAt: "2026-10-26T17:00:00+05:00",
+      checkOutAt: "2026-10-26T20:00:00+05:00",
+    }],
+    getCapacity: async () => 1,
+  });
+
+  const threeHours = await service.check({
+    checkInDate: "2026-10-26", checkInTime: "14:00", durationHours: 3, roomType: "FAMILY",
+  });
+  const tenHours = await service.check({
+    checkInDate: "2026-10-26", checkInTime: "14:00", durationHours: 10, roomType: "FAMILY",
+  });
+
+  assert.equal(threeHours.available, true);
+  assert.deepEqual(threeHours.occupiedCount, { bnovo: 0, local: 0, total: 0 });
+  assert.equal(tenHours.available, false);
+  assert.deepEqual(tenHours.occupiedCount, { bnovo: 0, local: 1, total: 1 });
 });
 
 test("cancelled Bnovo booking and cancelled local booking do not consume inventory", async () => {

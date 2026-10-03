@@ -179,8 +179,8 @@ export function isInventoryBlockingBooking(booking, options = {}) {
 
 export function extractBookingDates(booking) {
   const dates = booking?.dates || {};
-  const arrival = dates.real_arrival || dates.arrival || booking?.arrival || booking?.check_in;
-  const departure = dates.real_departure || dates.departure || booking?.departure || booking?.check_out;
+  const arrival = dates.arrival || dates.original_arrival || booking?.arrival || booking?.check_in;
+  const departure = dates.departure || dates.original_departure || booking?.departure || booking?.check_out;
   return {
     checkIn: String(arrival || "").slice(0, 10),
     checkOut: String(departure || "").slice(0, 10),
@@ -189,8 +189,8 @@ export function extractBookingDates(booking) {
 
 export function hasValidBookingWindow(booking, { hotelOffsetMinutes = 300 } = {}) {
   const dates = booking?.dates || {};
-  const arrival = dates.real_arrival || dates.arrival || booking?.arrival || booking?.check_in;
-  const departure = dates.real_departure || dates.departure || booking?.departure || booking?.check_out;
+  const arrival = dates.arrival || dates.original_arrival || booking?.arrival || booking?.check_in;
+  const departure = dates.departure || dates.original_departure || booking?.departure || booking?.check_out;
   const hasBookingTimes = /[ T]\d{2}:\d{2}/.test(String(arrival || "")) && /[ T]\d{2}:\d{2}/.test(String(departure || ""));
   if (hasBookingTimes) {
     const existingStart = parseBnovoTimestamp(arrival, hotelOffsetMinutes);
@@ -204,8 +204,8 @@ export function hasValidBookingWindow(booking, { hotelOffsetMinutes = 300 } = {}
 export function bookingOverlapsRequest(booking, request, { hotelOffsetMinutes = 300 } = {}) {
   if (!hasValidBookingWindow(booking, { hotelOffsetMinutes })) return false;
   const dates = booking?.dates || {};
-  const arrival = dates.real_arrival || dates.arrival || booking?.arrival || booking?.check_in;
-  const departure = dates.real_departure || dates.departure || booking?.departure || booking?.check_out;
+  const arrival = dates.arrival || dates.original_arrival || booking?.arrival || booking?.check_in;
+  const departure = dates.departure || dates.original_departure || booking?.departure || booking?.check_out;
   const hasBookingTimes = /[ T]\d{2}:\d{2}/.test(String(arrival || "")) && /[ T]\d{2}:\d{2}/.test(String(departure || ""));
   if (hasBookingTimes) {
     const requestedStart = request?.startAt

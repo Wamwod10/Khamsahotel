@@ -1,11 +1,6 @@
 import { validateAvailabilityQuery } from "./availability.js";
 import { countOverlappingRoomItems } from "./bookingCapacity.js";
-
-function addOneDay(dateOnly) {
-  const [year, month, day] = String(dateOnly).split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day + 1));
-  return date.toISOString().slice(0, 10);
-}
+import { buildHotelAvailabilityWindow } from "./availabilityWindow.js";
 
 function safeAvailabilityBody(result) {
   if (!result?.ok) {
@@ -41,27 +36,19 @@ export function createAvailabilityHandler(availabilityService) {
         code: validation.code,
       });
     }
-    const result = await availabilityService.check({
-      ...validation.value,
-      startAt: query.startAt,
-      endAt: query.endAt,
-    });
+    const result = await availabilityService.check(validation.value);
     const body = safeAvailabilityBody(result);
     return res.status(result.ok ? 200 : 503).json(body);
   };
 }
 
 export function availabilityRequestFromPaymentItem(item) {
-  const checkIn = String(item?.checkIn || "").slice(0, 10);
-  let checkOut = String(item?.checkOut || "").slice(0, 10);
-  if (!checkOut || checkOut <= checkIn) checkOut = addOneDay(checkIn);
-  return {
+  return buildHotelAvailabilityWindow({
     roomType: String(item?.rooms || "").toUpperCase(),
-    checkIn,
-    checkOut,
-    startAt: new Date(item.checkInAt).toISOString(),
-    endAt: new Date(item.checkOutAt).toISOString(),
-  };
+    checkInDate: String(item?.checkInDate || item?.checkIn || "").slice(0, 10),
+    checkInTime: item?.checkInTime,
+    durationHours: item?.durationHours,
+  });
 }
 
 export async function checkPaymentAvailability(paymentItems, availabilityService) {
@@ -91,4 +78,4 @@ export async function checkPaymentAvailability(paymentItems, availabilityService
   return { ok: true };
 }
 
-export const _internals = { addOneDay, safeAvailabilityBody };
+export const _internals = { safeAvailabilityBody };

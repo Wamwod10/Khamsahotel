@@ -7,6 +7,7 @@ import {
   overlapsDateRange,
 } from "./bnovo.js";
 import { isLocalInventoryBlockingStatus } from "./localInventory.js";
+import { buildHotelAvailabilityWindow } from "./availabilityWindow.js";
 
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const ROOM_TYPES = new Set(["STANDARD", "FAMILY"]);
@@ -23,6 +24,17 @@ function epochDay(value) {
 }
 
 export function validateAvailabilityQuery(input = {}) {
+  const hasTimeAwareField = ["checkInDate", "checkInTime", "durationHours"]
+    .some((field) => input[field] != null && String(input[field]) !== "");
+  if (hasTimeAwareField) {
+    const roomType = String(input.roomType || "STANDARD").toUpperCase();
+    if (!ROOM_TYPES.has(roomType)) return { ok: false, status: 400, code: "INVALID_ROOM_TYPE" };
+    try {
+      return { ok: true, value: buildHotelAvailabilityWindow({ ...input, roomType }) };
+    } catch {
+      return { ok: false, status: 400, code: "INVALID_DATES" };
+    }
+  }
   const checkIn = String(input.checkIn || "");
   const checkOut = String(input.checkOut || "");
   const roomType = String(input.roomType || "STANDARD").toUpperCase();
@@ -72,11 +84,7 @@ export function createAvailabilityService({ bnovoClient, loadLocalBookings, getC
       };
     }
 
-    const request = {
-      ...validation.value,
-      startAt: input?.startAt,
-      endAt: input?.endAt,
-    };
+    const request = validation.value;
 
     try {
       bnovoClient.assertRoomMapping(request.roomType);

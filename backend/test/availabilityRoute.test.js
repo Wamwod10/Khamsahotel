@@ -64,27 +64,68 @@ test("hourly payment windows use a one-day Bnovo query and preserve exact local 
   assert.deepEqual(availabilityRequestFromPaymentItem({
     rooms: "FAMILY",
     checkIn: "2026-10-10",
-    checkOut: "2026-10-10",
-    checkInAt: new Date("2026-10-10T10:00:00+05:00"),
-    checkOutAt: new Date("2026-10-10T13:00:00+05:00"),
+    checkInDate: "2026-10-10",
+    checkInTime: "10:00",
+    durationHours: 3,
+    checkOutAt: new Date("2026-10-12T13:00:00+05:00"),
   }), {
     roomType: "FAMILY",
+    checkInDate: "2026-10-10",
+    checkInTime: "10:00",
+    durationHours: 3,
     checkIn: "2026-10-10",
     checkOut: "2026-10-11",
-    startAt: "2026-10-10T05:00:00.000Z",
-    endAt: "2026-10-10T08:00:00.000Z",
+    startAt: "2026-10-10T10:00:00+05:00",
+    endAt: "2026-10-10T13:00:00+05:00",
   });
+});
+
+test("availability route derives the exact window server-side and ignores supplied endAt", async () => {
+  let captured;
+  const handler = createAvailabilityHandler({
+    check: async (request) => {
+      captured = request;
+      return { ok: true, availabilityKnown: true, roomType: "FAMILY", available: true, availableCount: 1, totalCapacity: 1 };
+    },
+  });
+  const response = makeResponse();
+  await handler({ query: {
+    checkInDate: "2026-10-26", checkInTime: "14:00", durationHours: "3", roomType: "FAMILY",
+    endAt: "2026-10-30T00:00:00+05:00",
+  } }, response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(captured.endAt, "2026-10-26T17:00:00+05:00");
 });
 
 test("payment availability guard blocks unknown Bnovo availability", async () => {
   const result = await checkPaymentAvailability([{
     rooms: "STANDARD",
     checkIn: "2026-10-10",
-    checkOut: "2026-10-10",
-    checkInAt: new Date("2026-10-10T10:00:00+05:00"),
-    checkOutAt: new Date("2026-10-10T13:00:00+05:00"),
+    checkInDate: "2026-10-10",
+    checkInTime: "10:00",
+    durationHours: 3,
   }], {
     check: async () => ({ ok: false, availabilityKnown: false, available: false, code: "BNOVO_UNAVAILABLE" }),
   });
   assert.deepEqual(result, { ok: false, code: "BNOVO_UNAVAILABLE", roomType: "STANDARD" });
+});
+
+test("final payment guard re-derives the exact datetime window", async () => {
+  let captured;
+  const result = await checkPaymentAvailability([{
+    rooms: "FAMILY",
+    checkInDate: "2026-10-26",
+    checkInTime: "14:00",
+    durationHours: 10,
+    checkInAt: new Date("2026-10-01T00:00:00Z"),
+    checkOutAt: new Date("2026-11-01T00:00:00Z"),
+  }], {
+    check: async (request) => {
+      captured = request;
+      return { ok: true, availabilityKnown: true, available: true, availableCount: 1, totalCapacity: 1 };
+    },
+  });
+  assert.deepEqual(result, { ok: true });
+  assert.equal(captured.startAt, "2026-10-26T14:00:00+05:00");
+  assert.equal(captured.endAt, "2026-10-27T00:00:00+05:00");
 });

@@ -19,6 +19,7 @@ import {
 } from "./bookingCapacity.js";
 import { normalizeCheckinsPagination } from "./checkinsPagination.js";
 import { ACTIVE_LOCAL_STATUS_SQL, withRoomTypeLocks } from "./localInventory.js";
+import { buildHotelAvailabilityWindow } from "./availabilityWindow.js";
 
 dotenv.config();
 const app = express();
@@ -529,8 +530,9 @@ function normalizePaymentItems(booking, fallbackAmount) {
     : [booking || {}];
 
   return rawItems.map((item) => {
+    const checkInDate = String(firstNonEmpty(item?.checkIn, booking?.checkIn) || "").slice(0, 10);
     const checkInValue = buildCheckInValue(
-      firstNonEmpty(item?.checkIn, booking?.checkIn),
+      checkInDate,
       firstNonEmpty(
         item?.checkOutTime,
         item?.checkInTime,
@@ -547,7 +549,10 @@ function normalizePaymentItems(booking, fallbackAmount) {
 
     return {
       raw: item,
-      checkIn: String(firstNonEmpty(item?.checkIn, booking?.checkIn) || "").slice(0, 10),
+      checkIn: checkInDate,
+      checkInDate,
+      checkInTime: bookingWindow.checkInTime,
+      durationHours: bookingWindow.durationHours,
       checkInAt: bookingWindow.startAt,
       checkOut: bookingWindow.checkOutDate,
       checkOutAt: bookingWindow.endAt,
@@ -921,36 +926,36 @@ function normalizeBookingDuration(durationValue) {
 }
 
 function computeBookingWindow(checkInStr, durationValue) {
-  const startAt = new Date(
-    String(checkInStr || "").includes("T")
-      ? checkInStr
-      : `${String(checkInStr || "").slice(0, 10)}T00:00:00`,
-  );
-
-  if (Number.isNaN(startAt.getTime())) {
+  const rawCheckIn = String(checkInStr || "");
+  const checkInDate = rawCheckIn.slice(0, 10);
+  const checkInTime = rawCheckIn.includes("T") ? rawCheckIn.slice(11, 16) : "00:00";
+  const duration = normalizeBookingDuration(durationValue);
+  const durationHours = duration.kind === "hours" ? duration.dbValue : duration.dbValue * 24;
+  try {
+    const window = buildHotelAvailabilityWindow({
+      checkInDate,
+      checkInTime,
+      durationHours,
+      roomType: "STANDARD",
+    });
+    return {
+      startAt: new Date(window.startAt),
+      endAt: new Date(window.endAt),
+      checkOutDate: window.endAt.slice(0, 10),
+      checkInTime,
+      durationHours,
+      duration,
+    };
+  } catch {
     return {
       startAt: null,
       endAt: null,
       checkOutDate: null,
-      duration: normalizeBookingDuration(durationValue),
+      checkInTime,
+      durationHours,
+      duration,
     };
   }
-
-  const duration = normalizeBookingDuration(durationValue);
-  const endAt = new Date(startAt);
-
-  if (duration.kind === "hours") {
-    endAt.setHours(endAt.getHours() + duration.dbValue);
-  } else {
-    endAt.setDate(endAt.getDate() + duration.dbValue);
-  }
-
-  return {
-    startAt,
-    endAt,
-    checkOutDate: endAt.toISOString().slice(0, 10),
-    duration,
-  };
 }
 
 function formatDurationLabel(durationValue) {

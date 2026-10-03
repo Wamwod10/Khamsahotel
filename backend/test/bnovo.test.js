@@ -71,6 +71,48 @@ test("date-only request treats a same-day hourly booking as part of that hotel d
   }, { hotelOffsetMinutes: 300 }), true);
 });
 
+test("exact Bnovo time intervals use half-open overlap boundaries", () => {
+  const booking = (arrival, departure) => ({ dates: { arrival, departure } });
+  const request = (startAt, endAt) => ({
+    checkIn: "2026-10-26", checkOut: "2026-10-27", startAt, endAt,
+  });
+
+  assert.equal(bookingOverlapsRequest(
+    booking("2026-10-26 17:00:00+05:00", "2026-10-26 20:00:00+05:00"),
+    request("2026-10-26T14:00:00+05:00", "2026-10-26T17:00:00+05:00"),
+  ), false);
+  assert.equal(bookingOverlapsRequest(
+    booking("2026-10-26 17:00:00+05:00", "2026-10-26 20:00:00+05:00"),
+    request("2026-10-26T14:00:00+05:00", "2026-10-27T00:00:00+05:00"),
+  ), true);
+  assert.equal(bookingOverlapsRequest(
+    booking("2026-10-26 08:00:00+05:00", "2026-10-26 11:00:00+05:00"),
+    request("2026-10-26T14:00:00+05:00", "2026-10-26T17:00:00+05:00"),
+  ), false);
+  assert.equal(bookingOverlapsRequest(
+    booking("2026-10-26 14:00:00+05:00", "2026-10-26 17:00:00+05:00"),
+    request("2026-10-26T16:00:00+05:00", "2026-10-26T19:00:00+05:00"),
+  ), true);
+  assert.equal(bookingOverlapsRequest(
+    booking("2026-10-26 14:00:00+05:00", "2026-10-26 17:00:00+05:00"),
+    request("2026-10-26T17:00:00+05:00", "2026-10-26T20:00:00+05:00"),
+  ), false);
+});
+
+test("scheduled arrival blocks inventory even when real arrival is later", () => {
+  assert.equal(bookingOverlapsRequest({
+    dates: {
+      arrival: "2026-10-26 17:00:00+05:00",
+      departure: "2026-10-26 20:00:00+05:00",
+      real_arrival: "2026-10-26 19:00:00+05:00",
+      real_departure: "2026-10-26 20:00:00+05:00",
+    },
+  }, {
+    checkIn: "2026-10-26", checkOut: "2026-10-27",
+    startAt: "2026-10-26T17:00:00+05:00", endAt: "2026-10-26T18:00:00+05:00",
+  }), true);
+});
+
 test("maps room types only by configured exact identifiers", () => {
   const mapping = {
     identifierField: "room_name",

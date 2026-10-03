@@ -15,19 +15,31 @@ function response(status, body) {
   };
 }
 
-test("builds a one-day Bnovo range while keeping exact hourly timestamps", () => {
+test("builds the normalized time-aware request model", () => {
   assert.deepEqual(buildAvailabilityRequest({
     checkIn: "2026-10-10",
     checkInTime: "10:00",
     duration: "Up to 3 hours",
     roomType: "STANDARD",
   }), {
-    checkIn: "2026-10-10",
-    checkOut: "2026-10-11",
+    checkInDate: "2026-10-10",
+    checkInTime: "10:00",
+    durationHours: 3,
     roomType: "STANDARD",
-    startAt: "2026-10-10T10:00:00+05:00",
-    endAt: "2026-10-10T13:00:00+05:00",
   });
+});
+
+test("changing only duration changes the availability request", async () => {
+  const urls = [];
+  const fetchImpl = async (url) => {
+    urls.push(url);
+    return response(200, { ok: true, availabilityKnown: true, roomType: "FAMILY", available: true, availableCount: 1, totalCapacity: 1 });
+  };
+  const common = { apiBase: "/backend-api", checkIn: "2026-10-26", checkInTime: "14:00", roomType: "FAMILY", fetchImpl };
+  await fetchRoomAvailability({ ...common, duration: "Up to 3 hours" });
+  await fetchRoomAvailability({ ...common, duration: "Up to 10 hours" });
+  assert.equal(new URL(urls[0], "https://test.local").searchParams.get("durationHours"), "3");
+  assert.equal(new URL(urls[1], "https://test.local").searchParams.get("durationHours"), "10");
 });
 
 test("availability client returns known aggregate availability", async () => {
