@@ -103,17 +103,49 @@ export function createAvailabilityService({ bnovoClient, loadLocalBookings, getC
       }
 
       const bnovoCount = (Array.isArray(bnovoBookings) ? bnovoBookings : []).filter((booking) => {
-        if (!bnovoClient.bookingBlocksInventory(booking)) return false;
+        if (!bnovoClient.bookingBlocksInventory(booking)) {
+          bnovoClient.debugAvailabilityDecision?.(booking, request, {
+            overlap: false,
+            skipReason: "STATUS_NON_BLOCKING",
+          });
+          return false;
+        }
         const mappedRoomType = mapBookingRoomType(booking, bnovoClient.mapping);
-        if (!mappedRoomType) throw new BnovoMappingError("Active Bnovo booking has an unmapped room identifier");
+        if (!mappedRoomType) {
+          bnovoClient.debugAvailabilityDecision?.(booking, request, {
+            mappedRoomType: null,
+            overlap: false,
+            skipReason: "ROOM_MAPPING_MISSING",
+          });
+          throw new BnovoMappingError("Active Bnovo booking has an unmapped room identifier");
+        }
         const validWindow = bnovoClient.hasValidBookingWindow
           ? bnovoClient.hasValidBookingWindow(booking)
           : hasValidBookingWindow(booking);
-        if (!validWindow) throw new BnovoUnavailableError("Active Bnovo booking has invalid dates");
-        if (mappedRoomType !== request.roomType) return false;
-        return bnovoClient.bookingOverlapsRequest
+        if (!validWindow) {
+          bnovoClient.debugAvailabilityDecision?.(booking, request, {
+            mappedRoomType,
+            overlap: false,
+            skipReason: "INVALID_INTERVAL",
+          });
+          throw new BnovoUnavailableError("Active Bnovo booking has invalid dates");
+        }
+        if (mappedRoomType !== request.roomType) {
+          bnovoClient.debugAvailabilityDecision?.(booking, request, {
+            mappedRoomType,
+            skipReason: "ROOM_TYPE_MISMATCH",
+          });
+          return false;
+        }
+        const overlap = bnovoClient.bookingOverlapsRequest
           ? bnovoClient.bookingOverlapsRequest(booking, request)
           : bookingOverlapsRequest(booking, request);
+        bnovoClient.debugAvailabilityDecision?.(booking, request, {
+          mappedRoomType,
+          overlap,
+          skipReason: overlap ? null : "NO_OVERLAP",
+        });
+        return overlap;
       }).length;
 
       const localCount = (Array.isArray(localBookings) ? localBookings : []).filter((booking) =>

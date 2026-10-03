@@ -71,6 +71,29 @@ test("date-only request treats a same-day hourly booking as part of that hotel d
   }, { hotelOffsetMinutes: 300 }), true);
 });
 
+test("JRC37-011026 API timestamps match the PMS wall-clock interval in hotel time", () => {
+  const booking = {
+    id: 101993016,
+    number: "JRC37-011026",
+    status: { id: 1, name: "Новое" },
+    room_type_id: 497470,
+    dates: {
+      arrival: "2026-12-11 12:00:00+03",
+      departure: "2026-12-12 10:00:00+03",
+    },
+  };
+  assert.equal(bookingOverlapsRequest(booking, {
+    checkIn: "2026-12-12", checkOut: "2026-12-13",
+    startAt: "2026-12-12T10:00:00+05:00",
+    endAt: "2026-12-12T13:00:00+05:00",
+  }, { hotelOffsetMinutes: 300 }), true);
+  assert.equal(bookingOverlapsRequest(booking, {
+    checkIn: "2026-12-12", checkOut: "2026-12-13",
+    startAt: "2026-12-12T12:00:00+05:00",
+    endAt: "2026-12-12T15:00:00+05:00",
+  }, { hotelOffsetMinutes: 300 }), false);
+});
+
 test("exact Bnovo time intervals use half-open overlap boundaries", () => {
   const booking = (arrival, departure) => ({ dates: { arrival, departure } });
   const request = (startAt, endAt) => ({
@@ -124,10 +147,40 @@ test("maps room types only by configured exact identifiers", () => {
   assert.equal(mapBookingRoomType({ room_name: "99", plan_name: "FAMILY" }, mapping), null);
 });
 
+test("maps the observed Bnovo category IDs instead of physical room names", () => {
+  const mapping = {
+    identifierField: "room_type_id",
+    STANDARD: new Set(["497469"]),
+    FAMILY: new Set(["497470"]),
+  };
+  assert.equal(mapBookingRoomType({ room_name: "1", room_type_id: 497470 }, mapping), "FAMILY");
+  assert.equal(mapBookingRoomType({ room_name: "15", room_type_id: 497469 }, mapping), "STANDARD");
+});
+
 test("cancelled Bnovo bookings do not consume inventory while unknown statuses do", () => {
   assert.equal(isInventoryBlockingBooking({ status: { name: "Cancelled" } }), false);
   assert.equal(isInventoryBlockingBooking({ status: { id: 2, name: "отменен" } }), false);
   assert.equal(isInventoryBlockingBooking({ status: { name: "Unexpected PMS state" } }), true);
+});
+
+test("Bnovo status 1 (Новое) blocks inventory", () => {
+  assert.equal(isInventoryBlockingBooking({ status: { id: 1, name: "Новое" } }), true);
+});
+
+test("bookings availability requests use the documented checkmate data type", async () => {
+  let bookingsUrl = "";
+  const client = createBnovoClient({
+    env: baseEnv,
+    fetchImpl: async (url) => {
+      if (url.endsWith("/auth")) return jsonResponse(200, { access_token: "token" });
+      bookingsUrl = url;
+      return jsonResponse(200, { data: { bookings: [], meta: { total: 0, limit: 20, offset: 0 } } });
+    },
+  });
+
+  await client.getBookings({ dateFrom: "2026-12-11", dateTo: "2026-12-13" });
+
+  assert.equal(new URL(bookingsUrl).searchParams.get("data_type"), "checkmate");
 });
 
 test("a 401 clears auth and retries the Bnovo request exactly once", async () => {

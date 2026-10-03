@@ -120,6 +120,16 @@ function parseBnovoTimestamp(value, hotelOffsetMinutes = 300) {
   return Date.parse(normalized);
 }
 
+function formatTimestampAtOffset(value, hotelOffsetMinutes = 300) {
+  const timestamp = parseBnovoTimestamp(value, hotelOffsetMinutes);
+  if (!Number.isFinite(timestamp)) return null;
+  const shifted = new Date(timestamp + hotelOffsetMinutes * 60_000);
+  const pad = (part) => String(part).padStart(2, "0");
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}` +
+    `T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}:${pad(shifted.getUTCSeconds())}` +
+    timezoneSuffix(hotelOffsetMinutes);
+}
+
 export function buildRoomMapping(env = process.env) {
   return {
     identifierField: String(env.BNOVO_ROOM_IDENTIFIER_FIELD || "room_name").trim(),
@@ -184,6 +194,14 @@ export function extractBookingDates(booking) {
   return {
     checkIn: String(arrival || "").slice(0, 10),
     checkOut: String(departure || "").slice(0, 10),
+  };
+}
+
+function bookingTimestampValues(booking) {
+  const dates = booking?.dates || {};
+  return {
+    arrival: dates.arrival || dates.original_arrival || booking?.arrival || booking?.check_in,
+    departure: dates.departure || dates.original_departure || booking?.departure || booking?.check_out,
   };
 }
 
@@ -396,6 +414,7 @@ export function createBnovoClient({
     const query = new URLSearchParams({
       date_from: dateFrom,
       date_to: dateTo,
+      data_type: "checkmate",
       limit: String(PAGE_SIZE),
       offset: String(offset),
     });
@@ -639,10 +658,26 @@ export function createBnovoClient({
     return isInventoryBlockingBooking(booking, { debug, logger, nonBlockingStatusIds, nonBlockingStatusNames });
   }
 
+  function debugAvailabilityDecision(booking, request, decision = {}) {
+    if (!debug) return null;
+    const trace = buildSafeAvailabilityTrace(
+      booking,
+      request,
+      mapping,
+      { hotelOffsetMinutes },
+    );
+    if (Object.hasOwn(decision, "mappedRoomType")) trace.mappedRoomType = decision.mappedRoomType;
+    if (Object.hasOwn(decision, "overlap")) trace.overlap = decision.overlap;
+    if (Object.hasOwn(decision, "skipReason")) trace.skipReason = decision.skipReason;
+    debugLog("availability decision", trace);
+    return trace;
+  }
+
   return {
     mapping,
     assertRoomMapping,
     bookingBlocksInventory,
+    debugAvailabilityDecision,
     bookingOverlapsRequest: (booking, request) => bookingOverlapsRequest(booking, request, { hotelOffsetMinutes }),
     hasValidBookingWindow: (booking) => hasValidBookingWindow(booking, { hotelOffsetMinutes }),
     getBookings,
@@ -689,4 +724,89 @@ export function getSafeDiagnosticRows(bookings, mapping = buildRoomMapping()) {
     });
   }
   return [...unique.values()];
+}
+
+export function getSafeBookingFields(booking) {
+  if (!booking || typeof booking !== "object") return null;
+  const safe = {};
+  const directFields = [
+    "id", "number", "booking_number", "room_name", "room_type_id",
+    "room_type_code", "room_type_name", "category_id", "category_name",
+    "room_category_id", "room_category_name", "plan_name",
+  ];
+  for (const field of directFields) {
+    if (booking[field] !== undefined) safe[field] = booking[field];
+  }
+  const status = booking.status;
+  if (status && typeof status === "object") {
+    safe.status = {};
+    if (status.id !== undefined) safe.status.id = status.id;
+    if (status.name !== undefined) safe.status.name = status.name;
+  }
+  const dates = booking.dates;
+  if (dates && typeof dates === "object") {
+    safe.dates = {};
+    for (const field of [
+      "arrival", "departure", "original_arrival", "original_departure",
+      "real_arrival", "real_departure",
+    ]) {
+      if (dates[field] !== undefined) safe.dates[field] = dates[field];
+    }
+  }
+
+  const directFieldSet = new Set(directFields);
+  const extra = {};
+  const visit = (value, path = "") => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return;
+    for (const [key, child] of Object.entries(value)) {
+      const nextPath = path ? `${path}.${key}` : key;
+      const primitive = child == null || ["string", "number", "boolean"].includes(typeof child);
+      const roomIdentifier = /(room|category).*(id|name|code)$/i.test(key);
+      if (primitive && roomIdentifier && !(path === "" && directFieldSet.has(key))) {
+        extra[nextPath] = child;
+      }
+      if (child && typeof child === "object" && !Array.isArray(child) &&
+          !/(customer|guest|client|contact|passport|payment)/i.test(key)) {
+        visit(child, nextPath);
+      }
+    }
+  };
+  visit(booking);
+  if (Object.keys(extra).length) safe.otherRoomCategoryIdentifiers = extra;
+  return safe;
+}
+
+export function buildSafeAvailabilityTrace(
+  booking,
+  request,
+  mapping,
+  { hotelOffsetMinutes = 300 } = {},
+) {
+  const status = normalizedStatus(booking);
+  const blocking = isInventoryBlockingBooking(booking);
+  const validWindow = hasValidBookingWindow(booking, { hotelOffsetMinutes });
+  const mappedRoomType = mapBookingRoomType(booking, mapping);
+  const overlap = validWindow
+    ? bookingOverlapsRequest(booking, request, { hotelOffsetMinutes })
+    : false;
+  let skipReason = null;
+  if (!blocking) skipReason = "STATUS_NON_BLOCKING";
+  else if (!validWindow) skipReason = "INVALID_INTERVAL";
+  else if (!mappedRoomType) skipReason = "ROOM_MAPPING_MISSING";
+  else if (request?.roomType && mappedRoomType !== String(request.roomType).toUpperCase()) {
+    skipReason = "ROOM_TYPE_MISMATCH";
+  } else if (!overlap) skipReason = "NO_OVERLAP";
+  const timestamps = bookingTimestampValues(booking);
+  return {
+    bookingId: booking?.id ?? booking?.booking_id ?? null,
+    bookingNumber: booking?.number ?? booking?.booking_number ?? null,
+    status: { id: status.id || null, name: status.name || null },
+    parsedStart: formatTimestampAtOffset(timestamps.arrival, hotelOffsetMinutes),
+    parsedEnd: formatTimestampAtOffset(timestamps.departure, hotelOffsetMinutes),
+    requestedStart: request?.startAt || null,
+    requestedEnd: request?.endAt || null,
+    mappedRoomType,
+    overlap,
+    skipReason,
+  };
 }

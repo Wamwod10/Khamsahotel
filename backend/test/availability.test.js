@@ -129,6 +129,42 @@ test("same-day hourly Bnovo booking blocks an overlapping website time window", 
   assert.equal(result.occupiedCount.bnovo, 1);
 });
 
+test("JRC37-011026 consumes FAMILY inventory until its exact checkout boundary", async () => {
+  const client = makeBnovoClient([{
+    id: 101993016,
+    number: "JRC37-011026",
+    room_name: "1",
+    room_type_id: 497470,
+    status: { id: 1, name: "Новое" },
+    dates: {
+      arrival: "2026-12-11 12:00:00+03",
+      departure: "2026-12-12 10:00:00+03",
+    },
+  }]);
+  client.mapping = {
+    identifierField: "room_type_id",
+    STANDARD: new Set(["497469"]),
+    FAMILY: new Set(["497470"]),
+  };
+  const service = createAvailabilityService({
+    bnovoClient: client,
+    loadLocalBookings: async () => [],
+    getCapacity: async () => 1,
+  });
+
+  const overlapping = await service.check({
+    checkInDate: "2026-12-12", checkInTime: "10:00", durationHours: 3, roomType: "FAMILY",
+  });
+  const boundary = await service.check({
+    checkInDate: "2026-12-12", checkInTime: "12:00", durationHours: 3, roomType: "FAMILY",
+  });
+
+  assert.equal(overlapping.available, false);
+  assert.equal(overlapping.occupiedCount.bnovo, 1);
+  assert.equal(boundary.available, true);
+  assert.equal(boundary.occupiedCount.bnovo, 0);
+});
+
 test("Bnovo and local bookings both use exact time and duration can change availability", async () => {
   const service = createAvailabilityService({
     bnovoClient: makeBnovoClient([{
