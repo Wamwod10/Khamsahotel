@@ -451,5 +451,7 @@
   "fraudLinksLabel": "Confirmation links:",
   "fraudLinksValue": "never sent via WhatsApp / Telegram / SMS",
   "fraudSupportLabel": "Support:",
-  "fraudAlert": "Received a suspicious message? Do not open any links. Contact Khamsa Hotel directly."
+  "fraudAlert": "Received a suspicious message? Do not open any links. Contact Khamsa Hotel directly.",
+  "availabilityUnknown": "Availability could not be confirmed. Please try again.",
+  "roomNotAvailable": "This room type is not available for the selected time."
 }

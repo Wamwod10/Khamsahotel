@@ -6,13 +6,19 @@ import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { Pool } from "pg";
-import { checkAvailability } from "./bnovo.js";
+import { bnovoClient } from "./bnovo.js";
+import { createAvailabilityService } from "./availability.js";
+import {
+  checkPaymentAvailability,
+  createAvailabilityHandler,
+} from "./availabilityRoute.js";
 import {
   countOverlappingRoomItems,
   getAllowedTariffCodes,
   validateRoomCapacity,
 } from "./bookingCapacity.js";
 import { normalizeCheckinsPagination } from "./checkinsPagination.js";
+import { ACTIVE_LOCAL_STATUS_SQL, withRoomTypeLocks } from "./localInventory.js";
 
 dotenv.config();
 const app = express();
@@ -1296,17 +1302,55 @@ async function getRoomTypeCfg(roomType) {
   }
   return rows[0];
 }
+
+async function loadLocalAvailabilityBookings(request) {
+  const startAt = request.startAt || `${request.checkIn}T00:00:00+05:00`;
+  const endAt = request.endAt || `${request.checkOut}T00:00:00+05:00`;
+  const { rows } = await pgPool.query(
+    `SELECT rooms,
+            check_in::text AS check_in,
+            check_out::text AS check_out,
+            check_in_at,
+            check_out_at,
+            status
+       FROM public.khamsachekin
+      WHERE rooms = $1
+        AND COALESCE(check_in_at, check_in::timestamp) < $3::timestamptz
+        AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz`,
+    [request.roomType, startAt, endAt],
+  );
+  return rows.map((row) => ({
+    source: "local",
+    roomType: row.rooms,
+    checkIn: String(row.check_in || "").slice(0, 10),
+    checkOut: String(row.check_out || "").slice(0, 10),
+    checkInAt: row.check_in_at,
+    checkOutAt: row.check_out_at,
+    status: row.status,
+  }));
+}
+
+const availabilityService = createAvailabilityService({
+  bnovoClient,
+  loadLocalBookings: loadLocalAvailabilityBookings,
+  getCapacity: async (roomType) => Number((await getRoomTypeCfg(roomType)).capacity),
+});
+const availabilityHandler = createAvailabilityHandler(availabilityService);
 async function getNeighbors(roomType, startISO) {
   const qPrev = pgPool.query(
     `SELECT MAX(COALESCE(check_out_at, check_out::timestamp)) AS p_end
      FROM public.khamsachekin
-     WHERE rooms=$1 AND COALESCE(check_out_at, check_out::timestamp) <= $2::timestamptz`,
+     WHERE rooms=$1
+       AND ${ACTIVE_LOCAL_STATUS_SQL}
+       AND COALESCE(check_out_at, check_out::timestamp) <= $2::timestamptz`,
     [roomType, startISO],
   );
   const qNext = pgPool.query(
     `SELECT MIN(COALESCE(check_in_at, check_in::timestamp)) AS n_start
      FROM public.khamsachekin
-     WHERE rooms=$1 AND COALESCE(check_in_at, check_in::timestamp) >= $2::timestamptz`,
+     WHERE rooms=$1
+       AND ${ACTIVE_LOCAL_STATUS_SQL}
+       AND COALESCE(check_in_at, check_in::timestamp) >= $2::timestamptz`,
     [roomType, startISO],
   );
   const [r1, r2] = await Promise.all([qPrev, qNext]);
@@ -1315,13 +1359,14 @@ async function getNeighbors(roomType, startISO) {
     n_start: r2.rows[0]?.n_start || null,
   };
 }
-async function getPeakConcurrency(roomType, fromTs, toTs) {
-  const { rows } = await pgPool.query(
+async function getPeakConcurrency(roomType, fromTs, toTs, database = pgPool) {
+  const { rows } = await database.query(
     `SELECT
         GREATEST(COALESCE(check_in_at,  check_in::timestamp), $2::timestamptz)  AS st,
         LEAST   (COALESCE(check_out_at, check_out::timestamp), $3::timestamptz) AS en
      FROM public.khamsachekin
      WHERE rooms=$1
+       AND ${ACTIVE_LOCAL_STATUS_SQL}
        AND COALESCE(check_in_at,  check_in::timestamp)  < $3::timestamptz
        AND COALESCE(check_out_at, check_out::timestamp) > $2::timestamptz`,
     [roomType, fromTs, toTs],
@@ -1345,7 +1390,7 @@ async function getPeakConcurrency(roomType, fromTs, toTs) {
   return peak;
 }
 
-async function validatePaymentCapacity(paymentItems) {
+async function validatePaymentCapacity(paymentItems, database = pgPool) {
   const roomTypes = [...new Set(paymentItems.map((item) => item.rooms).filter(Boolean))];
   const capacityEntries = await Promise.all(
     roomTypes.map(async (roomType) => {
@@ -1362,7 +1407,12 @@ async function validatePaymentCapacity(paymentItems) {
     const capacity = capacities[item.rooms];
     if (!Number.isFinite(capacity)) continue;
 
-    const existing = await getPeakConcurrency(item.rooms, item.checkInAt, item.checkOutAt);
+    const existing = await getPeakConcurrency(
+      item.rooms,
+      item.checkInAt,
+      item.checkOutAt,
+      database,
+    );
     const requested = countOverlappingRoomItems(paymentItems, item);
     if (existing + requested > capacity) {
       return {
@@ -1381,39 +1431,22 @@ async function validatePaymentCapacity(paymentItems) {
 /* =======================
  *  BNOVO ROUTES
  * ======================= */
+app.get("/api/availability", availabilityLimiter, availabilityHandler);
+
+// Eski frontend/deploylar uchun compatibility route.
 app.get("/api/bnovo/availability", availabilityLimiter, async (req, res) => {
-  try {
-    const { checkIn, nights = 1, roomType = "STANDARD" } = req.query || {};
-    if (!checkIn)
-      return res.status(400).json({ ok: false, error: "checkIn required" });
-    const ci = String(checkIn).slice(0, 10);
-    const n = Math.max(1, Number(nights || 1));
-    const checkInDate = new Date(ci + "T00:00:00Z");
-    if (Number.isNaN(checkInDate.getTime()))
-      return res.status(400).json({ ok: false, error: "checkIn invalid" });
-    const checkOut = new Date(checkInDate.getTime() + n * 86400000)
-      .toISOString()
-      .slice(0, 10);
-    const avail = await checkAvailability({
-      checkIn: ci,
-      checkOut,
-      roomType: String(roomType).toUpperCase(),
-    });
-    return res.json({
-      ok: Boolean(avail?.ok),
-      roomType: String(avail?.roomType || roomType).toUpperCase(),
-      available: Boolean(avail?.available),
-      checkIn: ci,
-      checkOut,
-      ...(avail?.source ? { source: avail.source } : {}),
-      ...(avail?.warning ? { warning: avail.warning } : {}),
-    });
-  } catch (e) {
-    console.error("/api/bnovo/availability error:", e);
-    res
-      .status(500)
-      .json({ ok: false, available: false, error: "availability failed" });
-  }
+  const checkIn = String(req.query?.checkIn || "").slice(0, 10);
+  const nights = Math.max(1, Math.min(30, Number(req.query?.nights || 1)));
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(checkIn)
+    ? new Date(`${checkIn}T00:00:00Z`)
+    : null;
+  const checkOut = date && !Number.isNaN(date.getTime())
+    ? new Date(date.getTime() + nights * 86_400_000).toISOString().slice(0, 10)
+    : "";
+  return availabilityHandler({
+    ...req,
+    query: { checkIn, checkOut, roomType: req.query?.roomType || "STANDARD" },
+  }, res);
 });
 
 /* =======================
@@ -1484,12 +1517,23 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       });
     }
 
-    const capacityCheck = await validatePaymentCapacity(paymentItems);
-    if (!capacityCheck.ok) {
-      const roomName =
-        capacityCheck.roomType === "FAMILY" ? "Family room" : capacityCheck.roomType;
+    const externalCapacityCheck = await checkPaymentAvailability(
+      paymentItems,
+      availabilityService,
+    );
+    if (!externalCapacityCheck.ok) {
+      if (
+        externalCapacityCheck.code === "BNOVO_UNAVAILABLE" ||
+        externalCapacityCheck.code === "BNOVO_MAPPING_INCOMPLETE"
+      ) {
+        return res.status(503).json({
+          error: "Availability could not be confirmed. Please try again.",
+          code: externalCapacityCheck.code,
+        });
+      }
       return res.status(409).json({
-        error: `${roomName} uchun bo'sh xona yo'q. Bizda bu turdagi xona soni: ${capacityCheck.capacity}.`,
+        error: `${externalCapacityCheck.roomType} uchun bo'sh xona yo'q.`,
+        code: "ROOM_UNAVAILABLE",
       });
     }
 
@@ -1527,8 +1571,20 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     try {
       await client.query("BEGIN");
 
-      for (const item of paymentItems) {
-        await client.query(
+      await withRoomTypeLocks(
+        client,
+        paymentItems.map((item) => item.rooms),
+        async () => {
+          const capacityCheck = await validatePaymentCapacity(paymentItems, client);
+          if (!capacityCheck.ok) {
+            const capacityError = new Error("ROOM_CAPACITY_EXCEEDED");
+            capacityError.code = "ROOM_CAPACITY_EXCEEDED";
+            capacityError.details = capacityCheck;
+            throw capacityError;
+          }
+
+          for (const item of paymentItems) {
+            await client.query(
         `
     INSERT INTO public.khamsachekin
     (transaction_id, status, rooms, check_in, check_out, check_in_at, check_out_at,
@@ -1549,8 +1605,10 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
           item.phone,
           item.email || payerEmail,
         ],
-        );
-      }
+            );
+          }
+        },
+      );
 
       await client.query("COMMIT");
       client.release();
@@ -1562,6 +1620,14 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       // 🔥 MUHIM: requestni to‘xtatamiz
       await client.query("ROLLBACK").catch(() => {});
       client.release();
+      if (e.code === "ROOM_CAPACITY_EXCEEDED") {
+        const capacityCheck = e.details;
+        const roomName =
+          capacityCheck.roomType === "FAMILY" ? "Family room" : capacityCheck.roomType;
+        return res.status(409).json({
+          error: `${roomName} uchun bo'sh xona yo'q. Bizda bu turdagi xona soni: ${capacityCheck.capacity}.`,
+        });
+      }
       return res.status(500).json({ error: "Bookingni saqlashda xatolik" });
     }
 
@@ -2099,9 +2165,7 @@ async function startServer() {
     app.listen(PORT, () => {
   console.log(`✅ Server yaxshi ishlayapti: ${BASE_URL} (port: ${PORT})`);
   console.log(
-    `[BNOVO] mode=${process.env.BNOVO_AUTH_MODE} auth_url=${
-      process.env.BNOVO_AUTH_URL
-    } id_set=${!!process.env.BNOVO_ID} pass_set=${!!process.env.BNOVO_PASSWORD}`,
+    `[BNOVO] configured id_set=${!!process.env.BNOVO_ID} api_key_set=${!!process.env.BNOVO_API_KEY} mapping_field=${process.env.BNOVO_ROOM_IDENTIFIER_FIELD || "room_name"}`,
   );
     });
   } catch (e) {

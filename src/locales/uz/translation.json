@@ -451,5 +451,7 @@
   "fraudLinksLabel": "Tasdiqlash havolalari:",
   "fraudLinksValue": "WhatsApp / Telegram / SMS orqali yuborilmaydi",
   "fraudSupportLabel": "Yordam:",
-  "fraudAlert": "Shubhali xabar oldingizmi? Hech qanday havolani ochmang. Khamsa Hotel bilan bevosita bog‘laning."
+  "fraudAlert": "Shubhali xabar oldingizmi? Hech qanday havolani ochmang. Khamsa Hotel bilan bevosita bog‘laning.",
+  "availabilityUnknown": "Bo‘sh xona mavjudligini tasdiqlab bo‘lmadi. Iltimos, qayta urinib ko‘ring.",
+  "roomNotAvailable": "Tanlangan vaqtda bu xona turi mavjud emas."
 }

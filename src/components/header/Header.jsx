@@ -12,6 +12,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { TbAirConditioning } from "react-icons/tb";
 import { RiDrinks2Fill } from "react-icons/ri";
 import { hasOverlappingFamilyBooking } from "../../utils/familyBookingAvailability.js";
+import { fetchRoomAvailability } from "../../utils/availability.js";
 
 /* ===== Helpers ===== */
 function getApiBase() {
@@ -34,8 +35,6 @@ function getApiBase() {
   );
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 const isForceFamilyBusy = () => {
   try {
     const sp = new URLSearchParams(window.location.search);
@@ -56,50 +55,7 @@ const localI18n = {
 };
 
 /* ===== Bnovo FAMILY availability (fallback) ===== */
-async function checkFamilyAvailability({ checkIn, nights = 1 }) {
-  const base = getApiBase();
-  const url = `${base}/api/bnovo/availability?checkIn=${encodeURIComponent(
-    checkIn
-  )}&nights=${encodeURIComponent(nights)}&roomType=FAMILY`;
-  try {
-    const res = await fetch(url, { credentials: "omit" });
-    const ct = (res.headers.get("content-type") || "").toLowerCase();
-    const data = ct.includes("application/json")
-      ? await res.json()
-      : { _raw: await res.text() };
-    if (!res.ok)
-      return { ok: false, available: true, reason: `HTTP ${res.status}` };
-    if (typeof data?.available === "boolean")
-      return {
-        ok: true,
-        available: data.available,
-        reason: data.source || "bnovo",
-      };
-    return { ok: false, available: true, reason: "unknown-shape" };
-  } catch {
-    return { ok: false, available: true, reason: "exception" };
-  }
-}
-
 /* FAMILY blackout (Postgres) — startAt ichida bo‘lsa band */
-async function postgresFamilyBusyDT(startAt) {
-  const base = getApiBase();
-  const url = `${base}/api/checkins/next-block?roomType=FAMILY&startAt=${encodeURIComponent(
-    startAt
-  )}`;
-  try {
-    const res = await fetch(url);
-    const ct = (res.headers.get("content-type") || "").toLowerCase();
-    const data = ct.includes("application/json")
-      ? await res.json()
-      : { _raw: await res.text() };
-    if (!res.ok) return { busy: false, block: null };
-    return { busy: !!data?.block, block: data?.block || null };
-  } catch {
-    return { busy: false, block: null };
-  }
-}
-
 /* ===== Duration ↔ code mapping =====
    Backend: ["3h","10h","24h"]  Frontend: i18n labels
 */
@@ -135,6 +91,8 @@ const Header = () => {
   const [rooms, setRooms] = useState("STANDARD");
 
   const [checking, setChecking] = useState(false);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [roomAvailability, setRoomAvailability] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMsg, setModalMsg] = useState("");
 
@@ -178,15 +136,6 @@ const Header = () => {
     setIsModalOpen(false);
     setModalMsg("");
     document.body.style.overflow = "";
-  }, []);
-
-  const getNightsFromDuration = useCallback((d) => {
-    if (!d) return 1;
-    const s = String(d).toLowerCase();
-    if (s.includes("one day") || s.includes("24")) return 1;
-    if (s.includes("10")) return 1;
-    if (s.includes("3")) return 1;
-    return 1;
   }, []);
 
   // startAt (YYYY-MM-DDTHH:mm)
@@ -252,7 +201,37 @@ const Header = () => {
     run();
     return () => ac.abort();
     // duration bu yerda deps emas — aks holda loop bo‘lishi mumkin
-  }, [rooms, startAt, t]);
+  }, [rooms, startAt, duration, t]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    if (!checkIn || !checkOutTime || !duration || !rooms) {
+      setRoomAvailability(null);
+      setAvailabilityLoading(false);
+      return () => controller.abort();
+    }
+
+    setAvailabilityLoading(true);
+    fetchRoomAvailability({
+      apiBase: getApiBase(),
+      checkIn,
+      checkInTime: checkOutTime,
+      duration,
+      roomType: rooms,
+      signal: controller.signal,
+    })
+      .then(setRoomAvailability)
+      .catch((error) => {
+        if (error?.name !== "AbortError") {
+          setRoomAvailability({ ok: false, availabilityKnown: false, available: false });
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setAvailabilityLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [checkIn, checkOutTime, duration, rooms]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -311,25 +290,34 @@ const Header = () => {
       }
 
       // 1) PG blackout check
-      const pg = await postgresFamilyBusyDT(startAtLocal);
-      if (pg.busy && pg.block) {
-        openModal(t("familyNotAvailable") || "Bu xona band qilingan");
+    }
+
+    setChecking(true);
+    try {
+      const availability = await fetchRoomAvailability({
+        apiBase: getApiBase(),
+        checkIn,
+        checkInTime: checkOutTime,
+        duration,
+        roomType: rooms,
+      });
+      if (!availability.ok || !availability.availabilityKnown) {
+        openModal(
+          t("availabilityUnknown") ||
+            "Availability could not be confirmed. Please try again."
+        );
         return;
       }
-
-      // 2) Bnovo availability (qo‘shimcha tekshiruv)
-      setChecking(true);
-      try {
-        await sleep(1200);
-        const nights = getNightsFromDuration(duration);
-        const avail = await checkFamilyAvailability({ checkIn, nights });
-        if (!avail.available) {
-          openModal();
-          return;
-        }
-      } finally {
-        setChecking(false);
+      if (!availability.available || availability.availableCount <= 0) {
+        openModal(
+          t("roomNotAvailable") ||
+            t("familyNotAvailable") ||
+            "Bu xona band qilingan"
+        );
+        return;
       }
+    } finally {
+      setChecking(false);
     }
 
     // Saqlab yuborish (frontend localStorage)
@@ -357,13 +345,17 @@ const Header = () => {
      loading -> kulrang, ok -> olovrang, bad -> qizil
   */
   const durationStatus = useMemo(() => {
-    if (rooms !== "FAMILY") return null;
-    if (tariffLoading) return { key: "searchrooms", kind: "loading" };
+    if (availabilityLoading || (rooms === "FAMILY" && tariffLoading)) {
+      return { key: "searchrooms", kind: "loading" };
+    }
     if (!startAt) return null;
-    return allowed.length > 0
+    if (!roomAvailability?.availabilityKnown) {
+      return { key: "availabilityUnknown", kind: "bad" };
+    }
+    return roomAvailability.available && roomAvailability.availableCount > 0
       ? { key: "available", kind: "ok" }
       : { key: "notavailable", kind: "bad" };
-  }, [rooms, tariffLoading, allowed.length, startAt]);
+  }, [rooms, tariffLoading, availabilityLoading, roomAvailability, startAt]);
 
   return (
     <>
@@ -529,7 +521,7 @@ const Header = () => {
               <button
                 type="submit"
                 className="header__form-button"
-                disabled={checking || !checkIn || !checkOutTime}
+                disabled={checking || availabilityLoading || !checkIn || !checkOutTime}
               >
                 {checking
                   ? t("searchrooms") || "Searching Room..."

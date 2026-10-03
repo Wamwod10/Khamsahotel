@@ -7,6 +7,8 @@ import "react-toastify/dist/ReactToastify.css";
 import "./roommodal.scss";
 import "./roomModalMedia.scss";
 import { hasOverlappingFamilyBooking } from "../../../../utils/familyBookingAvailability.js";
+import { fetchRoomAvailability } from "../../../../utils/availability.js";
+import { API_BASE } from "../../../../config.ts";
 
 function normalizeRoomCode(v) {
   const s = String(v || "").toLowerCase().trim();
@@ -133,6 +135,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
   });
 
   const [showSuccess, setShowSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     try {
@@ -181,8 +184,9 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
   };
 
   /** Confirm: faqat local/sessionStorage'ga saqlaymiz + success modal (Octo yo'q) */
-  const handleConfirm = (e) => {
+  const handleConfirm = async (e) => {
     e.preventDefault();
+    if (submitting) return;
 
     if (!bookingInfo.checkIn || !bookingInfo.checkOutTime || !bookingInfo.duration || !bookingInfo.rooms) {
       toast.error(t("Siz ma'lumotlarni to'liq kiritmadingiz!") || "Please complete booking info", {
@@ -219,10 +223,36 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
       createdAt: new Date().toISOString(),
     };
 
+    setSubmitting(true);
+    const availability = await fetchRoomAvailability({
+      apiBase: API_BASE,
+      checkIn: bookingInfo.checkIn,
+      checkInTime: bookingInfo.checkOutTime,
+      duration: bookingInfo.duration,
+      roomType: bookingInfo.rooms,
+    });
+    if (!availability.ok || !availability.availabilityKnown) {
+      setSubmitting(false);
+      toast.error(
+        t("availabilityUnknown") || "Availability could not be confirmed. Please try again.",
+        { position: "top-center", autoClose: 4000 }
+      );
+      return;
+    }
+    if (!availability.available || availability.availableCount <= 0) {
+      setSubmitting(false);
+      toast.error(
+        t("roomNotAvailable") || t("familyNotAvailable") || "This room is not available.",
+        { position: "top-center", autoClose: 4000 }
+      );
+      return;
+    }
+
     try {
       const parsed = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
       const existing = Array.isArray(parsed) ? parsed : [];
       if (hasOverlappingFamilyBooking(existing, full)) {
+        setSubmitting(false);
         toast.error(
           t("familyAlreadySelected") ||
             "A Family room is already selected for this time in My bookings.",
@@ -236,6 +266,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
       localStorage.setItem("bookingInfo", JSON.stringify(full));
       localStorage.setItem("allBookings", JSON.stringify(updated));
     } catch (err) {
+      setSubmitting(false);
       console.error("RoomModal: Storage error:", err);
       toast.error(t("Ma'lumotlarni saqlashda xatolik yuz berdi!") || "Storage error", {
         position: "top-center",
@@ -244,6 +275,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
       return;
     }
 
+    setSubmitting(false);
     setShowSuccess(true);
   };
 
@@ -365,8 +397,8 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
           </div>
 
           <div className="modal__buttons">
-            <button type="submit" className="modal__confirm">
-              {t("confirm") || "Confirm"}
+            <button type="submit" className="modal__confirm" disabled={submitting}>
+              {submitting ? (t("searchrooms") || "Checking...") : (t("confirm") || "Confirm")}
             </button>
             <button type="button" className="modal__cancel" onClick={onClose}>
               {t("cancel") || "Cancel"}
