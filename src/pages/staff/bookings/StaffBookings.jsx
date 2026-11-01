@@ -7,6 +7,21 @@ import { FaCheckCircle } from "react-icons/fa";
 import { adminFetch, clearAdminToken, getAdminToken } from "../staffApi";
 import { loadAllStaffBookings } from "./loadAllStaffBookings.js";
 
+// Bron vaqti mehmonxona joylashgan hududning soati bilan chiqishi kerak.
+const hotelTimeFormatter = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Tashkent",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+function formatHotelTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : hotelTimeFormatter.format(date);
+}
+
+
 const StaffBookings = () => {
   const navigate = useNavigate();
   const [openAdd, setOpenAdd] = useState(false);
@@ -27,11 +42,8 @@ const StaffBookings = () => {
           phone: b.phone || "",
           email: b.email || "",
           date: b.check_in ? b.check_in.split("T")[0] : "",
-          time:
-            b.check_in_time ||
-            (b.check_in_at
-              ? new Date(b.check_in_at).toTimeString().slice(0, 5)
-              : ""),
+          // TIMESTAMPTZ is authoritative. Older rows may have only check_in_time.
+          time: b.check_in_at ? formatHotelTime(b.check_in_at) : (b.check_in_time || ""),
           room: b.rooms,
           duration: b.duration ? `${b.duration} soat` : "-",
           price: b.price || 0,

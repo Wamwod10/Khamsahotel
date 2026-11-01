@@ -29,9 +29,11 @@ const StaffBookingModal = ({ booking, onClose, onDelete }) => {
     const date = new Date(d);
     if (isNaN(date)) return d;
 
-    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+    return `${date.toLocaleDateString("en-GB", { timeZone: "Asia/Tashkent" })} ${date.toLocaleTimeString("en-GB", {
+      timeZone: "Asia/Tashkent",
       hour: "2-digit",
       minute: "2-digit",
+      hourCycle: "h23",
     })}`;
   };
 

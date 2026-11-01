@@ -20,6 +20,7 @@ import {
 import { normalizeCheckinsPagination } from "./checkinsPagination.js";
 import { ACTIVE_LOCAL_STATUS_SQL, withRoomTypeLocks } from "./localInventory.js";
 import { buildHotelAvailabilityWindow } from "./availabilityWindow.js";
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayTime } from "./bookingDisplayTime.js";
 
 dotenv.config();
 const app = express();
@@ -418,35 +419,6 @@ function escapeHtml(value) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
-}
-
-function pad2(value) {
-  return String(value).padStart(2, "0");
-}
-
-function formatDisplayDate(isoLike) {
-  if (!isoLike) return "-";
-  const d = new Date(isoLike);
-  if (Number.isNaN(d.getTime())) return escapeHtml(isoLike);
-  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
-}
-
-function formatDisplayDateTime(isoLike) {
-  if (!isoLike) return "-";
-  const d = new Date(isoLike);
-  if (Number.isNaN(d.getTime())) return "-";
-  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-
-function formatDisplayTime(value) {
-  if (!value) return "-";
-  if (String(value).includes("T")) {
-    const d = new Date(value);
-    if (!Number.isNaN(d.getTime())) {
-      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-    }
-  }
-  return String(value).slice(0, 5);
 }
 
 function roomLabel(roomCode) {
