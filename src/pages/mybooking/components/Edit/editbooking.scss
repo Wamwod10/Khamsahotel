@@ -128,3 +128,36 @@
 
 .edit-booking-error { margin:0; font-size:0.84rem; color:#b33; }
 .edit-booking-checkout { font-size:0.78rem; color:#8e661c; }
+
+@media (max-width: 600px) {
+  .edit-modal-overlay { box-sizing: border-box; padding: 10px; height: 100vh; height: 100dvh; overflow: hidden; }
+  .edit-modal {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 500px;
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
+    margin: 0;
+    padding: 18px 16px 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .edit-modal h2 { margin-bottom: 14px; font-size: 1.3rem; }
+  .edit-modal .edit-modal-form { gap: 11px; }
+  .edit-modal .edit-modal-form label { min-width: 0; font-size: 0.88rem; }
+  .edit-modal .edit-modal-form input,
+  .edit-modal .edit-modal-form select { box-sizing: border-box; width: 100%; min-height: 44px; font-size: 16px; }
+  .edit-modal .edit-modal-buttons {
+    position: sticky;
+    bottom: -13px;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    margin: 4px -16px -12px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+  }
+  .edit-modal .edit-modal-buttons .btn { flex: 1 1 0; min-width: 0; width: auto; min-height: 44px; padding: 9px 8px; white-space: normal; }
+}

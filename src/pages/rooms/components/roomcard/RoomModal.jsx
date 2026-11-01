@@ -301,19 +301,35 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
   };
   const handleGoToMyBooking = () => (window.location.href = "/mybooking");
 
+  // Prevent the page beneath the booking sheet from scrolling on phones.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onEscape = (event) => {
+      if (event.key === "Escape" && !submitting) onClose?.();
+    };
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [isOpen, submitting, onClose]);
+
   if (!isOpen) return null;
   if (showSuccess) return <SuccessModal onStayHere={handleStayHere} onGoToMyBooking={handleGoToMyBooking} />;
 
   return (
     <div className="modal-main">
       <div className="modal-overlay" onClick={onClose} />
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div className="modal room-booking-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabIndex={-1}>
+        <button type="button" className="modal__mobile-close" onClick={onClose} disabled={submitting} aria-label={t("cancel") || "Close"}>×</button>
         <h2 className="modal__title" id="modal-title">
           {t("bookyourstay") || "Book Your Stay"}
         </h2>
         <p className="modal__progress">{t("bookingStepGuest")}</p>
 
-        <div className="modal_all__section">
+        <div className="modal_all__section" aria-label={t("bookyourstay")}>
           <div className="modal__section">
             <label>{t("check-in") || "Check-In"}:</label>
             <p>{bookingInfo.checkIn ? formatDate(bookingInfo.checkIn) : "-"}</p>

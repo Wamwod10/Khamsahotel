@@ -367,3 +367,78 @@
     padding: 10px 8px;
   }
 }
+
+/* Targeted mobile corrections: no desktop room-card changes. */
+@media (max-width: 800px) {
+  .room-card__item { min-width: 0; overflow: hidden; }
+  .room-card__image-wrapper {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .room-card__image {
+    position: static;
+    left: auto;
+    right: auto;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: clamp(220px, 56vw, 310px);
+    object-fit: cover;
+  }
+  .room-card__thumbnails {
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 2px 0 6px;
+    scrollbar-width: thin;
+  }
+  .room-card__thumbnail {
+    flex: 0 0 clamp(54px, 17vw, 76px);
+    width: clamp(54px, 17vw, 76px);
+    height: clamp(54px, 17vw, 76px);
+  }
+  .room-card__body {
+    min-width: 0;
+    width: 100%;
+  }
+  .room-card__allprice {
+    position: static;
+    inset: auto;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    align-items: flex-start;
+    margin: 0 0 14px;
+    gap: 6px;
+  }
+  .room-card__prices {
+    position: static;
+    flex-direction: row;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 7px;
+    margin-bottom: 0;
+  }
+  .room-card__prices span { padding: 7px 10px; font-size: 12px; }
+  .room-card__number { position: static; inset: auto; margin: 0; font-size: 14px; }
+  .room-card__room-title { margin-bottom: 12px; }
+  .room-card__ft-box { position: static; left: auto; right: auto; width: 100%; max-width: 100%; }
+  .room-card__text { width: auto; max-width: 100%; }
+  .room-card__info { flex-wrap: wrap; }
+}
+@media (max-width: 425px) {
+  .room-card__list { margin: 24px 0; gap: 18px; }
+  .room-card__item { padding: 14px; gap: 12px; }
+  .room-card__text { font-size: 14px; }
+  .room-card__prices span { font-size: 11px; padding: 6px 9px; }
+  .room-card__room-title { margin-bottom: 10px; font-size: 23px; }
+  .room-card__btn { width: 100%; min-height: 44px; }
+}

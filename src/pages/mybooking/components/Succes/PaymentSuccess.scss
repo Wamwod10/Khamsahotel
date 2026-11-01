@@ -85,3 +85,10 @@
   .payment-success-container .booking-confirmation-actions,
   .payment-success-container .booking-confirmed-item a { display: none !important; }
 }
+
+@media (max-width: 520px) {
+  .payment-success-container { box-sizing: border-box; width: calc(100% - 24px); padding: 25px 15px; margin: 25px 12px; }
+  .payment-success-container h1 { overflow-wrap: anywhere; }
+  .booking-confirmed-item { min-width: 0; overflow-wrap: anywhere; }
+  .booking-confirmation-actions button { min-height: 44px; flex: 1 1 100%; }
+}

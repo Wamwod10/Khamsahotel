@@ -101,3 +101,15 @@
 }
 .booking-card .booking-actions .btn.btn-copy { background: #f7f7f7; color: #6b7280; border: 1px solid #e5e7eb; }
 @media (max-width: 520px) { .booking-card .booking-actions { flex-wrap: wrap; } }
+
+@media (max-width: 600px) {
+  .booking-card { box-sizing: border-box; width: 100%; padding: 16px 14px; margin: 14px auto; }
+  .booking-card h2 { font-size: 1.24rem; margin-bottom: 12px; }
+  .booking-card h3 { font-size: 1.06rem; margin-top: 17px; }
+  .booking-card .booking-row { gap: 12px; align-items: flex-start; font-size: 0.89rem; }
+  .booking-card .booking-row span { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+  .booking-card .booking-row span:last-child { text-align: right; }
+  .booking-card .booking-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+  .booking-card .booking-actions .btn { min-width: 0; min-height: 44px; padding: 10px 8px; white-space: normal; }
+  .booking-card .booking-actions .btn-copy { grid-column: 1 / -1; }
+}

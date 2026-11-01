@@ -140,3 +140,54 @@
         }
     }
     }
+/* Let the original booking card flow naturally on phones; retain all brand styling. */
+@media (max-width: 900px) {
+  .header {
+    height: auto;
+    min-height: 100svh;
+  }
+  .header .header__big-box {
+    height: auto;
+    min-height: 100svh;
+  }
+  .header .header__big-box .container {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    width: 100%;
+    padding: 65px 18px 32px;
+  }
+  .header .header__box {
+    width: 100%;
+    max-width: 650px;
+    margin: 0 auto;
+  }
+  .header .header__form {
+    position: relative;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    transform: none;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+@media (max-width: 600px) {
+  .header .header__big-box .container { padding: 65px 14px 24px; gap: 15px; }
+  .header .header__form { padding: 20px 16px; }
+  .header .header__conditions-box { box-sizing: border-box; width: 100%; gap: 8px 12px; }
+  .header .header__conditions-text { font-size: 13px; }
+  .header .header__form-row { gap: 12px; margin-bottom: 12px; }
+  .header .header__form-group { min-width: 0; }
+  .header .header__form-group input,
+  .header .header__form-group select { min-height: 44px; font-size: 16px; }
+  .header .header__time-label { flex-wrap: wrap; gap: 4px 8px; }
+  .header .header__checkout-preview { white-space: normal; overflow-wrap: anywhere; }
+  .header .header__info-row { margin-top: 16px; justify-content: center; gap: 8px 14px; }
+  .header .header__form-button { min-height: 46px; }
+}
