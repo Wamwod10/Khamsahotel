@@ -76,3 +76,12 @@
 .booking-confirmation-actions button { border: 1px solid #ebc998; border-radius: 6px; padding: 8px 11px; background: #fff8ec; color: #9b6119; cursor: pointer; font-weight: 600; }
 @media (max-width: 520px) { .payment-success-container { padding: 2rem 1.3rem; margin: 3rem 1rem; } .payment-success-container h1 { font-size: 1.65rem; } }
 @media print { nav, header, footer, .booking-confirmation-actions, .booking-confirmed-item a, .payment-success-container > a { display: none !important; } .payment-success-container { box-shadow: none; margin: 0; max-width: 100%; } }
+
+/* Print only the verified confirmation card, not the rest of the website. */
+@media print {
+  body * { visibility: hidden !important; }
+  .payment-success-container, .payment-success-container * { visibility: visible !important; }
+  .payment-success-container { position: absolute; top: 0; left: 0; width: 100%; }
+  .payment-success-container .booking-confirmation-actions,
+  .payment-success-container .booking-confirmed-item a { display: none !important; }
+}

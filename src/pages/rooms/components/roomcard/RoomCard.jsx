@@ -112,7 +112,7 @@ const RoomCard = () => {
   return (
     <div className="room-card">
       <div className="container">
-        <h1 className="room-card__title">{t("roomtitle")}</h1>
+        <h1 className="room-card__title">{t("roomtitle")} <small style={{ color: "#888", fontSize: "0.35em", fontWeight: 400, whiteSpace: "nowrap" }}>· {t("bookingStepRoom")}</small></h1>
         <p className="room-card__text">{t("roomtext")}</p>
 
         <div className="room-card__list">
