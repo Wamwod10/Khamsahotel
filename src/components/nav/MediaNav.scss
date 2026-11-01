@@ -281,3 +281,40 @@
     overscroll-behavior: contain;
   }
 }
+
+
+/* Keep existing navbar look, but fit its controls into narrow mobile viewports. */
+@media (max-width: 600px) {
+  .nav .container { max-width: 100%; padding: 11px 10px; }
+  .nav .nav__box { min-width: 0; gap: 6px; justify-content: space-between; }
+  .nav .nav__main-box { min-width: 0; gap: 7px; column-gap: 7px; }
+  .nav .nav__logo { flex: 0 0 auto; min-width: 0; }
+  .nav .nav__logo-img { width: 38px; height: auto; }
+  .nav .nav__lang { flex: 0 1 auto; width: auto; min-width: 0; }
+  .nav .nav__lang-btn {
+    box-sizing: border-box;
+    width: auto;
+    min-width: 0;
+    max-width: 116px;
+    padding: 8px 6px;
+    gap: 4px;
+    font-size: 14px;
+  }
+  .nav .nav__lang-btn .arrow { font-size: 16px; }
+  .nav .nav__booking {
+    flex: 0 0 auto;
+    margin-left: 0;
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+  .nav .nav__booking-link { font-size: 13px; }
+  .nav .nav_btn-svg,
+  .nav .nav__close-btn--outside { flex: 0 0 auto; }
+}
+@media (max-width: 360px) {
+  .nav .container { padding-inline: 8px; }
+  .nav .nav__main-box { gap: 5px; column-gap: 5px; }
+  .nav .nav__lang-btn { max-width: 95px; font-size: 12px; }
+  .nav .nav__booking { padding: 9px 8px; }
+  .nav .nav__booking-link { font-size: 12px; }
+}
