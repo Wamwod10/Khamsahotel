@@ -1,10 +1,6 @@
-function durationHours(value) {
-  const normalized = String(value || "").toLowerCase();
-  if (normalized.includes("10")) return 10;
-  if (normalized.includes("24") || normalized.includes("one day") || normalized.includes("1 day") || normalized.includes("1 kun")) return 24;
-  if (normalized.includes("3")) return 3;
-  return null;
-}
+import { durationToHours } from "./bookingExperience.js";
+
+const durationHours = durationToHours;
 
 export function buildAvailabilityRequest({ checkIn, checkInTime, duration, roomType }) {
   const hours = durationHours(duration);

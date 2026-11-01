@@ -13,7 +13,7 @@ import { TbAirConditioning } from "react-icons/tb";
 import { RiDrinks2Fill } from "react-icons/ri";
 import { hasOverlappingFamilyBooking } from "../../utils/familyBookingAvailability.js";
 import { fetchRoomAvailability } from "../../utils/availability.js";
-import { addHotelHours, checkoutPreview, hotelNowParts, isPastHotelSlot, readBookingDraft, saveBookingDraft, DRAFT_KEY } from "../../utils/bookingExperience.js";
+import { addHotelHours, checkoutPreview, hotelNowParts, isPastHotelSlot, readBookingDraft, saveBookingDraft, durationToHours, DRAFT_KEY } from "../../utils/bookingExperience.js";
 
 /* ===== Helpers ===== */
 function getApiBase() {
@@ -72,12 +72,8 @@ function labelFromCode(code, t) {
   return item ? t(item.key) : code;
 }
 function codeFromLabel(label = "") {
-  const s = String(label).toLowerCase();
-  if (s.includes("one day") || s.includes("24")) return "24h";
-  if (s.includes("10")) return "10h";
-  if (s.includes("3")) return "3h";
-  // i18n labelda ham raqamlar bor — yetarli
-  return null;
+  const hours = durationToHours(label);
+  return hours === 24 ? "24h" : hours === 10 ? "10h" : hours === 3 ? "3h" : null;
 }
 
 /* ===== Component ===== */
@@ -104,6 +100,14 @@ const Header = () => {
   const [allowed, setAllowed] = useState(ALL_CODES); // STANDARD: default — hammasi
   const [tariffLoading, setTariffLoading] = useState(false);
   const [tariffError, setTariffError] = useState("");
+
+  // Preserve the selected tariff when the guest switches between UZ / RU / EN.
+  useEffect(() => {
+    setDuration((current) => {
+      const code = codeFromLabel(current);
+      return code ? labelFromCode(code, t) : current;
+    });
+  }, [i18n.language, t]);
 
   const today = hotelNowParts().date;
   const checkout = useMemo(() => checkoutPreview(checkIn, checkOutTime, duration), [checkIn, checkOutTime, duration]);

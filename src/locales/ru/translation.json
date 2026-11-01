@@ -483,5 +483,9 @@
   "bookingInvalidSelection": "Выберите корректные номер, дату и длительность.",
   "bookingSaveFailed": "Не удалось сохранить бронь. Попробуйте ещё раз.",
   "bookingSaving": "Проверяем...",
-  "bookingCopySelection": "Копировать выбор"
+  "bookingCopySelection": "Копировать выбор",
+  "bookingExpandPhoto": "Увеличить фото номера",
+  "bookingRoomGallery": "Фотографии номера",
+  "bookingPreviousPhoto": "Предыдущее фото",
+  "bookingNextPhoto": "Следующее фото"
 }

@@ -483,5 +483,9 @@
   "bookingInvalidSelection": "Please select a valid room, date and duration.",
   "bookingSaveFailed": "Could not save this booking. Please try again.",
   "bookingSaving": "Checking...",
-  "bookingCopySelection": "Copy selection"
+  "bookingCopySelection": "Copy selection",
+  "bookingExpandPhoto": "Expand room photo",
+  "bookingRoomGallery": "Room photo gallery",
+  "bookingPreviousPhoto": "Previous photo",
+  "bookingNextPhoto": "Next photo"
 }

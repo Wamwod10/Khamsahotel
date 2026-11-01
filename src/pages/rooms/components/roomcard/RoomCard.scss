@@ -337,3 +337,25 @@
     box-shadow: 0 7px 16px rgba(229, 148, 0, 0.6);
   }
 }
+
+/* Gallery overlay only: room card styling and page layout remain unchanged. */
+.room-card__image[role="button"] { cursor: zoom-in; }
+.room-card__image[role="button"]:focus-visible { outline: 3px solid #ffa930; outline-offset: 3px; }
+.room-image-lightbox {
+  position: fixed; inset: 0; z-index: 12000; background: rgba(0, 0, 0, .92);
+  display: flex; justify-content: center; align-items: center; gap: 12px; padding: 48px 12px 24px;
+}
+.room-image-lightbox__photo { min-width: 0; max-width: min(1050px, 80vw); text-align: center; }
+.room-image-lightbox__photo img { max-width: 100%; max-height: 78vh; border-radius: 10px; object-fit: contain; }
+.room-image-lightbox__photo span { display: block; margin-top: 8px; font-size: 13px; color: #eee; }
+.room-image-lightbox__arrow, .room-image-lightbox__close {
+  border: 1px solid rgba(255,255,255,.3); color: white; background: rgba(255,255,255,.15);
+  border-radius: 8px; cursor: pointer; font-size: 2rem; min-height: 42px;
+}
+.room-image-lightbox__arrow { width: 42px; flex: 0 0 42px; }
+.room-image-lightbox__close { position: absolute; top: 14px; right: 18px; width: 42px; }
+@media(max-width: 500px) {
+  .room-image-lightbox { gap: 5px; padding: 50px 5px 30px; }
+  .room-image-lightbox__arrow { width: 32px; flex-basis: 32px; font-size: 1.4rem; }
+  .room-image-lightbox__photo { max-width: calc(100vw - 84px); }
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./RoomCard.scss";
 import "./Rmedia/RCmedia.scss";
 
@@ -26,6 +26,24 @@ const RoomCard = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [noticeMessage, setNoticeMessage] = useState("");
   const [showNotice, setShowNotice] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const touchStart = useRef(null);
+  const movePreview = (direction) => {
+    setPreview((previous) => previous ? {
+      ...previous,
+      index: (previous.index + direction + previous.images.length) % previous.images.length,
+    } : null);
+  };
+  useEffect(() => {
+    if (!preview) return;
+    const onKey = (event) => {
+      if (event.key === "Escape") setPreview(null);
+      if (event.key === "ArrowLeft") movePreview(-1);
+      if (event.key === "ArrowRight") movePreview(1);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [preview]);
 
   // "STANDARD" | "FAMILY"
   const [selectedRoomType, setSelectedRoomType] = useState("STANDARD");
@@ -122,7 +140,11 @@ const RoomCard = () => {
             </div>
 
             <div className="room-card__image-wrapper">
-              <img src={mainImage} alt="Main Room" className="room-card__image" />
+              <img src={mainImage} alt={t("standard")} className="room-card__image"
+                loading="lazy" decoding="async" tabIndex={0} role="button"
+                aria-label={t("bookingExpandPhoto")}
+                onClick={() => setPreview({ images: standardImages, index: standardImages.indexOf(mainImage) })}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPreview({ images: standardImages, index: standardImages.indexOf(mainImage) }); } }} />
             </div>
 
             <div className="room-card__body">
@@ -210,7 +232,11 @@ const RoomCard = () => {
             </div>
 
             <div className="room-card__image-wrapper">
-              <img src={familyImage} alt="Main Room" className="room-card__image" />
+              <img src={familyImage} alt={t("family")} className="room-card__image"
+                loading="lazy" decoding="async" tabIndex={0} role="button"
+                aria-label={t("bookingExpandPhoto")}
+                onClick={() => setPreview({ images: familyImages, index: familyImages.indexOf(familyImage) })}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPreview({ images: familyImages, index: familyImages.indexOf(familyImage) }); } }} />
             </div>
 
             <div className="room-card__body">
@@ -279,6 +305,29 @@ const RoomCard = () => {
         </div>
       </div>
 
+      {preview && (
+        <div className="room-image-lightbox" role="dialog" aria-modal="true"
+          aria-label={t("bookingRoomGallery")}
+          onClick={() => setPreview(null)}
+          onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }}
+          onTouchEnd={(event) => {
+            const start = touchStart.current;
+            const end = event.changedTouches[0]?.clientX;
+            if (start != null && end != null && Math.abs(start - end) > 45) movePreview(start > end ? 1 : -1);
+            touchStart.current = null;
+          }}>
+          <button type="button" className="room-image-lightbox__close"
+            aria-label={t("cancel")} onClick={() => setPreview(null)}>×</button>
+          <button type="button" className="room-image-lightbox__arrow" aria-label={t("bookingPreviousPhoto")}
+            onClick={(event) => { event.stopPropagation(); movePreview(-1); }}>‹</button>
+          <div className="room-image-lightbox__photo" onClick={(event) => event.stopPropagation()}>
+            <img src={preview.images[preview.index]} alt={t("bookingRoomGallery") + " " + (preview.index + 1)} />
+            <span>{preview.index + 1} / {preview.images.length}</span>
+          </div>
+          <button type="button" className="room-image-lightbox__arrow" aria-label={t("bookingNextPhoto")}
+            onClick={(event) => { event.stopPropagation(); movePreview(1); }}>›</button>
+        </div>
+      )}
       {showNotice && (
         <NoticePopup message={noticeMessage} onOk={() => setShowNotice(false)} />
       )}

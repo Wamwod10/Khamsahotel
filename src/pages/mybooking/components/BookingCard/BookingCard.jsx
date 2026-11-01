@@ -58,7 +58,7 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
       String(booking.duration || ""),
       Number(booking.price || 0) + "€",
     ];
-    try { await navigator.clipboard.writeText(lines.join("\\n")); setCopied(true); }
+    try { await navigator.clipboard.writeText(lines.join("\n")); setCopied(true); }
     catch { setCopied(false); }
   };
 

@@ -31,8 +31,8 @@ function roomCodeToLabel(code, t) {
 function formError(name, value, t) {
   const input = String(value || "").trim();
   if (!input) return t("bookingRequiredField");
-  if (name === "email" && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(input)) return t("bookingInvalidEmail");
-  if (name === "phone" && (input.replace(/\\D/g, "").length < 7 || input.replace(/\\D/g, "").length > 15)) return t("bookingInvalidPhone");
+  if (name === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input)) return t("bookingInvalidEmail");
+  if (name === "phone" && (input.replace(/\D/g, "").length < 7 || input.replace(/\D/g, "").length > 15)) return t("bookingInvalidPhone");
   if (input.length > 120) return t("bookingTooLong");
   return "";
 }

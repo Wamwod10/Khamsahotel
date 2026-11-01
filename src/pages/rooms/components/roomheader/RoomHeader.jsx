@@ -40,15 +40,9 @@ export default function RoomHeader() {
 
   const formatDate = (dateString) => {
     if (!dateString) return t("selectDate");
-    try {
-      const date = new Date(dateString);
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}.${month}.${year}`;
-    } catch (error) {
-      return dateString;
-    }
+    const parts = String(dateString).slice(0, 10).split("-");
+    if (parts.length !== 3) return dateString;
+    return parts[2] + "." + parts[1] + "." + parts[0];
   };
 
   const formatTime = (timeString) => {
