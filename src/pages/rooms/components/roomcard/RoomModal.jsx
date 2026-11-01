@@ -9,6 +9,7 @@ import "./roomModalMedia.scss";
 import { hasOverlappingFamilyBooking } from "../../../../utils/familyBookingAvailability.js";
 import { fetchRoomAvailability } from "../../../../utils/availability.js";
 import { API_BASE } from "../../../../config.ts";
+import { checkoutPreview } from "../../../../utils/bookingExperience.js";
 
 function normalizeRoomCode(v) {
   const s = String(v || "").toLowerCase().trim();
@@ -24,6 +25,16 @@ function roomCodeToLabel(code, t) {
   if (c === "STANDARD") return t("standard") || "Standard Room";
   if (c === "FAMILY") return t("family") || "Family Room";
   return "-";
+}
+
+
+function formError(name, value, t) {
+  const input = String(value || "").trim();
+  if (!input) return t("bookingRequiredField");
+  if (name === "email" && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(input)) return t("bookingInvalidEmail");
+  if (name === "phone" && (input.replace(/\\D/g, "").length < 7 || input.replace(/\\D/g, "").length > 15)) return t("bookingInvalidPhone");
+  if (input.length > 120) return t("bookingTooLong");
+  return "";
 }
 
 const guestCountByCode = { STANDARD: 1, FAMILY: 3 };
@@ -97,9 +108,9 @@ const SuccessModal = ({ onStayHere, onGoToMyBooking }) => {
       <div className="modal-overlay" />
       <div className="modal success-modal" role="dialog" aria-modal="true" aria-labelledby="success-modal-title">
         <h2 id="success-modal-title">
-          {t("bookingsucced") || "Bron qabul qilindi"} <FaCheck className="modal-icon" />
+          {t("bookingAddedToList")} <FaCheck className="modal-icon" />
         </h2>
-        <p>{t("bookingsuccess") || "Booking success!"}</p>
+        <p>{t("bookingPaymentStillRequired")}</p>
         <div className="success-modal-buttons">
           <button className="btn-stay" onClick={onStayHere}>
             {t("stayhere") || "Stay here"}
@@ -134,6 +145,12 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     email: "",
   });
 
+  const [touched, setTouched] = useState({});
+  const fieldErrors = useMemo(() => Object.fromEntries(
+    ["firstName", "lastName", "phone", "email"].map((key) => [key, formError(key, formData[key], t)])
+  ), [formData, t]);
+  const checkout = useMemo(() => checkoutPreview(bookingInfo.checkIn, bookingInfo.checkOutTime, bookingInfo.duration),
+    [bookingInfo.checkIn, bookingInfo.checkOutTime, bookingInfo.duration]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -196,11 +213,10 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
       return;
     }
     const { firstName, lastName, phone, email } = formData;
-    if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim()) {
-      toast.error(t("Iltimos, barcha maydonlarni to'ldiring") || "Please fill all fields", {
-        position: "top-center",
-        autoClose: 3000,
-      });
+    const firstInvalid = ["firstName", "lastName", "phone", "email"].find((field) => fieldErrors[field]);
+    if (firstInvalid) {
+      setTouched({ firstName: true, lastName: true, phone: true, email: true });
+      document.getElementById(firstInvalid)?.focus();
       return;
     }
     if (!durationKey) {
@@ -295,6 +311,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
         <h2 className="modal__title" id="modal-title">
           {t("bookyourstay") || "Book Your Stay"}
         </h2>
+        <p className="modal__progress">{t("bookingStepGuest")}</p>
 
         <div className="modal_all__section">
           <div className="modal__section">
@@ -304,6 +321,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
           <div className="modal__section">
             <label>{t("check-in-hours") || "Check-In Time"}:</label>
             <p>{bookingInfo.checkOutTime ? formatTime(bookingInfo.checkOutTime) : "-"}</p>
+            {checkout && <small className="modal__checkout-hint">{t("bookingCheckoutLabel")}: {formatDate(checkout.date)} · {checkout.time}</small>}
           </div>
           <div className="modal__section">
             <label>{t("duration") || "Duration"}:</label>
@@ -334,8 +352,14 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
               required
               value={formData.firstName}
               onChange={handleInputChange}
+              onBlur={() => setTouched((p) => ({ ...p, firstName: true }))}
+              aria-invalid={Boolean(touched.firstName && fieldErrors.firstName)}
+              aria-describedby={touched.firstName && fieldErrors.firstName ? "firstName-error" : undefined}
               autoComplete="given-name"
             />
+            {touched.firstName && fieldErrors.firstName && (
+              <small id="firstName-error" className="modal__field-error" role="alert">{fieldErrors.firstName}</small>
+            )}
           </div>
 
           <div className="modal__field">
@@ -348,8 +372,14 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
               required
               value={formData.lastName}
               onChange={handleInputChange}
+              onBlur={() => setTouched((p) => ({ ...p, lastName: true }))}
+              aria-invalid={Boolean(touched.lastName && fieldErrors.lastName)}
+              aria-describedby={touched.lastName && fieldErrors.lastName ? "lastName-error" : undefined}
               autoComplete="family-name"
             />
+            {touched.lastName && fieldErrors.lastName && (
+              <small id="lastName-error" className="modal__field-error" role="alert">{fieldErrors.lastName}</small>
+            )}
           </div>
 
           <div className="modal__field">
@@ -362,8 +392,14 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
               required
               value={formData.phone}
               onChange={handleInputChange}
+              onBlur={() => setTouched((p) => ({ ...p, phone: true }))}
+              aria-invalid={Boolean(touched.phone && fieldErrors.phone)}
+              aria-describedby={touched.phone && fieldErrors.phone ? "phone-error" : undefined}
               autoComplete="tel"
             />
+            {touched.phone && fieldErrors.phone && (
+              <small id="phone-error" className="modal__field-error" role="alert">{fieldErrors.phone}</small>
+            )}
           </div>
 
           <div className="modal__field">
@@ -376,8 +412,14 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
               required
               value={formData.email}
               onChange={handleInputChange}
+              onBlur={() => setTouched((p) => ({ ...p, email: true }))}
+              aria-invalid={Boolean(touched.email && fieldErrors.email)}
+              aria-describedby={touched.email && fieldErrors.email ? "email-error" : undefined}
               autoComplete="email"
             />
+            {touched.email && fieldErrors.email && (
+              <small id="email-error" className="modal__field-error" role="alert">{fieldErrors.email}</small>
+            )}
           </div>
 
           {/* Payment method (indikativ) */}
@@ -396,6 +438,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
             </p>
           </div>
 
+          <p className="modal__booking-requirement">{t("bookingTransitRequirement")}</p>
           <div className="modal__buttons">
             <button type="submit" className="modal__confirm" disabled={submitting}>
               {submitting ? (t("searchrooms") || "Checking...") : (t("confirm") || "Confirm")}

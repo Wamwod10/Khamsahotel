@@ -50,6 +50,17 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
   };
 
   const roomLabel = roomCodeToLabel(booking.rooms, t);
+  const [copied, setCopied] = React.useState(false);
+  const copySelection = async () => {
+    const lines = [
+      roomLabel,
+      booking.checkIn + " " + formatTime(booking.checkOutTime),
+      String(booking.duration || ""),
+      Number(booking.price || 0) + "€",
+    ];
+    try { await navigator.clipboard.writeText(lines.join("\\n")); setCopied(true); }
+    catch { setCopied(false); }
+  };
 
   // Pay tugmasi
   const handlePay = async () => {
@@ -159,6 +170,9 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
       </div>
 
       <div className="booking-actions">
+        <button type="button" className="btn btn-copy" onClick={copySelection}>
+          {copied ? t("bookingCopied") : t("bookingCopySelection")}
+        </button>
         <button className="btn btn-edit" onClick={() => onEdit && onEdit(booking)}>
           {t("bookingcard_edit", { defaultValue: "Edit" })}
         </button>

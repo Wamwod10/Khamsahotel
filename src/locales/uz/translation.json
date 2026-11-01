@@ -471,5 +471,17 @@
   "bookingCopyDetails": "Bron ma’lumotlarini nusxalash",
   "bookingCopied": "Nusxalandi!",
   "bookingSavePdf": "PDF sifatida saqlash / Chop etish",
-  "bookingBackHome": "Bosh sahifa"
+  "bookingBackHome": "Bosh sahifa",
+  "bookingRequiredField": "Bu maydonni to‘ldiring.",
+  "bookingInvalidEmail": "Email manzilini to‘g‘ri kiriting.",
+  "bookingInvalidPhone": "Telefon raqamini to‘g‘ri kiriting.",
+  "bookingTooLong": "Matn juda uzun.",
+  "bookingAddedToList": "Bronlar ro‘yxatiga qo‘shildi",
+  "bookingPaymentStillRequired": "Tanlov saqlandi. To‘lovni yakunlash uchun «Bronim» bo‘limiga o‘ting.",
+  "bookingTransitRequirement": "Khamsa Sleep Lounge aeroportning tranzit hududida joylashgan. Keyingi reys uchun boarding pass talab qilinadi.",
+  "bookingStepGuest": "4 bosqichdan 3-si · Mehmon ma’lumotlari",
+  "bookingInvalidSelection": "Xona, sana va davomiylikni to‘g‘ri tanlang.",
+  "bookingSaveFailed": "Bronni saqlab bo‘lmadi. Qayta urinib ko‘ring.",
+  "bookingSaving": "Tekshirilmoqda...",
+  "bookingCopySelection": "Tanlovni nusxalash"
 }

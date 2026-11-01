@@ -1,20 +1,23 @@
 import React, { useState, useEffect } from "react";
 import "./editbooking.scss";
 import { useTranslation } from "react-i18next";
+import { durationToHours, checkoutPreview, hotelNowParts } from "../../../../utils/bookingExperience.js";
 
 const durationOptions = [
-  { value: "up_to_2_hours", label: "up_to_2_hours" },
-  { value: "up_to_10_hours", label: "up_to_10_hours" },
-  { value: "for_a_day", label: "for_a_day" },
+  { value: "Up to 3 hours", label: "upTo3Hours" },
+  { value: "Up to 10 hours", label: "upTo10Hours" },
+  { value: "One day", label: "oneDay" },
 ];
 
 const roomOptions = [
-  { value: "Standard Room", label: "Standard room" },
-  { value: "Family Room", label: "Family room" },
+  { value: "STANDARD", label: "standard" },
+  { value: "FAMILY", label: "family" },
 ];
 
 const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
   const { t } = useTranslation();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [editData, setEditData] = useState({
     checkIn: "",
     checkOutTime: "",
@@ -31,8 +34,10 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
       setEditData({
         checkIn: booking.checkIn || "",
         checkOutTime: booking.checkOutTime || "",
-        duration: booking.duration || "",
-        rooms: booking.rooms || "",
+        duration: durationToHours(booking.duration) === 3 ? "Up to 3 hours" :
+          durationToHours(booking.duration) === 10 ? "Up to 10 hours" :
+          durationToHours(booking.duration) === 24 ? "One day" : "",
+        rooms: String(booking.rooms || "").toUpperCase().includes("FAMILY") ? "FAMILY" : "STANDARD",
         firstName: booking.firstName || "",
         lastName: booking.lastName || "",
         phone: booking.phone || "",
@@ -42,17 +47,21 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
   }, [booking]);
 
   if (!isOpen) return null;
+  const checkout = checkoutPreview(editData.checkIn, editData.checkOutTime, editData.duration);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEditData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // BNOVO API qismi olib tashlandi, shuning uchun faqat onSave chaqiriladi
-    onSave(editData);
-    onClose();
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    try { await onSave(editData); }
+    catch (err) { setError(err?.message || t("bookingSaveFailed")); }
+    finally { setSaving(false); }
   };
 
   return (
@@ -66,11 +75,13 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
         <h2>{t("editmodal_title")}</h2>
 
         <form onSubmit={handleSubmit} className="edit-modal-form">
+          {error && <p className="edit-booking-error" role="alert">{error}</p>}
           {/* Check In Date */}
           <label>
             {t("check-in")}
             <input
               type="date"
+              min={hotelNowParts().date}
               name="checkIn"
               required
               value={editData.checkIn}
@@ -90,6 +101,7 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
             />
           </label>
 
+          {checkout && <small className="edit-booking-checkout">{t("bookingCheckoutLabel")}: {checkout.date} · {checkout.time}</small>}
           {/* Duration Select */}
           <label>
             {t("duration")}
@@ -180,10 +192,10 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
 
           {/* Buttons */}
           <div className="edit-modal-buttons">
-            <button type="submit" className="btn btn-save">
-              {t("editmodal_save")}
+            <button type="submit" className="btn btn-save" disabled={saving} aria-busy={saving}>
+              {saving ? t("bookingSaving") : t("editmodal_save")}
             </button>
-            <button type="button" className="btn btn-cancel" onClick={onClose}>
+            <button type="button" className="btn btn-cancel" onClick={onClose} disabled={saving}>
               {t("editmodal_cancel")}
             </button>
           </div>

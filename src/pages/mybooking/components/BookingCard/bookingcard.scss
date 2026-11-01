@@ -99,3 +99,5 @@
     row-gap: 5px;
   }
 }
+.booking-card .booking-actions .btn.btn-copy { background: #f7f7f7; color: #6b7280; border: 1px solid #e5e7eb; }
+@media (max-width: 520px) { .booking-card .booking-actions { flex-wrap: wrap; } }

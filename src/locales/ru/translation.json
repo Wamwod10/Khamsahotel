@@ -471,5 +471,17 @@
   "bookingCopyDetails": "Скопировать информацию",
   "bookingCopied": "Скопировано!",
   "bookingSavePdf": "Сохранить в PDF / Печать",
-  "bookingBackHome": "Главная"
+  "bookingBackHome": "Главная",
+  "bookingRequiredField": "Заполните это поле.",
+  "bookingInvalidEmail": "Укажите корректный адрес электронной почты.",
+  "bookingInvalidPhone": "Укажите корректный номер телефона.",
+  "bookingTooLong": "Слишком длинный текст.",
+  "bookingAddedToList": "Добавлено в список бронирований",
+  "bookingPaymentStillRequired": "Ваш выбор сохранён. Перейдите в «Мои брони» для оплаты.",
+  "bookingTransitRequirement": "Khamsa Sleep Lounge находится в транзитной зоне аэропорта. Требуется посадочный талон на следующий рейс.",
+  "bookingStepGuest": "Шаг 3 из 4 · Данные гостя",
+  "bookingInvalidSelection": "Выберите корректные номер, дату и длительность.",
+  "bookingSaveFailed": "Не удалось сохранить бронь. Попробуйте ещё раз.",
+  "bookingSaving": "Проверяем...",
+  "bookingCopySelection": "Копировать выбор"
 }

@@ -5,6 +5,9 @@ import BookingCard from "./components/BookingCard/BookingCard";
 import EditBookingModal from "./components/Edit/EditBookingModal";
 import { v4 as uuidv4 } from "uuid";
 import { useTranslation } from "react-i18next";
+import { fetchRoomAvailability } from "../../utils/availability.js";
+import { durationToHours, isPastHotelSlot } from "../../utils/bookingExperience.js";
+import { hasOverlappingFamilyBooking } from "../../utils/familyBookingAvailability.js";
 
 /* ===================== Helpers ===================== */
 
@@ -137,7 +140,7 @@ const MyBooking = () => {
   useEffect(() => {
     let saved = [];
     try {
-      saved = JSON.parse(sessionStorage.getItem("allBookings") || "[]");
+      saved = JSON.parse(sessionStorage.getItem("allBookings") || localStorage.getItem("allBookings") || "[]");
       if (!Array.isArray(saved)) saved = [];
     } catch {
       saved = [];
@@ -167,16 +170,24 @@ const MyBooking = () => {
     setIsEditOpen(true);
   };
 
-  const handleSaveBooking = (updatedBooking) => {
-    const updated = bookings.map((b) =>
-      b.id === editingBooking.id
-        ? {
-            ...updatedBooking,
-            id: b.id,
-            price: normalizePrice(updatedBooking.price),
-          }
-        : b
-    );
+  const handleSaveBooking = async (updatedBooking) => {
+    if (!editingBooking) throw new Error(t("bookingInvalidSelection"));
+    const hours = durationToHours(updatedBooking.duration);
+    const rooms = toRoomCode(updatedBooking.rooms);
+    const duration = hours === 3 ? "Up to 3 hours" : hours === 10 ? "Up to 10 hours" : hours === 24 ? "One day" : null;
+    const tariff = { STANDARD: {3:45,10:70,24:115}, FAMILY: {3:80,10:115,24:175} };
+    const price = tariff[rooms]?.[hours];
+    if (!duration || !price || !updatedBooking.checkIn || !updatedBooking.checkOutTime) throw new Error(t("bookingInvalidSelection"));
+    if (isPastHotelSlot(updatedBooking.checkIn, updatedBooking.checkOutTime)) throw new Error(t("bookingPastTime"));
+    const next = { ...editingBooking, ...updatedBooking, duration, rooms, price, guests: rooms === "FAMILY" ? 3 : 1 };
+    if (hasOverlappingFamilyBooking(bookings.filter(b => b.id !== editingBooking.id), next)) throw new Error(t("familyAlreadySelected"));
+    const availability = await fetchRoomAvailability({
+      apiBase: API_BASE, checkIn: next.checkIn, checkInTime: next.checkOutTime,
+      duration: next.duration, roomType: next.rooms,
+    });
+    if (!availability.ok || !availability.availabilityKnown) throw new Error(t("availabilityUnknown"));
+    if (!availability.available || availability.availableCount <= 0) throw new Error(t("roomNotAvailable"));
+    const updated = bookings.map((b) => b.id === editingBooking.id ? next : b);
     setBookings(updated);
     saveBookingsToStorage(updated);
     setIsEditOpen(false);
@@ -339,6 +350,7 @@ const MyBooking = () => {
             </div>
           </div>
 
+          <p className="my-booking-requirement">{t("bookingTransitRequirement")}</p>
           <div className="my-booking-buttons">
             <button
               className="btn btn-pay"

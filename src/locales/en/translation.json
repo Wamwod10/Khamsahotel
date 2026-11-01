@@ -471,5 +471,17 @@
   "bookingCopyDetails": "Copy booking details",
   "bookingCopied": "Copied!",
   "bookingSavePdf": "Save as PDF / Print",
-  "bookingBackHome": "Home"
+  "bookingBackHome": "Home",
+  "bookingRequiredField": "This field is required.",
+  "bookingInvalidEmail": "Enter a valid email address.",
+  "bookingInvalidPhone": "Enter a valid phone number.",
+  "bookingTooLong": "Text is too long.",
+  "bookingAddedToList": "Added to your bookings",
+  "bookingPaymentStillRequired": "Your selection is saved. Continue to My Booking to complete the payment.",
+  "bookingTransitRequirement": "Khamsa Sleep Lounge is inside the airport transit area. An onward boarding pass is required.",
+  "bookingStepGuest": "Step 3 of 4 · Guest details",
+  "bookingInvalidSelection": "Please select a valid room, date and duration.",
+  "bookingSaveFailed": "Could not save this booking. Please try again.",
+  "bookingSaving": "Checking...",
+  "bookingCopySelection": "Copy selection"
 }
