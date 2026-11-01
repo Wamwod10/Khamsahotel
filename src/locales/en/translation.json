@@ -458,5 +458,18 @@
   "bookingTimeTimezoneShort": "Tashkent (UTC+5)",
   "bookingCheckoutLabel": "Check-out",
   "bookingPastTime": "Please select a future check-in time (Tashkent time).",
-  "bookingAlternativeTimes": "Other available times:"
+  "bookingAlternativeTimes": "Other available times:",
+  "bookingVerifyingPayment": "Verifying your payment...",
+  "bookingVerificationUnavailable": "Booking confirmation unavailable",
+  "bookingVerificationInstructions": "We could not verify a paid booking for this link. If you were charged, please contact the hotel with your payment reference. Do not pay again until confirmed.",
+  "bookingReturnSelection": "Return to my booking",
+  "bookingPaymentConfirmed": "Payment confirmed!",
+  "bookingConfirmationEmailSent": "Your booking is confirmed. A confirmation email will be sent to your address.",
+  "bookingReference": "Booking reference",
+  "bookingGoogleCalendar": "Add to Google Calendar",
+  "bookingAppleCalendar": "Apple Calendar / Download .ics",
+  "bookingCopyDetails": "Copy booking details",
+  "bookingCopied": "Copied!",
+  "bookingSavePdf": "Save as PDF / Print",
+  "bookingBackHome": "Home"
 }

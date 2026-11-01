@@ -1672,6 +1672,42 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   }
 });
 
+// Public confirmation lookup exposes no guest PII; random payment UUID is the lookup key.
+// The calendar links are only available after the local DB reports a PAID booking.
+app.get("/api/booking-confirmation", availabilityLimiter, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+  const transactionId = String(req.query?.stid || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId)) {
+    return res.status(400).json({ ok: false, error: "Invalid booking reference" });
+  }
+  try {
+    const result = await pgPool.query(
+      `SELECT rooms,
+              to_char(check_in_at AT TIME ZONE 'Asia/Tashkent', 'YYYY-MM-DD') AS check_in_date,
+              to_char(check_in_at AT TIME ZONE 'Asia/Tashkent', 'HH24:MI') AS check_in_time,
+              to_char(check_out_at AT TIME ZONE 'Asia/Tashkent', 'YYYY-MM-DD') AS check_out_date,
+              to_char(check_out_at AT TIME ZONE 'Asia/Tashkent', 'HH24:MI') AS check_out_time,
+              price
+         FROM public.khamsachekin
+        WHERE transaction_id=$1 AND status='paid'
+        ORDER BY id ASC
+        LIMIT 24`,
+      [transactionId],
+    );
+    if (!result.rows.length) return res.status(404).json({ ok: false, error: "Confirmed booking not found" });
+    const items = result.rows.filter((row) => row.check_in_date && row.check_in_time && row.check_out_date && row.check_out_time)
+      .map((row) => ({
+        room: normalizeRoomCode(row.rooms), checkInDate: row.check_in_date, checkInTime: row.check_in_time,
+        checkOutDate: row.check_out_date, checkOutTime: row.check_out_time, price: Number(row.price) || 0,
+      }));
+    if (!items.length) return res.status(404).json({ ok: false, error: "Booking times unavailable" });
+    return res.json({ ok: true, reference: transactionId, items });
+  } catch (error) {
+    console.error("booking-confirmation error:", error?.message || error);
+    return res.status(500).json({ ok: false, error: "Confirmation lookup unavailable" });
+  }
+});
+
 // Octo redirect: DB holati va Octo'ning server-to-server statusi bilan tasdiqlaymiz.
 app.get("/octo-return", async (req, res) => {
   try {
@@ -1694,7 +1730,7 @@ app.get("/octo-return", async (req, res) => {
 
     if (rows[0]?.status === "paid") {
       await finalizePaidTransaction(stid);
-      return res.redirect(302, `${FRONTEND_URL}/success`);
+      return res.redirect(302, `${FRONTEND_URL}/success?stid=${encodeURIComponent(stid)}`);
     }
 
     // Callback redirectdan keyinroq kelishi mumkin. Shuning uchun Octo'dan
@@ -1703,7 +1739,7 @@ app.get("/octo-return", async (req, res) => {
       const verified = await verifyOctoTransactionStatus(stid);
       if (verified.status === "succeeded") {
         await finalizePaidTransaction(stid);
-        return res.redirect(302, `${FRONTEND_URL}/success`);
+        return res.redirect(302, `${FRONTEND_URL}/success?stid=${encodeURIComponent(stid)}`);
       }
 
       if (verified.status === "canceled") {

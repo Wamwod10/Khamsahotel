@@ -458,5 +458,18 @@
   "bookingTimeTimezoneShort": "Toshkent (UTC+5)",
   "bookingCheckoutLabel": "Chiqish",
   "bookingPastTime": "Toshkent vaqti bo‘yicha kelajakdagi kirish vaqtini tanlang.",
-  "bookingAlternativeTimes": "Boshqa bo‘sh vaqtlar:"
+  "bookingAlternativeTimes": "Boshqa bo‘sh vaqtlar:",
+  "bookingVerifyingPayment": "To‘lov tasdiqlanmoqda...",
+  "bookingVerificationUnavailable": "Bron tasdig‘ini tekshirib bo‘lmadi",
+  "bookingVerificationInstructions": "Ushbu havola orqali to‘langan bronni tasdiqlay olmadik. Pul yechilgan bo‘lsa, qayta to‘lamasdan avval mehmonxonaga murojaat qiling.",
+  "bookingReturnSelection": "Bronimga qaytish",
+  "bookingPaymentConfirmed": "To‘lov tasdiqlandi!",
+  "bookingConfirmationEmailSent": "Broningiz tasdiqlandi. Email manzilingizga tasdiq yuboriladi.",
+  "bookingReference": "Bron raqami",
+  "bookingGoogleCalendar": "Google Calendar'ga qo‘shish",
+  "bookingAppleCalendar": "Apple Calendar / .ics yuklash",
+  "bookingCopyDetails": "Bron ma’lumotlarini nusxalash",
+  "bookingCopied": "Nusxalandi!",
+  "bookingSavePdf": "PDF sifatida saqlash / Chop etish",
+  "bookingBackHome": "Bosh sahifa"
 }

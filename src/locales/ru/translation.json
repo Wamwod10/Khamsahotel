@@ -458,5 +458,18 @@
   "bookingTimeTimezoneShort": "Ташкент (UTC+5)",
   "bookingCheckoutLabel": "Выезд",
   "bookingPastTime": "Выберите будущее время заезда по Ташкенту.",
-  "bookingAlternativeTimes": "Другие свободные часы:"
+  "bookingAlternativeTimes": "Другие свободные часы:",
+  "bookingVerifyingPayment": "Проверяем оплату...",
+  "bookingVerificationUnavailable": "Подтверждение бронирования недоступно",
+  "bookingVerificationInstructions": "Не удалось подтвердить оплаченный заказ по этой ссылке. Если деньги списаны, свяжитесь с отелем и не платите повторно до выяснения.",
+  "bookingReturnSelection": "Вернуться к брони",
+  "bookingPaymentConfirmed": "Оплата подтверждена!",
+  "bookingConfirmationEmailSent": "Бронь подтверждена. На вашу почту будет отправлено подтверждение.",
+  "bookingReference": "Номер бронирования",
+  "bookingGoogleCalendar": "Добавить в Google Calendar",
+  "bookingAppleCalendar": "Apple Calendar / Скачать .ics",
+  "bookingCopyDetails": "Скопировать информацию",
+  "bookingCopied": "Скопировано!",
+  "bookingSavePdf": "Сохранить в PDF / Печать",
+  "bookingBackHome": "Главная"
 }

@@ -12,9 +12,10 @@ const Cancel = () => {
       <p className="message">
         Afsuski Buyurtmangiz qabul qilinmadi. To'lov amalga oshirilmadi.
       </p>
-      <a className="back-home" href="/">
-        Bosh sahifaga qaytish
+      <a className="back-home" href="/mybooking">
+        Bronni davom ettirish / Resume booking
       </a>
+      <p><a href="/">Bosh sahifa / Home</a></p>
     </div>
   )
 }
