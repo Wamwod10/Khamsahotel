@@ -165,7 +165,7 @@ const Nav = () => {
                       src={currentLangIcon}
                       alt={currentLangLabel}
                     />
-                    {currentLangLabel}
+                    <span className="nav__lang-name">{currentLangLabel}</span>
                     <span className="arrow">
                       <HiChevronDown />
                     </span>
@@ -208,7 +208,7 @@ const Nav = () => {
                   src={currentLangIcon}
                   alt={currentLangLabel}
                 />
-                {currentLangLabel}
+                <span className="nav__lang-name">{currentLangLabel}</span>
                 <span className="arrow">
                   <HiChevronDown />
                 </span>
