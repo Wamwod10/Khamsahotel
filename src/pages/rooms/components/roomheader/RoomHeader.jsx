@@ -120,7 +120,7 @@ export default function RoomHeader() {
         </div>
       </div>
 
-      <NavLink to="/" className="room-header__button">
+      <NavLink to="/" className="room-header__button" title={t("bookingStepRoom")}>
         <IoSearch className="room-header-icon" />
         {t("modifysearch")}
       </NavLink>

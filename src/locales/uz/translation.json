@@ -487,5 +487,12 @@
   "bookingExpandPhoto": "Xona rasmini kattalashtirish",
   "bookingRoomGallery": "Xona rasmlari",
   "bookingPreviousPhoto": "Oldingi rasm",
-  "bookingNextPhoto": "Keyingi rasm"
+  "bookingNextPhoto": "Keyingi rasm",
+  "bookingStepSearch": "1/4 bosqich",
+  "bookingStepRoom": "2/4 bosqich · Xona tanlash",
+  "bookingStepPayment": "4/4 bosqich",
+  "bookingCheckinTooltip": "Toshkent mahalliy vaqti (UTC+5) bo‘yicha kirish vaqtini tanlang.",
+  "bookingDurationTooltip": "Turar joy davomiyligiga qarab chiqish vaqti hisoblanadi.",
+  "bookingPaymentNotConfirmed": "To‘lov hali tasdiqlanmadi",
+  "bookingCheckPaymentFirst": "To‘lov tasdig‘ini ololmadik. Pul yechilgan bo‘lsa, qayta to‘lashdan oldin mehmonxona bilan bog‘laning. Bu ikki marta to‘lovning oldini oladi."
 }

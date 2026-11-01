@@ -1,23 +1,21 @@
-import React from 'react'
-import "./cancel.scss"
+import React from "react";
+import { useTranslation } from "react-i18next";
+import "./cancel.scss";
 import { GiCancel } from "react-icons/gi";
 
 const Cancel = () => {
+  const { t } = useTranslation();
   return (
-     <div className="payment-success-container">
-      <div className="success-icon" role="img" aria-label="Success checkmark">
-       <div className='icon-div'><GiCancel className='icon-cancel' /></div>
+    <div className="payment-success-container">
+      <div className="success-icon">
+        <div className="icon-div"><GiCancel className="icon-cancel" /></div>
       </div>
-      <h1 className='red'>To‘lov Bekor Qilindi</h1>
-      <p className="message">
-        Afsuski Buyurtmangiz qabul qilinmadi. To'lov amalga oshirilmadi.
-      </p>
-      <a className="back-home" href="/mybooking">
-        Bronni davom ettirish / Resume booking
-      </a>
-      <p><a href="/">Bosh sahifa / Home</a></p>
+      <h1 className="red">{t("bookingPaymentNotConfirmed")}</h1>
+      <p className="message">{t("bookingCheckPaymentFirst")}</p>
+      <a className="back-home" href="/mybooking">{t("bookingReturnSelection")}</a>
+      <p><a href="/">{t("bookingBackHome")}</a></p>
     </div>
-  )
-}
+  );
+};
 
-export default Cancel
+export default Cancel;

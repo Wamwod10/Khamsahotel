@@ -458,7 +458,7 @@ const Header = () => {
 
             <form className="header__form" onSubmit={handleSubmit}>
               <h2 className="header__form-title">{t("bookyourstay")}</h2>
-              <p className="header__form-text">{t("booktext")}</p>
+              <p className="header__form-text">{t("booktext")} <span style={{ fontSize: "0.73rem", color: "#858585", whiteSpace: "nowrap" }}>· {t("bookingStepSearch")}</span></p>
 
               <div className="header__form-row">
                 <div className="header__form-group">
@@ -500,6 +500,7 @@ const Header = () => {
                     disabled={!checkIn}
                     min={checkIn === today ? hotelNowParts().time : undefined}
                     className="kh-time"
+                    title={t("bookingCheckinTooltip")}
                     aria-describedby="booking-timezone-note"
                   />
                 </div>
@@ -522,6 +523,7 @@ const Header = () => {
                   <div className="custom-select">
                     <select
                       id="duration"
+                      title={t("bookingDurationTooltip")}
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
                       disabled={!checkIn || !checkOutTime}

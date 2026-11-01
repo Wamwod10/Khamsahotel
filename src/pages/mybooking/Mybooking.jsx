@@ -318,7 +318,7 @@ const MyBooking = () => {
   return (
     <div className="my-booking-container">
       <div className="booking-header">
-        <h1>{t("mybookings")}</h1>
+        <h1>{t("mybookings")} <small style={{ fontSize: "0.72rem", fontWeight: 400, color: "#858585", whiteSpace: "nowrap" }}>· {t("bookingStepPayment")}</small></h1>
         <button
           className="btn btn-add"
           onClick={addNewBooking}

@@ -487,5 +487,12 @@
   "bookingExpandPhoto": "Увеличить фото номера",
   "bookingRoomGallery": "Фотографии номера",
   "bookingPreviousPhoto": "Предыдущее фото",
-  "bookingNextPhoto": "Следующее фото"
+  "bookingNextPhoto": "Следующее фото",
+  "bookingStepSearch": "Шаг 1/4",
+  "bookingStepRoom": "Шаг 2/4 · Выбор номера",
+  "bookingStepPayment": "Шаг 4/4",
+  "bookingCheckinTooltip": "Укажите время заезда по местному времени Ташкента (UTC+5).",
+  "bookingDurationTooltip": "Продолжительность проживания определяет время выезда.",
+  "bookingPaymentNotConfirmed": "Оплата пока не подтверждена",
+  "bookingCheckPaymentFirst": "Не удалось подтвердить оплату. Если деньги списаны, свяжитесь с отелем до повторной попытки, чтобы избежать двойной оплаты."
 }

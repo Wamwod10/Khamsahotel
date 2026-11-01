@@ -487,5 +487,12 @@
   "bookingExpandPhoto": "Expand room photo",
   "bookingRoomGallery": "Room photo gallery",
   "bookingPreviousPhoto": "Previous photo",
-  "bookingNextPhoto": "Next photo"
+  "bookingNextPhoto": "Next photo",
+  "bookingStepSearch": "Step 1/4",
+  "bookingStepRoom": "Step 2/4 · Select a room",
+  "bookingStepPayment": "Step 4/4",
+  "bookingCheckinTooltip": "Select the local time in Tashkent (UTC+5).",
+  "bookingDurationTooltip": "The stay duration determines your check-out time.",
+  "bookingPaymentNotConfirmed": "Payment not yet confirmed",
+  "bookingCheckPaymentFirst": "We could not confirm the payment. If money was deducted, contact the hotel before attempting another payment to avoid a duplicate charge."
 }
