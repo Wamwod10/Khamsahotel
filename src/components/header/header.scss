@@ -227,6 +227,25 @@
     }
   }
 
+  // Subtle local-time reminder directly below the check-in time field.
+  &__timezone-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 7px 0 0;
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.4;
+
+    svg {
+      flex: 0 0 auto;
+      color: #9a8fa5;
+      font-size: 0.875rem;
+      margin-top: 1px;
+    }
+  }
+
   &__info-row {
     display: flex;
     justify-content: space-between;

@@ -5,7 +5,7 @@ import "./headerMedia.scss";
 import { FaWifi, FaChevronDown, FaShieldAlt } from "react-icons/fa";
 import { IoTimeOutline } from "react-icons/io5";
 import { useTranslation } from "react-i18next";
-import { AiOutlineSafety } from "react-icons/ai";
+import { AiOutlineSafety, AiOutlineInfoCircle } from "react-icons/ai";
 import { FaCircleCheck } from "react-icons/fa6";
 import { MdOutlineCancel } from "react-icons/md";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -443,7 +443,12 @@ const Header = () => {
                     required
                     disabled={!checkIn}
                     className="kh-time"
+                    aria-describedby="booking-timezone-note"
                   />
+                  <p id="booking-timezone-note" className="header__timezone-note">
+                    <AiOutlineInfoCircle aria-hidden="true" />
+                    <span>{t("bookingTimeTimezoneNotice")}</span>
+                  </p>
                 </div>
               </div>
 
