@@ -302,3 +302,14 @@
         padding-top: 6px;
     }
 }
+
+/* Maintain legibility instead of shrinking footer text down to 10px. */
+@media(max-width:600px) {
+ .footer {padding:28px 14px}
+ .footer__container {gap:23px}
+ .footer__left .footer__logo {font-size:20px}
+ .footer__title {font-size:17px}
+ .footer__description,.footer__address,.footer__phone,.footer__email {font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+ .footer__payment {width:37px;height:auto}
+ .footer__bottom {font-size:12px;line-height:1.5;padding-top:18px}
+}

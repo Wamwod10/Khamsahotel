@@ -1,54 +1,18 @@
-@media (max-width:1024px) {
-    .booking {
-        &__box {
-            justify-content: space-around;
-            row-gap: 35px;
-        }
-    }
+@media(max-width:1024px) {.booking__box {justify-content:center;gap:25px}}
+@media(max-width:768px) {
+ .booking {margin-top:45px}
+ .booking__title {font-size:32px;line-height:1.2}
+ .booking__text {font-size:16px;line-height:1.5}
+ .booking__box {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-top:25px}
+ .booking__box-offers {box-sizing:border-box;min-width:0;max-width:none;width:100%;height:auto;min-height:205px;padding:18px 15px}
+ .booking__box-text {width:auto;max-width:100%;font-size:14px;line-height:1.5}
 }
-
-@media (max-width:768px) {
-    .booking {
-        &__box {
-            justify-content: center;
-            column-gap: 25px;
-        }
-
-        &__box-offers {
-            max-inline-size: 340px;
-            height: 220px;
-
-        }
-
-        &__title {
-            font-size: 38px;
-        }
-
-        &__text {
-            font-size: 17px;
-        }
-    }
-}
-
-@media (max-width:425px) {
-    .booking {
-        &__box-title {
-            font-size: 18px;
-        }
-    }
-}
-
-@media (max-width:320px) {
-    .booking {
-        &__title{
-            font-size: 29px;
-        }
-        &__text{
-            font-size: 15px;
-        }
-        &__box-text {
-            font-size: 13px;
-            width: 270px;
-        }
-    }
+@media(max-width:600px) {
+ .booking {margin-top:35px}
+ .booking__title {font-size:27px}
+ .booking__text {font-size:14px;margin-top:10px}
+ .booking__box {grid-template-columns:minmax(0,1fr);gap:14px}
+ .booking__box-offers {max-width:460px;margin:0 auto;min-height:190px}
+ .booking__box-title {font-size:18px}
+ .booking__icon-div {width:54px;height:54px;font-size:25px}
 }
