@@ -193,3 +193,9 @@
   .room-header__label { font-size: 11px; }
   .room-header__value { font-size: 12px; }
 }
+
+@media(max-width:600px) {
+ .room-header {max-width:none}
+ .room-header .room-header__availability {width:100%;flex-wrap:wrap}
+ .room-header .room-header__badge {white-space:normal;line-height:1.3}
+}

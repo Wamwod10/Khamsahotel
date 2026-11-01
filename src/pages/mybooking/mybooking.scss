@@ -110,3 +110,10 @@
   .my-booking-summary { overflow-wrap: anywhere; }
   .bnovo-modal { max-height: calc(100dvh - 24px); overflow-y: auto; min-height: 0; }
 }
+
+@media(max-width:600px) {
+ .my-booking-container {min-width:0;overflow-wrap:anywhere}
+ .booking-header .btn-add {box-sizing:border-box;max-width:100%}
+ .my-booking-buttons {width:100%}
+ .my-booking-buttons .btn-pay {box-sizing:border-box;max-width:100%;white-space:normal}
+}

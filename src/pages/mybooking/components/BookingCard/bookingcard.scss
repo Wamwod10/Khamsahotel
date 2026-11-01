@@ -113,3 +113,8 @@
   .booking-card .booking-actions .btn { min-width: 0; min-height: 44px; padding: 10px 8px; white-space: normal; }
   .booking-card .booking-actions .btn-copy { grid-column: 1 / -1; }
 }
+
+@media(max-width:600px) {
+ .booking-card .booking-row_gmail {min-width:0;gap:8px}
+ .booking-card .booking-row_gmail span {flex:1 1 0;min-width:0;overflow-wrap:anywhere}
+}
