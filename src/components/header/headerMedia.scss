@@ -1,263 +1,51 @@
-    @media (max-width:1024px) {
-        .header {
-            height: 100vh;
-            width: 100%;
-
-            &__big-box {
-
-                flex-direction: column;
-                background-size: cover;
-                background-position: center;
-
-                height: 100vh;
-
-                &::before {
-                    height: 100%;
-                }
-            }
-
-            &__box {
-                margin: 10px;
-            }
-
-            &__conditions-box {
-                margin: 0 auto;
-            }
-
-            &__title {
-                font-size: 36px;
-                text-align: center;
-            }
-
-            &__text {
-                font-size: 16px;
-                text-align: center;
-            }
-
-            &__conditions-text {
-                font-size: 16px;
-            }
-        }
-    }
-
-/* Mobile layout follows the real DOM: .container > .header__big-box > .header__form.
-   Keep desktop styling and brand colors untouched. */
-@media (max-width: 900px) {
-  .header {
-    height: auto;
-    min-height: 0;
-    width: 100%;
-    background-color: #fff;
-    background-image: none;
-  }
-
-  /* Do not size the hero photo against the full height of the booking form:
-     on iOS that zooms/crops the photo as the form grows. */
-  .header::before {
-    height: clamp(410px, 110vw, 530px);
-    background-image:
-      linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
-      url("/hero-home.jpg");
-    background-position: center top, center center;
-    background-size: cover, cover;
-    background-repeat: no-repeat;
-  }
-
-  .header > .container {
-    display: block;
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 100%;
-    padding: 36px 18px 28px;
-  }
-
-  .header .header__big-box {
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    width: 100%;
-    min-width: 0;
-    height: auto;
-    min-height: 0;
-    gap: 20px;
-  }
-
-  .header .header__box {
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
-    max-width: 650px;
-    margin: 0 auto;
-  }
-
-  .header .header__form {
-    box-sizing: border-box;
-    position: relative;
-    inset: auto;
-    left: auto;
-    right: auto;
-    top: auto;
-    bottom: auto;
-    transform: none;
-    flex: 0 1 auto;
-    width: 100%;
-    max-width: 600px;
-    min-width: 0;
-    margin: 0 auto;
-  }
-
-  .header .header__form-row,
-  .header .header__form-group,
-  .header .header__form-group .custom-select {
-    box-sizing: border-box;
-    min-width: 0;
-    max-width: 100%;
-  }
+/* Consolidated mobile homepage: no fixed vertical offsets. */
+@media(max-width:1024px) {
+ .header .header__title {font-size:36px}
+ .header .header__text {font-size:16px}
 }
-
-@media (max-width: 600px) {
-  .header > .container { padding: 32px 14px 25px; }
-
-  .header .header__big-box { gap: 15px; }
-  .header .header__box { padding: 0; margin: 0 auto; }
-  .header .header__title {
-    font-size: clamp(1.6rem, 7vw, 2rem);
-    line-height: 1.23;
-    margin-bottom: 12px;
-    overflow-wrap: break-word;
-    text-align: center;
-  }
-  .header .header__text {
-    font-size: 0.92rem;
-    line-height: 1.5;
-    margin-bottom: 14px;
-    text-align: center;
-  }
-  .header .header__conditions-box {
-    box-sizing: border-box;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    margin: 0;
-    gap: 8px 12px;
-    padding: 10px;
-  }
-  .header .header__conditions-text {
-    font-size: 12px;
-    line-height: 1.3;
-  }
-
-  .header .header__form {
-    padding: 20px 16px;
-    border-radius: 15px;
-  }
-  .header .header__form-title {
-    font-size: 1.5rem;
-    line-height: 1.3;
-  }
-  .header .header__form-text {
-    font-size: 0.86rem;
-    margin-bottom: 15px;
-    line-height: 1.4;
-  }
-
-  .header .header__form-row {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    margin: 0 0 12px;
-  }
-  .header .header__form-group {
-    display: flex;
-    flex-direction: column;
-    flex: 0 1 auto;
-    width: 100%;
-    min-width: 0;
-  }
-  .header .header__form-group label {
-    min-width: 0;
-    font-size: 13px;
-    margin-bottom: 6px;
-  }
-  .header .header__form-group .header__time-label {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 4px 8px;
-  }
-  .header .header__timezone-badge {
-    padding: 3px 6px;
-    font-size: 10px;
-  }
-
-  /* iOS Safari's date/time controls have intrinsic widths. Explicitly
-     constrain the native controls, including their internal display box. */
-  .header .header__form-group input,
-  .header .header__form-group select,
-  .header .header__form-group .custom-select select {
-    display: block;
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    height: 44px;
-    min-height: 44px;
-    margin: 0;
-    font-size: 16px;
-    line-height: normal;
-    border-radius: 8px;
-  }
-  .header .header__form-group input[type="date"],
-  .header .header__form-group input[type="time"] {
-    -webkit-appearance: auto;
-    appearance: auto;
-    overflow: hidden;
-    text-overflow: clip;
-    padding: 8px 12px;
-  }
-  .header .header__form-group input[type="date"]::-webkit-date-and-time-value,
-  .header .header__form-group input[type="time"]::-webkit-date-and-time-value {
-    min-width: 0;
-    text-align: left;
-  }
-  .header .header__form-group .custom-select {
-    width: 100%;
-  }
-  .header .header__form-group .custom-select select {
-    padding: 8px 34px 8px 12px;
-    appearance: none;
-    -webkit-appearance: none;
-  }
-
-  .header .header__checkout-preview {
-    max-width: 100%;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    font-size: 0.68rem;
-  }
-  .header .header__info-row {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px 12px;
-    margin-top: 15px;
-    font-size: 0.79rem;
-  }
-  .header .header__form-button { min-height: 46px; }
+@media(max-width:900px) {
+ .header {height:auto;min-height:0;background:#fff}
+ .header::before {
+   width:100%;height:clamp(410px,110vw,520px);pointer-events:none;
+   background:linear-gradient(rgba(0,0,0,.57),rgba(0,0,0,.54)),url("/hero-home.jpg") center/cover no-repeat;
+ }
+ .header > .container {display:block;width:100%;max-width:100%;padding:30px 18px 35px}
+ .header .header__big-box {display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;width:100%;height:auto;min-height:0;gap:18px}
+ .header .header__box {box-sizing:border-box;width:100%;max-width:650px;min-width:0;margin:0 auto;padding:18px 0 0;text-align:center}
+ .header .header__title {font-size:clamp(28px,5vw,38px);line-height:1.22;margin-bottom:12px;text-align:center;overflow-wrap:break-word}
+ .header .header__text {font-size:16px;line-height:1.5;margin-bottom:17px;text-align:center}
+ .header .header__conditions-box {box-sizing:border-box;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;width:100%;max-width:100%;margin:0 auto;padding:10px;gap:10px 15px}
+ .header .header__conditions-text {font-size:14px}
+ .header .header__form {box-sizing:border-box;display:block;position:relative;inset:auto;top:auto;bottom:auto;left:auto;right:auto;transform:none;flex:none;width:100%;min-width:0;max-width:600px;margin:0 auto;padding:24px}
+ .header .header__form-row,.header .header__form-group,.header .header__form-group .custom-select {box-sizing:border-box;width:100%;max-width:100%;min-width:0}
 }
-
-@media (max-width: 360px) {
-  .header > .container { padding: 27px 10px 20px; }
-  .header .header__form { padding: 17px 13px; }
-  .header .header__form-title { font-size: 1.35rem; }
-  .header .header__conditions-box { gap: 7px 10px; }
-  .header .header__conditions-text { font-size: 11px; }
+@media(max-width:600px) {
+ .header > .container {padding:24px 12px 28px}
+ .header::before {height:clamp(410px,118vw,495px)}
+ .header .header__box {padding:12px 3px 0}
+ .header .header__title {font-size:clamp(25px,7.2vw,33px)}
+ .header .header__text {font-size:14px;line-height:1.5;margin-bottom:15px}
+ .header .header__conditions-box {gap:9px 12px;padding:9px}
+ .header .header__conditions-text {font-size:12px;gap:5px}
+ .header .header__form {padding:20px 16px;border-radius:15px}
+ .header .header__form-title {font-size:24px;line-height:1.25}
+ .header .header__form-text {font-size:13px;line-height:1.45;margin-bottom:18px}
+ .header .header__form-row {display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:0 0 12px}
+ .header .header__form-group {display:flex;flex:none;flex-direction:column}
+ .header .header__form-group label {font-size:13px;line-height:1.4;margin:0 0 6px}
+ .header .header__time-label {display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px 8px}
+ .header .header__timezone-badge {padding:3px 7px;font-size:10px}
+ .header .header__form-group input,.header .header__form-group select,.header .header__form-group .custom-select select {display:block;box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-inline-size:0;height:44px;min-height:44px;margin:0;font-size:16px;line-height:normal}
+ .header .header__form-group input[type="date"],.header .header__form-group input[type="time"] {padding:8px 12px;background-color:#fff;appearance:auto;-webkit-appearance:auto;overflow:hidden}
+ .header .header__form-group input[type="date"]::-webkit-date-and-time-value,.header .header__form-group input[type="time"]::-webkit-date-and-time-value {min-width:0;text-align:left}
+ .header .header__form-group .custom-select select {appearance:none;-webkit-appearance:none;padding:8px 36px 8px 12px}
+ .header .header__checkout-preview {white-space:normal;overflow-wrap:anywhere}
+ .header .header__info-row {margin-top:15px;justify-content:center;gap:8px 12px;font-size:12px}
+ .header .header__form-button {min-height:46px;font-size:16px}
+}
+@media(max-width:355px) {
+ .header .header__title {font-size:25px}
+ .header .header__form {padding:17px 13px}
+ .header .header__form-title {font-size:22px}
+ .header .header__conditions-text {font-size:11px}
 }
