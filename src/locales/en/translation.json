@@ -454,5 +454,6 @@
   "fraudAlert": "Received a suspicious message? Do not open any links. Contact Khamsa Hotel directly.",
   "availabilityUnknown": "Availability could not be confirmed. Please try again.",
   "roomNotAvailable": "This room type is not available for the selected time.",
-  "bookingTimeTimezoneNotice": "All booking times are shown in Tashkent local time (UTC+5)."
+  "bookingTimeTimezoneNotice": "All booking times are shown in Tashkent local time (UTC+5).",
+  "bookingTimeTimezoneShort": "Tashkent (UTC+5)"
 }

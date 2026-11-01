@@ -454,5 +454,6 @@
   "fraudAlert": "Shubhali xabar oldingizmi? Hech qanday havolani ochmang. Khamsa Hotel bilan bevosita bog‘laning.",
   "availabilityUnknown": "Bo‘sh xona mavjudligini tasdiqlab bo‘lmadi. Iltimos, qayta urinib ko‘ring.",
   "roomNotAvailable": "Tanlangan vaqtda bu xona turi mavjud emas.",
-  "bookingTimeTimezoneNotice": "Barcha bron vaqtlari Toshkent mahalliy vaqti (UTC+5) bo‘yicha ko‘rsatiladi."
+  "bookingTimeTimezoneNotice": "Barcha bron vaqtlari Toshkent mahalliy vaqti (UTC+5) bo‘yicha ko‘rsatiladi.",
+  "bookingTimeTimezoneShort": "Toshkent (UTC+5)"
 }

@@ -434,7 +434,18 @@ const Header = () => {
                 </div>
 
                 <div className="header__form-group">
-                  <label htmlFor="checkout">{t("check-in-hours")}</label>
+                  <label htmlFor="checkout" className="header__time-label">
+                    <span>{t("check-in-hours")}</span>
+                    <span
+                      id="booking-timezone-note"
+                      className="header__timezone-badge"
+                      title={t("bookingTimeTimezoneNotice")}
+                      aria-label={t("bookingTimeTimezoneNotice")}
+                    >
+                      <AiOutlineInfoCircle aria-hidden="true" />
+                      {t("bookingTimeTimezoneShort")}
+                    </span>
+                  </label>
                   <input
                     id="checkout"
                     type="time"
@@ -445,10 +456,6 @@ const Header = () => {
                     className="kh-time"
                     aria-describedby="booking-timezone-note"
                   />
-                  <p id="booking-timezone-note" className="header__timezone-note">
-                    <AiOutlineInfoCircle aria-hidden="true" />
-                    <span>{t("bookingTimeTimezoneNotice")}</span>
-                  </p>
                 </div>
               </div>
 
