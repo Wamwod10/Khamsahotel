@@ -455,5 +455,8 @@
   "availabilityUnknown": "Availability could not be confirmed. Please try again.",
   "roomNotAvailable": "This room type is not available for the selected time.",
   "bookingTimeTimezoneNotice": "All booking times are shown in Tashkent local time (UTC+5).",
-  "bookingTimeTimezoneShort": "Tashkent (UTC+5)"
+  "bookingTimeTimezoneShort": "Tashkent (UTC+5)",
+  "bookingCheckoutLabel": "Check-out",
+  "bookingPastTime": "Please select a future check-in time (Tashkent time).",
+  "bookingAlternativeTimes": "Other available times:"
 }

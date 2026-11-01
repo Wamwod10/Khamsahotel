@@ -13,6 +13,7 @@ import { TbAirConditioning } from "react-icons/tb";
 import { RiDrinks2Fill } from "react-icons/ri";
 import { hasOverlappingFamilyBooking } from "../../utils/familyBookingAvailability.js";
 import { fetchRoomAvailability } from "../../utils/availability.js";
+import { addHotelHours, checkoutPreview, hotelNowParts, isPastHotelSlot, readBookingDraft, saveBookingDraft, DRAFT_KEY } from "../../utils/bookingExperience.js";
 
 /* ===== Helpers ===== */
 function getApiBase() {
@@ -85,10 +86,13 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOutTime, setCheckOutTime] = useState("");
-  const [duration, setDuration] = useState("Up to 3 hours");
-  const [rooms, setRooms] = useState("STANDARD");
+  const initialDraft = useMemo(() => readBookingDraft(window.localStorage), []);
+  const [checkIn, setCheckIn] = useState(initialDraft?.checkIn || "");
+  const [checkOutTime, setCheckOutTime] = useState(initialDraft?.checkOutTime || "");
+  const [duration, setDuration] = useState(initialDraft?.duration || "Up to 3 hours");
+  const [rooms, setRooms] = useState(initialDraft?.rooms || "STANDARD");
+  const [alternativeSlots, setAlternativeSlots] = useState([]);
+  const [alternativesLoading, setAlternativesLoading] = useState(false);
 
   const [checking, setChecking] = useState(false);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -101,12 +105,18 @@ const Header = () => {
   const [tariffLoading, setTariffLoading] = useState(false);
   const [tariffError, setTariffError] = useState("");
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = hotelNowParts().date;
+  const checkout = useMemo(() => checkoutPreview(checkIn, checkOutTime, duration), [checkIn, checkOutTime, duration]);
+  useEffect(() => {
+    if (location.state?.clearSearch) return;
+    saveBookingDraft(window.localStorage, {checkIn, checkOutTime, duration, rooms});
+  }, [checkIn, checkOutTime, duration, rooms, location.state]);
 
   // Forms reset (agar /rooms -> back bo‘lsa)
   useEffect(() => {
     if (location.state?.clearSearch) {
       localStorage.removeItem("bookingInfo");
+      localStorage.removeItem(DRAFT_KEY);
       setCheckIn("");
       setCheckOutTime("");
       setDuration("Up to 3 hours");
@@ -233,6 +243,33 @@ const Header = () => {
     return () => controller.abort();
   }, [checkIn, checkOutTime, duration, rooms]);
 
+
+  // Show only time slots verified by the hotel's availability service.
+  useEffect(() => {
+    const controller = new AbortController();
+    setAlternativeSlots([]);
+    if (!checkIn || !checkOutTime || !duration || !rooms ||
+        !roomAvailability?.availabilityKnown || roomAvailability.available ||
+        availabilityLoading || isPastHotelSlot(checkIn, checkOutTime)) return () => controller.abort();
+    setAlternativesLoading(true);
+    const candidates = [1, 2, 3, 4].map((offset) => addHotelHours(checkIn, checkOutTime, offset))
+      .filter(Boolean).filter((slot) => !isPastHotelSlot(slot.date, slot.time));
+    Promise.all(candidates.map(async (slot) => {
+      const result = await fetchRoomAvailability({
+        apiBase: getApiBase(), checkIn: slot.date, checkInTime: slot.time,
+        duration, roomType: rooms, signal: controller.signal,
+      });
+      return result.ok && result.availabilityKnown && result.available && result.availableCount > 0 ? slot : null;
+    })).then((results) => {
+      if (!controller.signal.aborted) setAlternativeSlots(results.filter(Boolean).slice(0, 3));
+    }).catch(() => {
+      if (!controller.signal.aborted) setAlternativeSlots([]);
+    }).finally(() => {
+      if (!controller.signal.aborted) setAlternativesLoading(false);
+    });
+    return () => controller.abort();
+  }, [checkIn, checkOutTime, duration, rooms, roomAvailability, availabilityLoading]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!checkIn || !checkOutTime || !duration || !rooms) {
@@ -240,6 +277,10 @@ const Header = () => {
       return;
     }
 
+    if (isPastHotelSlot(checkIn, checkOutTime)) {
+      openModal(t("bookingPastTime"));
+      return;
+    }
     const startAtLocal = `${checkIn}T${checkOutTime}`;
 
     // FAMILY: duration ruxsatini tekshirish
@@ -453,6 +494,7 @@ const Header = () => {
                     onChange={(e) => setCheckOutTime(e.target.value)}
                     required
                     disabled={!checkIn}
+                    min={checkIn === today ? hotelNowParts().time : undefined}
                     className="kh-time"
                     aria-describedby="booking-timezone-note"
                   />
@@ -526,7 +568,12 @@ const Header = () => {
               </div>
 
               <div className="header__form-group full-width">
-                <label htmlFor="hotel">{t("hotel")}</label>
+                <label htmlFor="hotel" className="header__time-label">
+                  <span>{t("hotel")}</span>
+                  {checkout && <span className="header__checkout-preview" title={t("bookingTimeTimezoneNotice")}>
+                    {t("bookingCheckoutLabel")}: {checkout.date} · {checkout.time}
+                  </span>}
+                </label>
                 <input id="hotel" value={t("TashkentAirportHotel")} disabled />
               </div>
 
@@ -540,6 +587,19 @@ const Header = () => {
                   : t("checkavailable") || "Check availability"}
               </button>
 
+              {(alternativeSlots.length > 0 || alternativesLoading) && (
+                <div className="header__alternate-times" aria-live="polite">
+                  <span>{t("bookingAlternativeTimes")}</span>
+                  {alternativesLoading && <span>{t("searchrooms")}</span>}
+                  {!alternativesLoading && alternativeSlots.map((slot) => (
+                    <button key={slot.date + slot.time} type="button" onClick={() => {
+                      setCheckIn(slot.date); setCheckOutTime(slot.time);
+                    }}>
+                      {slot.date === checkIn ? slot.time : slot.date + " · " + slot.time}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="header__info-row">
                 <span className="header__color1">
                   <AiOutlineSafety /> {t("secure")}

@@ -258,6 +258,17 @@
     }
   }
 
+  &__checkout-preview { color: #8d651f; font-size: 0.72rem; font-weight: 500; white-space: nowrap; }
+  &__alternate-times {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+    margin-top: 10px; color: #6b7280; font-size: 0.75rem;
+    button {
+      border: 1px solid #f5d7a5; background: #fff8ed; border-radius: 999px;
+      padding: 4px 9px; color: #925f17; cursor: pointer; font-size: 0.75rem;
+    }
+  }
+  @media (max-width: 425px) { &__checkout-preview { font-size: 0.64rem; } }
+
   &__info-row {
     display: flex;
     justify-content: space-between;

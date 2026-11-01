@@ -455,5 +455,8 @@
   "availabilityUnknown": "Не удалось подтвердить наличие мест. Пожалуйста, попробуйте ещё раз.",
   "roomNotAvailable": "Этот тип номера недоступен на выбранное время.",
   "bookingTimeTimezoneNotice": "Время бронирования указано по местному времени Ташкента (UTC+5).",
-  "bookingTimeTimezoneShort": "Ташкент (UTC+5)"
+  "bookingTimeTimezoneShort": "Ташкент (UTC+5)",
+  "bookingCheckoutLabel": "Выезд",
+  "bookingPastTime": "Выберите будущее время заезда по Ташкенту.",
+  "bookingAlternativeTimes": "Другие свободные часы:"
 }

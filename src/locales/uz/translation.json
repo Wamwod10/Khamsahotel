@@ -455,5 +455,8 @@
   "availabilityUnknown": "Bo‘sh xona mavjudligini tasdiqlab bo‘lmadi. Iltimos, qayta urinib ko‘ring.",
   "roomNotAvailable": "Tanlangan vaqtda bu xona turi mavjud emas.",
   "bookingTimeTimezoneNotice": "Barcha bron vaqtlari Toshkent mahalliy vaqti (UTC+5) bo‘yicha ko‘rsatiladi.",
-  "bookingTimeTimezoneShort": "Toshkent (UTC+5)"
+  "bookingTimeTimezoneShort": "Toshkent (UTC+5)",
+  "bookingCheckoutLabel": "Chiqish",
+  "bookingPastTime": "Toshkent vaqti bo‘yicha kelajakdagi kirish vaqtini tanlang.",
+  "bookingAlternativeTimes": "Boshqa bo‘sh vaqtlar:"
 }
