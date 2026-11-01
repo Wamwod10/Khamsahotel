@@ -21,3 +21,14 @@
  .lightbox__prev,.lightbox__next {width:35px;height:35px;font-size:24px}
  .lightbox__img {max-inline-size:calc(100vw - 48px)}
 }
+
+
+/* The base gallery hides the close button; keep it reachable on phones. */
+@media(max-width:768px) {
+  .lightbox .lightbox__close {
+    display:flex;top:calc(12px + env(safe-area-inset-top,0px));
+    right:12px;width:44px;height:44px;z-index:2;
+  }
+  .lightbox__prev,.lightbox__next {z-index:2}
+  .gallery__grid .gallery__item:focus-visible {outline:3px solid #ffa930;outline-offset:3px}
+}
