@@ -39,3 +39,11 @@ img{
 html,body,#root {max-width:100%;min-width:0}
 img,video {max-width:100%}
 :focus-visible {outline:2px solid #ffa930;outline-offset:2px}
+
+/* Last-resort viewport containment, after fixing actual overflowing components. */
+@media (max-width: 900px) {
+ html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+ #root { width: 100%; max-width: 100%; min-width: 0; }
+ .container { box-sizing: border-box; min-width: 0; }
+}
+

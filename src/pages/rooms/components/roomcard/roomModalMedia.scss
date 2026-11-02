@@ -210,3 +210,60 @@
   .modal-main > .room-booking-modal .modal_all__section { gap: 7px 12px; }
   .modal-main > .room-booking-modal .modal__form { margin-top: 10px; gap: 9px; }
 }
+
+/* Mobile guest details: no truncated placeholders; readable booking summary. */
+@media (max-width: 600px) {
+ .modal-main { box-sizing: border-box; overflow: hidden; }
+ .modal-main > .room-booking-modal {
+   max-width: calc(100vw - 16px);
+   min-width: 0;
+   max-height: calc(100dvh - 16px);
+   padding-bottom: 0;
+ }
+ .modal-main > .room-booking-modal .modal_all__section {
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+   gap: 10px 12px;
+   padding: 12px;
+   background: #fffaf3;
+   border: 1px solid #f6e3c5;
+   border-radius: 10px;
+ }
+ .modal-main > .room-booking-modal .modal__section {
+   display: block;
+   min-width: 0;
+ }
+ .modal-main > .room-booking-modal .modal__section:last-child {
+   display: block;
+   grid-column: 1 / -1;
+ }
+ .modal-main > .room-booking-modal .modal__section label { font-size: 11px; color: #7c7f86; font-weight: 500; }
+ .modal-main > .room-booking-modal .modal__section p {
+   font-size: 13px; line-height: 1.4; font-weight: 600; color: #323841;
+ }
+ .modal-main > .room-booking-modal .modal__checkout-hint { font-size: 11px; overflow-wrap: anywhere; }
+ .modal-main > .room-booking-modal .modal__form {
+   grid-template-columns: minmax(0, 1fr);
+   gap: 12px;
+ }
+ .modal-main > .room-booking-modal .modal__field,
+ .modal-main > .room-booking-modal .modal__field .input-wrapper {
+   box-sizing: border-box; width: 100%; min-width: 0;
+ }
+ .modal-main > .room-booking-modal .modal__field input {
+   display: block; box-sizing: border-box; width: 100%; max-width: 100%;
+   min-width: 0; height: 46px; min-height: 46px; padding: 11px 12px; font-size: 16px;
+ }
+ .modal-main > .room-booking-modal .modal__field.custom-select input {
+   padding-inline: 44px 12px; font-size: 15px;
+ }
+ .modal-main > .room-booking-modal .modal__form .total-price-display {
+   justify-content: space-between; align-items: center; align-self: stretch;
+   padding: 10px 0 0;
+   border-top: 1px solid #eee;
+ }
+ .modal-main > .room-booking-modal .modal__booking-requirement { font-size: 12px; line-height: 1.5; }
+ .modal-main > .room-booking-modal .modal__buttons {
+   position: sticky; bottom: 0; margin: 0 -14px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+ }
+}
+

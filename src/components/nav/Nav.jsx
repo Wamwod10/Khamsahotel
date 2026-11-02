@@ -58,6 +58,23 @@ const Nav = () => {
   const handleClick = () => setIsActive((p) => !p);
 
   useEffect(() => {
+    if (!isActive) return undefined;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") {
+        setIsActive(false);
+        setIsLangOpen(false);
+      }
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = oldOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isActive]);
+
+  useEffect(() => {
     if (!navRef.current) return;
     const h = navRef.current.offsetHeight;
     document.documentElement.style.setProperty("--nav-h", `${h}px`);
@@ -110,6 +127,8 @@ const Nav = () => {
           <ul
             ref={menuRef}
             className={`nav__list ${isActive ? "show" : ""}`}
+            id="khamsa-mobile-menu"
+            aria-label="Main navigation"
             onClick={(e) => {
               e.stopPropagation();
               if (e.target.closest(".nav__link")) setIsActive(false);
@@ -247,6 +266,9 @@ const Nav = () => {
                 ref={btnRef}
                 className={`nav_btn-svg ${isActive ? "active" : ""}`}
                 onClick={handleClick}
+                aria-label="Open menu"
+                aria-controls="khamsa-mobile-menu"
+                aria-expanded={isActive}
               >
                 <IoMenu className="btn_icon" />
               </button>
@@ -254,6 +276,7 @@ const Nav = () => {
             {isActive && (
               <button
                 className="nav__close-btn nav__close-btn--outside"
+                aria-label="Close menu"
                 onClick={() => setIsActive(false)}
               >
                 ×

@@ -13,6 +13,7 @@ import { BsFillUsbPlugFill } from "react-icons/bs";
 import { useTranslation } from "react-i18next";
 import RoomModal from "./RoomModal";
 import NoticePopup from "./NoticePopup";
+import { durationToHours, isPastHotelSlot } from "../../../../utils/bookingExperience.js";
 
 const standardImages = ["/5.jpg", "/24.jpg", "/13.jpg", "/23.jpg"];
 const familyImages = ["/4.jpg", "/25.jpg", "/26.jpg", "/27.jpg"];
@@ -66,6 +67,17 @@ const RoomCard = () => {
 
   // Modalni ochishdan oldin mehmon soni uchun tekshiruvlar
   const openModalWithCheck = (roomData) => {
+    // Booking details must be selected before the guest-details step.
+    // Otherwise the modal displays '-' for date, time, duration and price.
+    let selected = null;
+    try { selected = JSON.parse(localStorage.getItem("bookingInfo") || "null"); } catch {}
+    if (!selected?.checkIn || !selected?.checkOutTime ||
+        !durationToHours(selected?.duration) ||
+        isPastHotelSlot(selected.checkIn, selected.checkOutTime)) {
+      setNoticeMessage(t("bookingSelectDatesFirst"));
+      setShowNotice(true);
+      return;
+    }
     // Limitlar: STANDARD <=1, FAMILY <=3
     if (roomData.typeCode === "STANDARD" && roomData.guests > 1) {
       setNoticeMessage(

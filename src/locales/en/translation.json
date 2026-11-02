@@ -494,5 +494,8 @@
   "bookingCheckinTooltip": "Select the local time in Tashkent (UTC+5).",
   "bookingDurationTooltip": "The stay duration determines your check-out time.",
   "bookingPaymentNotConfirmed": "Payment not yet confirmed",
-  "bookingCheckPaymentFirst": "We could not confirm the payment. If money was deducted, contact the hotel before attempting another payment to avoid a duplicate charge."
+  "bookingCheckPaymentFirst": "We could not confirm the payment. If money was deducted, contact the hotel before attempting another payment to avoid a duplicate charge.",
+  "bookingSelectDatesFirst": "Please select your check-in date, time and duration on the home page before booking a room.",
+  "bookingEmptySubtitle": "Your selected rooms will appear here. Start a booking to choose your stay dates and room.",
+  "bookingCreateFirst": "Find a room"
 }

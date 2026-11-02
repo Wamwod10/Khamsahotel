@@ -5,6 +5,7 @@ import BookingCard from "./components/BookingCard/BookingCard";
 import EditBookingModal from "./components/Edit/EditBookingModal";
 import { v4 as uuidv4 } from "uuid";
 import { useTranslation } from "react-i18next";
+import { FiCalendar, FiArrowRight } from "react-icons/fi";
 import { fetchRoomAvailability } from "../../utils/availability.js";
 import { durationToHours, isPastHotelSlot } from "../../utils/bookingExperience.js";
 import { hasOverlappingFamilyBooking } from "../../utils/familyBookingAvailability.js";
@@ -317,7 +318,7 @@ const MyBooking = () => {
 
   return (
     <div className="my-booking-container">
-      <div className="booking-header">
+      <div className={bookings.length === 0 ? "booking-header booking-header--empty" : "booking-header"}>
         <h1>{t("mybookings")} <small style={{ fontSize: "0.72rem", fontWeight: 400, color: "#858585", whiteSpace: "nowrap" }}>· {t("bookingStepPayment")}</small></h1>
         <button
           className="btn btn-add"
@@ -330,7 +331,12 @@ const MyBooking = () => {
 
       {bookings.length === 0 ? (
         <div className="my-booking-empty">
-          <p>{t("nobooking")}</p>
+          <div className="my-booking-empty__icon" aria-hidden="true"><FiCalendar /></div>
+          <h2>{t("nobooking")}</h2>
+          <p className="my-booking-empty__description">{t("bookingEmptySubtitle")}</p>
+          <button type="button" className="my-booking-empty__action" onClick={addNewBooking}>
+            {t("bookingCreateFirst")} <FiArrowRight aria-hidden="true" />
+          </button>
         </div>
       ) : (
         <>

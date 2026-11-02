@@ -49,3 +49,83 @@
  .header .header__form-title {font-size:22px}
  .header .header__conditions-text {font-size:11px}
 }
+
+/* Khamsa mobile UX — home booking, safe native iOS controls. Desktop untouched. */
+@media (max-width: 600px) {
+  .header > .container { padding-inline: 14px; }
+  .header .header__big-box { gap: 0; }
+  .header .header__form {
+    box-sizing: border-box;
+    margin: 62px auto 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 20px 16px;
+    overflow: visible;
+  }
+  .header .header__form-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    gap: 13px;
+  }
+  .header .header__form-group,
+  .header .header__form-group.full-width,
+  .header .header__form-group .custom-select {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-inline: 0;
+  }
+  .header .header__form-group input,
+  .header .header__form-group select,
+  .header .header__form-group .custom-select select,
+  .header .header__form-group input.kh-date,
+  .header .header__form-group input.kh-time {
+    display: block;
+    position: relative;
+    flex: none;
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    block-size: 46px;
+    min-block-size: 46px;
+    max-block-size: 46px;
+    padding: 9px 13px;
+    margin: 0;
+    border-radius: 8px;
+    font-size: 16px;
+    line-height: 24px;
+    vertical-align: middle;
+  }
+  .header .header__form-group input[type="date"],
+  .header .header__form-group input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-inline: 13px;
+    min-inline-size: 0;
+    overflow: clip;
+  }
+  .header .header__form-group input[type="date"]::-webkit-date-and-time-value,
+  .header .header__form-group input[type="time"]::-webkit-date-and-time-value,
+  .header .header__form-group input[type="date"]::-webkit-datetime-edit,
+  .header .header__form-group input[type="time"]::-webkit-datetime-edit {
+    min-inline-size: 0;
+    padding: 0;
+    text-align: start;
+  }
+  .header .header__form-group .custom-select select { padding-inline: 13px 36px; }
+  .header .header__form-group .custom-select .select-icon { right: 12px; }
+  .header .header__form-text { overflow-wrap: anywhere; }
+  .header .header__time-label { min-width: 0; }
+}
+@media (max-width: 355px) {
+  .header .header__form { margin-top: 54px; padding-inline: 13px; }
+}
+

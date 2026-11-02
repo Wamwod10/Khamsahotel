@@ -199,3 +199,10 @@
  .room-header .room-header__availability {width:100%;flex-wrap:wrap}
  .room-header .room-header__badge {white-space:normal;line-height:1.3}
 }
+
+@media (max-width: 768px) {
+ .room-header { max-width: calc(100% - 24px); min-width: 0; }
+ .room-header .room-header__box, .room-header__item { min-width: 0; }
+ .room-header__value { overflow-wrap: anywhere; }
+}
+

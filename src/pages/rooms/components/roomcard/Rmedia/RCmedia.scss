@@ -38,3 +38,14 @@
  .room-card__thumbnail {flex-basis:53px;width:53px;height:53px}
  .room-card__room-title {font-size:20px}
 }
+
+/* Viewport-aware controls: avoid horizontal document growth. */
+@media (max-width: 900px) {
+ .room-card .container, .room-card__list, .room-card__item, .room-card__body,
+ .room-card__image-wrapper, .room-card__ft-box { box-sizing: border-box; min-width: 0; max-width: 100%; }
+ .room-card__prices span { white-space: normal; overflow-wrap: anywhere; }
+ .room-card__info, .room-card__desc, .room-card__location { min-width: 0; overflow-wrap: anywhere; }
+ .room-card__thumbnails { min-width: 0; max-width: 100%; }
+ .room-card__image { min-width: 0; }
+}
+
