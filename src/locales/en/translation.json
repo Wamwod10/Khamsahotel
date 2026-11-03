@@ -497,5 +497,6 @@
   "bookingCheckPaymentFirst": "We could not confirm the payment. If money was deducted, contact the hotel before attempting another payment to avoid a duplicate charge.",
   "bookingSelectDatesFirst": "Please select your check-in date, time and duration on the home page before booking a room.",
   "bookingEmptySubtitle": "Your selected rooms will appear here. Start a booking to choose your stay dates and room.",
-  "bookingCreateFirst": "Find a room"
+  "bookingCreateFirst": "Find a room",
+  "bookingTimeMustBeSelected": "Your booking check-in time is missing or invalid. Please edit the booking and select the exact Tashkent time before payment."
 }

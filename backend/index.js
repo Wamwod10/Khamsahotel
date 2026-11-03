@@ -21,6 +21,7 @@ import { normalizeCheckinsPagination } from "./checkinsPagination.js";
 import { ACTIVE_LOCAL_STATUS_SQL, withRoomTypeLocks } from "./localInventory.js";
 import { buildHotelAvailabilityWindow } from "./availabilityWindow.js";
 import { formatDisplayDate, formatDisplayDateTime, formatDisplayTime } from "./bookingDisplayTime.js";
+import { readGuestCheckInSelection } from "./bookingInputTime.js";
 
 dotenv.config();
 const app = express();
@@ -446,19 +447,6 @@ function formatEuro(value) {
   return `${formatted} EUR`;
 }
 
-function buildCheckInValue(checkIn, checkInTime) {
-  const date = String(checkIn || "").slice(0, 10);
-  if (!date) return checkIn;
-
-  const rawTime = String(checkInTime || "").trim();
-  if (!rawTime) return date;
-  if (rawTime.includes("T")) return rawTime;
-
-  const time = rawTime.slice(0, 5);
-  if (!/^\d{2}:\d{2}$/.test(time)) return date;
-  return `${date}T${time}:00`;
-}
-
 function getBookingRows(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
   return value ? [value] : [];
@@ -497,35 +485,28 @@ function getBookingGroups(bookings) {
 }
 
 function normalizePaymentItems(booking, fallbackAmount) {
-  const rawItems = Array.isArray(booking?.items) && booking.items.length
-    ? booking.items
-    : [booking || {}];
+  const hasIndividualItems = Array.isArray(booking?.items) && booking.items.length > 0;
+  const rawItems = hasIndividualItems ? booking.items : [booking || {}];
 
   return rawItems.map((item) => {
-    const checkInDate = String(firstNonEmpty(item?.checkIn, booking?.checkIn) || "").slice(0, 10);
-    const checkInValue = buildCheckInValue(
-      checkInDate,
-      firstNonEmpty(
-        item?.checkOutTime,
-        item?.checkInTime,
-        item?.check_in_time,
-        booking?.checkOutTime,
-        booking?.checkInTime,
-      ),
-    );
+    // For multi-room payments each row MUST supply its own selected clock.
+    // Never borrow the parent booking's time or default an absent value to midnight.
+    const selection = readGuestCheckInSelection(item);
     const bookingWindow = computeBookingWindow(
-      checkInValue,
+      selection?.localDateTime || "",
       firstNonEmpty(item?.duration, booking?.duration),
     );
     const price = Number(firstNonEmpty(item?.price, fallbackAmount));
 
     return {
       raw: item,
-      checkIn: checkInDate,
-      checkInDate,
-      checkInTime: bookingWindow.checkInTime,
+      selectedTimeValid: Boolean(selection),
+      checkIn: selection?.date || "",
+      checkInDate: selection?.date || "",
+      checkInTime: selection?.time || "",
       durationHours: bookingWindow.durationHours,
       checkInAt: bookingWindow.startAt,
+
       checkOut: bookingWindow.checkOutDate,
       checkOutAt: bookingWindow.endAt,
       duration: bookingWindow.duration,
@@ -900,7 +881,10 @@ function normalizeBookingDuration(durationValue) {
 function computeBookingWindow(checkInStr, durationValue) {
   const rawCheckIn = String(checkInStr || "");
   const checkInDate = rawCheckIn.slice(0, 10);
-  const checkInTime = rawCheckIn.includes("T") ? rawCheckIn.slice(11, 16) : "00:00";
+  // A missing clock is invalid — never turn date-only input into 00:00.
+  const checkInTime = /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:00$/.test(rawCheckIn)
+    ? rawCheckIn.slice(11, 16)
+    : "";
   const duration = normalizeBookingDuration(durationValue);
   const durationHours = duration.kind === "hours" ? duration.dbValue : duration.dbValue * 24;
   try {
@@ -1450,6 +1434,17 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       return res.status(400).json({ error: "Booking items soni noto‘g‘ri" });
     }
 
+    // Reject missing, conflicting or malformed guest-selected times BEFORE any
+    // payment, database write or Telegram notification occurs.
+    if (paymentItems.some((item) => !item.selectedTimeValid || !item.checkInAt ||
+        formatDisplayDate(item.checkInAt) !== formatDisplayDate(item.checkIn) ||
+        formatDisplayTime(item.checkInAt) !== item.checkInTime)) {
+      return res.status(400).json({
+        error: "Kirish sanasi/soati noto‘g‘ri yoki yo‘q. Bron vaqtini qayta tanlang (Toshkent vaqti).",
+        code: "BOOKING_CHECKIN_TIME_INVALID",
+      });
+    }
+
     // Narx clientdan ishonib olinmaydi. Serverdagi rasmiy tariflar source of truth.
     for (const item of paymentItems) {
       const officialPrice = getOfficialBookingPrice(item);
@@ -1565,8 +1560,8 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
         `
     INSERT INTO public.khamsachekin
     (transaction_id, status, rooms, check_in, check_out, check_in_at, check_out_at,
-     duration, price, first_name, last_name, phone, email)
-    VALUES ($1,'pending',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+     duration, price, first_name, last_name, phone, email, check_in_time)
+    VALUES ($1,'pending',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
     `,
         [
           shopTransactionId,
@@ -1581,6 +1576,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
           item.lastName,
           item.phone,
           item.email || payerEmail,
+          item.checkInTime,
         ],
             );
           }

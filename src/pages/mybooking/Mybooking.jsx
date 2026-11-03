@@ -238,6 +238,14 @@ const MyBooking = () => {
       return;
     }
     if (paying) return;
+    const invalidBookingTime = bookings.some((item) =>
+      !/^\d{4}-\d{2}-\d{2}$/.test(String(item.checkIn || "")) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(item.checkOutTime || ""))
+    );
+    if (invalidBookingTime) {
+      alert(t("bookingTimeMustBeSelected"));
+      return;
+    }
     setPaying(true);
 
     try {

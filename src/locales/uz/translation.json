@@ -497,5 +497,6 @@
   "bookingCheckPaymentFirst": "To‘lov tasdig‘ini ololmadik. Pul yechilgan bo‘lsa, qayta to‘lashdan oldin mehmonxona bilan bog‘laning. Bu ikki marta to‘lovning oldini oladi.",
   "bookingSelectDatesFirst": "Xonani bron qilishdan oldin bosh sahifada kirish sanasi, soati va davomiyligini tanlang.",
   "bookingEmptySubtitle": "Tanlagan xonalaringiz shu yerda ko‘rinadi. Bron qilish uchun sana va xonani tanlang.",
-  "bookingCreateFirst": "Xona tanlash"
+  "bookingCreateFirst": "Xona tanlash",
+  "bookingTimeMustBeSelected": "Bron kirish soati kiritilmagan yoki noto‘g‘ri. To‘lovdan oldin bronni tahrirlab, Toshkent vaqti bo‘yicha aniq soatni tanlang."
 }

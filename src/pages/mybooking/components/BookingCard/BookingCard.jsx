@@ -80,6 +80,7 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
         description: `${roomLabel} / ${durationKey || booking.duration || ""}`.trim(),
         booking: {
           checkIn: booking.checkIn,                    // YYYY-MM-DD
+          checkOutTime: booking.checkOutTime,           // guest-selected Tashkent HH:mm
           duration: booking.duration,                  // human-readable
           rooms: booking.rooms,                        // "STANDARD" | "FAMILY"
           guests: booking.guests,
