@@ -498,5 +498,17 @@
   "bookingSelectDatesFirst": "Xonani bron qilishdan oldin bosh sahifada kirish sanasi, soati va davomiyligini tanlang.",
   "bookingEmptySubtitle": "Tanlagan xonalaringiz shu yerda ko‘rinadi. Bron qilish uchun sana va xonani tanlang.",
   "bookingCreateFirst": "Xona tanlash",
-  "bookingTimeMustBeSelected": "Bron kirish soati kiritilmagan yoki noto‘g‘ri. To‘lovdan oldin bronni tahrirlab, Toshkent vaqti bo‘yicha aniq soatni tanlang."
+  "bookingTimeMustBeSelected": "Bron kirish soati kiritilmagan yoki noto‘g‘ri. To‘lovdan oldin bronni tahrirlab, Toshkent vaqti bo‘yicha aniq soatni tanlang.",
+  "guestCommentLabel": "Mehmon izohi",
+  "guestCommentHint": "Qo‘shimcha istaklaringiz (ixtiyoriy)",
+  "guestCommentOptional": "Istaklar bajarilishi kafolatlanmaydi.",
+  "bookingQrLabel": "Bron QR-kodi",
+  "bookingQrNote": "QR-kodni olgan kishi bron raqami va vaqtini ko‘ra oladi.",
+  "bookingShare": "Bronni ulashish",
+  "bookingShareDone": "Bron havolasi nusxalandi",
+  "bookingCountdown": "Bron boshlanishiga qoldi",
+  "bookingStarted": "Kirish vaqti keldi",
+  "bookingStatus": "Bron holati",
+  "bookingStatusPending": "To‘lov tasdig‘i kutilmoqda",
+  "bookingStatusFailed": "To‘lov tasdiqlanmadi"
 }
