@@ -16,7 +16,11 @@ const Nav = () => {
   const [isLangOpen, setIsLangOpen] = useState(false);
 
   // ✅ localStorage bilan bir xil ishlatdik
-  const savedLang = localStorage.getItem("appLanguage") || "en";
+  const savedLang = (() => {
+    const explicit = localStorage.getItem("appLanguage");
+    if (["en","ru","uz"].includes(explicit)) return explicit;
+    return (navigator.languages || [navigator.language || "en"]).map(l => String(l).toLowerCase().split("-")[0]).find(l => ["en","ru","uz"].includes(l)) || "en";
+  })();
   const [currentLangCode, setCurrentLangCode] = useState(savedLang);
 
   const languages = [
