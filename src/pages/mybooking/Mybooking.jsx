@@ -262,6 +262,7 @@ const MyBooking = () => {
         phone: booking.phone,
         email: booking.email,
         price: Number(booking.price) || 0,
+        comment: booking.comment || "",
       }));
 
       const durationKey = normalizeDuration(payerBooking.duration);
@@ -283,10 +284,19 @@ const MyBooking = () => {
           phone: payerBooking.phone,
           email: payerBooking.email,
           price: Number(totalAmount),
+          comment: payerBooking.comment || "",
           items: paymentItems,
         },
       };
 
+      const paymentFingerprint = JSON.stringify(paymentItems);
+      let requestKey;
+      try {
+        const saved = JSON.parse(sessionStorage.getItem("khamsa_payment_request_v1") || "null");
+        requestKey = saved?.fingerprint === paymentFingerprint ? saved.key : crypto.randomUUID();
+        sessionStorage.setItem("khamsa_payment_request_v1", JSON.stringify({fingerprint:paymentFingerprint,key:requestKey}));
+      } catch { requestKey = crypto.randomUUID(); }
+      body.requestKey = requestKey;
       const res = await fetch(`${API_BASE}/create-payment`, {
         method: "POST",
         mode: "cors", // ko‘rinishi uchun aniq belgilab qo‘ydik
