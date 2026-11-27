@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Nav from "./components/nav/Nav";
@@ -27,8 +27,11 @@ import Directions from "./pages/directions/Directions";
 import AntiFraud from "./components/antifraud/AntiFraud";
 
 function App() {
+  const [offline, setOffline] = useState(() => typeof navigator !== "undefined" && navigator.onLine === false);
+  useEffect(() => { const sync=()=>setOffline(navigator.onLine === false); window.addEventListener("online",sync);window.addEventListener("offline",sync);return()=>{window.removeEventListener("online",sync);window.removeEventListener("offline",sync);}; },[]);
   return (
     <>
+      {offline && <div role="status" style={{background:"#fff8ec",color:"#915c23",padding:"9px 16px",textAlign:"center",fontSize:13,borderBottom:"1px solid #f0d7aa"}}>Internet connection lost. Booking selections remain saved; payments will not be retried automatically.</div>}
       <Reklem />
       <Nav />
       <Routes>
