@@ -1,5 +1,6 @@
 // backend/index.js — Khamsa backend (Express + Bnovo + Octo + Postgres)
 import express from "express";
+import { sanitizeGuestComment, isValidGuestComment, validPaymentRequestKey } from "./bookingGuestExperience.js";
 import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
@@ -517,8 +518,8 @@ function normalizePaymentItems(booking, fallbackAmount) {
       phone: firstNonEmpty(item?.phone, booking?.phone),
       email: firstNonEmpty(item?.email, booking?.email),
       price,
-      guestComment: String(item?.comment ?? "").trim().slice(0, 500).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ""),
-      commentValid: item?.comment == null || String(item.comment).length <= 500,
+      guestComment: sanitizeGuestComment(item?.comment),
+      commentValid: isValidGuestComment(item?.comment),
     };
   });
 }
@@ -1432,8 +1433,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       return res.status(500).json({ error: "Payment sozlanmagan (env yo'q)" });
 
     const shopTransactionId = crypto.randomUUID();
-    const clientRequestKey = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(req.body?.requestKey || ""))
-      ? String(req.body.requestKey) : null;
+    const clientRequestKey = validPaymentRequestKey(req.body?.requestKey);
 
     const {
       amount,
