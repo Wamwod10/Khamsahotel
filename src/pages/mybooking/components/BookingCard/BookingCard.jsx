@@ -89,6 +89,7 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
           phone: booking.phone,
           email: booking.email,
           price: Number(booking.price),
+          comment: booking.comment || "",
         },
       };
 
@@ -170,6 +171,7 @@ const BookingCard = ({ booking, onEdit, onDelete }) => {
         </div>
       </div>
 
+      {booking.comment && <div className="booking-section booking-comment-preview"><strong>{t("guestCommentLabel")}:</strong> <span>{booking.comment}</span></div>}
       <div className="booking-actions">
         <button type="button" className="btn btn-copy" onClick={copySelection}>
           {copied ? t("bookingCopied") : t("bookingCopySelection")}
