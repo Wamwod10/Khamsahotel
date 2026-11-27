@@ -510,5 +510,6 @@
   "bookingStarted": "Время заселения наступило",
   "bookingStatus": "Статус брони",
   "bookingStatusPending": "Ожидается подтверждение оплаты",
-  "bookingStatusFailed": "Оплата не подтверждена"
+  "bookingStatusFailed": "Оплата не подтверждена",
+  "bookingAlreadyAdded": "Это бронирование уже есть в вашем списке."
 }
