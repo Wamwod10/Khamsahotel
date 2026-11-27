@@ -498,5 +498,18 @@
   "bookingSelectDatesFirst": "Please select your check-in date, time and duration on the home page before booking a room.",
   "bookingEmptySubtitle": "Your selected rooms will appear here. Start a booking to choose your stay dates and room.",
   "bookingCreateFirst": "Find a room",
-  "bookingTimeMustBeSelected": "Your booking check-in time is missing or invalid. Please edit the booking and select the exact Tashkent time before payment."
+  "bookingTimeMustBeSelected": "Your booking check-in time is missing or invalid. Please edit the booking and select the exact Tashkent time before payment.",
+  "guestCommentLabel": "Special requests",
+  "guestCommentHint": "Any special requests? (optional)",
+  "guestCommentOptional": "Requests are not guaranteed.",
+  "bookingQrLabel": "Booking QR code",
+  "bookingQrNote": "Anyone with this QR code can view the booking reference and stay time.",
+  "bookingShare": "Share booking",
+  "bookingShareDone": "Booking link copied",
+  "bookingCountdown": "Time until check-in",
+  "bookingStarted": "Your check-in time has arrived",
+  "bookingStatus": "Booking status",
+  "bookingStatusPending": "Awaiting payment confirmation",
+  "bookingStatusFailed": "Payment was not confirmed",
+  "bookingAlreadyAdded": "This booking is already in your list."
 }

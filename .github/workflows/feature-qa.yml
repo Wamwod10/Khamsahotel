@@ -1,0 +1,27 @@
+name: Khamsa guest features QA
+on:
+  push:
+    branches: [feature/booking-guest-experience-2026-11]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+      - name: Run regression tests
+        run: npm test
+      - name: Build frontend
+        run: npm run build

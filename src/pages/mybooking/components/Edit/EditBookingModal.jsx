@@ -27,6 +27,7 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
     lastName: "",
     phone: "",
     email: "",
+    comment: "",
   });
 
   useEffect(() => {
@@ -42,6 +43,7 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
         lastName: booking.lastName || "",
         phone: booking.phone || "",
         email: booking.email || "",
+        comment: booking.comment || "",
       });
     }
   }, [booking]);
@@ -178,6 +180,9 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
             />
           </label>
 
+          <label>{t("guestCommentLabel")}
+            <textarea name="comment" rows={3} maxLength={500} value={editData.comment || ""} onChange={handleChange} placeholder={t("guestCommentHint")} />
+          </label>
           {/* Email */}
           <label>
             {t("editmodal_email")}

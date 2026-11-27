@@ -85,6 +85,8 @@ const Header = () => {
   const initialDraft = useMemo(() => readBookingDraft(window.localStorage), []);
   const [checkIn, setCheckIn] = useState(initialDraft?.checkIn || "");
   const [checkOutTime, setCheckOutTime] = useState(initialDraft?.checkOutTime || "");
+  const [hotelClock, setHotelClock] = useState(() => hotelNowParts().time);
+  useEffect(() => { const id = window.setInterval(() => setHotelClock(hotelNowParts().time), 30000); return () => window.clearInterval(id); }, []);
   const [duration, setDuration] = useState(initialDraft?.duration || "Up to 3 hours");
   const [rooms, setRooms] = useState(initialDraft?.rooms || "STANDARD");
   const [alternativeSlots, setAlternativeSlots] = useState([]);
@@ -488,7 +490,7 @@ const Header = () => {
                       aria-label={t("bookingTimeTimezoneNotice")}
                     >
                       <AiOutlineInfoCircle aria-hidden="true" />
-                      {t("bookingTimeTimezoneShort")}
+                      {t("bookingTimeTimezoneShort")} · {hotelClock}
                     </span>
                   </label>
                   <input
