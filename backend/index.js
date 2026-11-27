@@ -517,6 +517,8 @@ function normalizePaymentItems(booking, fallbackAmount) {
       phone: firstNonEmpty(item?.phone, booking?.phone),
       email: firstNonEmpty(item?.email, booking?.email),
       price,
+      guestComment: String(item?.comment ?? "").trim().slice(0, 500).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ""),
+      commentValid: item?.comment == null || String(item.comment).length <= 500,
     };
   });
 }
@@ -632,6 +634,7 @@ function buildBookingTelegramHtml(booking) {
     `🛏️ <b>Xona:</b> ${escapeHtml(roomLabel(booking?.rooms))}`,
     `📆 <b>Davomiylik:</b> ${escapeHtml(formatDurationLabel(booking?.duration || "-"))}`,
     `💶 <b>Narx:</b> ${booking?.price != null ? escapeHtml(`${booking.price}€`) : "-"}`,
+    ...(booking?.guest_comment ? [`💬 <b>Mehmon izohi:</b> ${escapeHtml(booking.guest_comment)}`] : []),
     "",
     `❕ <b>@freemustafa Send an Invoice to the guest!</b>`,
     `✅ <b>Mijoz kelganda, mavjud bo‘sh xonaga joylashtiriladi</b>`,
@@ -678,6 +681,7 @@ function buildBookingTelegramHtmlForRows(bookings) {
     ...roomLines,
     `🗓️ <b>Bron yaratilgan vaqt (Toshkent):</b> ${escapeHtml(formatDisplayDateTime(createdAt))}`,
     `💶 <b>Jami:</b> ${escapeHtml(formatEuro(totalPrice))}`,
+    ...rows.filter((row) => row.guest_comment).map((row, i) => `💬 <b>Izoh ${i + 1}:</b> ${escapeHtml(row.guest_comment)}`),
     "",
     "❕ <b>@freemustafa Send an Invoice to the guest!</b>",
     "✅ <b>Mijoz kelganda, mavjud bosh xonaga joylashtiriladi</b>",
@@ -1160,6 +1164,15 @@ async function ensureSchema() {
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='check_in_time') THEN
         EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN check_in_time TEXT';
       END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='guest_comment') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN guest_comment TEXT';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='request_key') THEN
+        EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN request_key UUID';
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='khamsa_request_key_unique') THEN
+        EXECUTE 'CREATE UNIQUE INDEX khamsa_request_key_unique ON public.'||_t||'(request_key) WHERE request_key IS NOT NULL';
+      END IF;
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name=_t AND column_name='price') THEN
         EXECUTE 'ALTER TABLE public.'||_t||' ADD COLUMN price NUMERIC(12,2)';
       END IF;
@@ -1419,6 +1432,8 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       return res.status(500).json({ error: "Payment sozlanmagan (env yo'q)" });
 
     const shopTransactionId = crypto.randomUUID();
+    const clientRequestKey = /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(String(req.body?.requestKey || ""))
+      ? String(req.body.requestKey) : null;
 
     const {
       amount,
@@ -1436,6 +1451,9 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
     // Reject missing, conflicting or malformed guest-selected times BEFORE any
     // payment, database write or Telegram notification occurs.
+    if (paymentItems.some((item) => !item.commentValid)) {
+      return res.status(400).json({ error: "Comment must be 500 characters or less" });
+    }
     if (paymentItems.some((item) => !item.selectedTimeValid || !item.checkInAt ||
         formatDisplayDate(item.checkInAt) !== formatDisplayDate(item.checkIn) ||
         formatDisplayTime(item.checkInAt) !== item.checkInTime)) {
@@ -1555,13 +1573,13 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
             throw capacityError;
           }
 
-          for (const item of paymentItems) {
+          for (const [itemIndex, item] of paymentItems.entries()) {
             await client.query(
         `
     INSERT INTO public.khamsachekin
     (transaction_id, status, rooms, check_in, check_out, check_in_at, check_out_at,
-     duration, price, first_name, last_name, phone, email, check_in_time)
-    VALUES ($1,'pending',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+     duration, price, first_name, last_name, phone, email, check_in_time, guest_comment, request_key)
+    VALUES ($1,'pending',$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
     `,
         [
           shopTransactionId,
@@ -1577,6 +1595,8 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
           item.phone,
           item.email || payerEmail,
           item.checkInTime,
+          item.guestComment,
+          itemIndex === 0 ? clientRequestKey : null,
         ],
             );
           }
@@ -1593,6 +1613,9 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       // 🔥 MUHIM: requestni to‘xtatamiz
       await client.query("ROLLBACK").catch(() => {});
       client.release();
+      if (e.code === "23505" && String(e.constraint || "").includes("khamsa_request_key_unique")) {
+        return res.status(409).json({ code: "DUPLICATE_PAYMENT_REQUEST", error: "This payment request was already started. Check its status before trying another payment." });
+      }
       if (e.code === "ROOM_CAPACITY_EXCEEDED") {
         const capacityCheck = e.details;
         const roomName =
@@ -1666,6 +1689,19 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     console.error("❌ create-payment:", err);
     res.status(500).json({ error: "Server xatosi" });
   }
+});
+
+// Only a coarse status is public; never send guest information with it.
+app.get("/api/booking-status", availabilityLimiter, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const id = String(req.query?.stid || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return res.status(400).json({ ok: false });
+  try {
+    const { rows } = await pgPool.query("SELECT status FROM public.khamsachekin WHERE transaction_id=$1 LIMIT 1", [id]);
+    if (!rows.length) return res.status(404).json({ ok: false });
+    const status = rows[0].status === "paid" ? "confirmed" : rows[0].status === "failed" ? "failed" : "pending";
+    return res.json({ ok: true, status });
+  } catch (err) { console.error("booking status error:", err?.message); return res.status(503).json({ ok: false }); }
 });
 
 // Public confirmation lookup exposes no guest PII; random payment UUID is the lookup key.
@@ -1879,7 +1915,7 @@ app.get("/api/checkins", requireAdmin, async (req, res) => {
              COALESCE(check_in_at,  (check_in::timestamp))  AS start_at,
              COALESCE(check_out_at, (check_out::timestamp)) AS end_at,
              duration, price,
-             first_name, last_name, phone, email, check_in_time, created_at
+             first_name, last_name, phone, email, check_in_time, guest_comment, created_at
       FROM public.khamsachekin
       ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
       ORDER BY COALESCE(check_in_at, check_in::timestamp) ASC, id ASC
