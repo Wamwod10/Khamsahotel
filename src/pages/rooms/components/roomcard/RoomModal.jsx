@@ -1,5 +1,5 @@
 // RoomModal.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaCheck } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -153,6 +153,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
   const checkout = useMemo(() => checkoutPreview(bookingInfo.checkIn, bookingInfo.checkOutTime, bookingInfo.duration),
     [bookingInfo.checkIn, bookingInfo.checkOutTime, bookingInfo.duration]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const modalViewportRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -331,11 +332,33 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     };
   }, [isOpen, submitting, onClose]);
 
+  // Mobile Safari may keep the layout viewport tall after the keyboard opens.
+  // Track the visible viewport so the dialog header and actions remain reachable.
+  useEffect(() => {
+    if (!isOpen || showSuccess) return undefined;
+    const viewport = window.visualViewport;
+    const updateBounds = () => {
+      const element = modalViewportRef.current;
+      if (!element) return;
+      element.style.setProperty("--guest-modal-height", `${Math.round(viewport?.height || window.innerHeight)}px`);
+      element.style.setProperty("--guest-modal-top", `${Math.round(viewport?.offsetTop || 0)}px`);
+    };
+    updateBounds();
+    viewport?.addEventListener("resize", updateBounds);
+    viewport?.addEventListener("scroll", updateBounds);
+    window.addEventListener("resize", updateBounds);
+    return () => {
+      viewport?.removeEventListener("resize", updateBounds);
+      viewport?.removeEventListener("scroll", updateBounds);
+      window.removeEventListener("resize", updateBounds);
+    };
+  }, [isOpen, showSuccess]);
+
   if (!isOpen) return null;
   if (showSuccess) return <SuccessModal onStayHere={handleStayHere} onGoToMyBooking={handleGoToMyBooking} />;
 
   return (
-    <div className="modal-main">
+    <div className="modal-main modal-main--guest-booking" ref={modalViewportRef}>
       <div className="modal-overlay" onClick={onClose} />
       <div className="modal room-booking-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabIndex={-1}>
         <button type="button" className="modal__mobile-close" onClick={onClose} disabled={submitting} aria-label={t("cancel") || "Close"}>×</button>
@@ -344,7 +367,8 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
         </h2>
         <p className="modal__progress">{t("bookingStepGuest")}</p>
 
-        <div className="modal_all__section" aria-label={t("bookyourstay")}>
+        <div className="modal__scroll-area">
+          <div className="modal_all__section" aria-label={t("bookyourstay")}>
           <div className="modal__section">
             <label>{t("check-in") || "Check-In"}:</label>
             <p>{bookingInfo.checkIn ? formatDate(bookingInfo.checkIn) : "-"}</p>
@@ -372,7 +396,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
           </div>
         </div>
 
-        <form className="modal__form" onSubmit={handleConfirm} noValidate>
+        <form id="khamsa-booking-guest-form" className="modal__form" onSubmit={handleConfirm} noValidate>
           <div className="modal__field">
             <label htmlFor="firstName">{t("firstName") || "First Name"}</label>
             <input
@@ -478,15 +502,16 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
           </div>
 
           <p className="modal__booking-requirement">{t("bookingTransitRequirement")}</p>
-          <div className="modal__buttons">
-            <button type="submit" className="modal__confirm" disabled={submitting}>
+        </form>
+        </div>
+        <div className="modal__buttons">
+            <button type="submit" form="khamsa-booking-guest-form" className="modal__confirm" disabled={submitting}>
               {submitting ? (t("searchrooms") || "Checking...") : (t("confirm") || "Confirm")}
             </button>
             <button type="button" className="modal__cancel" onClick={onClose}>
               {t("cancel") || "Cancel"}
             </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );
