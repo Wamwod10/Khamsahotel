@@ -183,7 +183,7 @@ const EditBookingModal = ({ isOpen, booking, onClose, onSave }) => {
           <label>{t("guestCommentLabel")}
             <textarea name="comment" rows={3} maxLength={500} value={editData.comment || ""} onChange={handleChange} placeholder={t("guestCommentHint")} />
           </label>
-          {/* Email */
+          {/* Email */}
           <label>
             {t("editmodal_email")}
             <input
