@@ -92,3 +92,8 @@
   .booking-confirmed-item { min-width: 0; overflow-wrap: anywhere; }
   .booking-confirmation-actions button { min-height: 44px; flex: 1 1 100%; }
 }
+
+.booking-confirmation-qr {display:grid;justify-items:center;gap:8px;margin:12px auto;color:#777;font-size:.76rem;max-width:310px}
+.booking-confirmation-qr > div {padding:8px;background:#fff;border:1px solid #eee;border-radius:10px}
+.booking-confirmation-qr small {font-size:.73rem;line-height:1.5}
+@media print {.booking-confirmation-qr {display:none!important}}
