@@ -510,5 +510,6 @@
   "bookingStarted": "Kirish vaqti keldi",
   "bookingStatus": "Bron holati",
   "bookingStatusPending": "To‘lov tasdig‘i kutilmoqda",
-  "bookingStatusFailed": "To‘lov tasdiqlanmadi"
+  "bookingStatusFailed": "To‘lov tasdiqlanmadi",
+  "bookingAlreadyAdded": "Bu bron ro‘yxatingizga allaqachon qo‘shilgan."
 }
