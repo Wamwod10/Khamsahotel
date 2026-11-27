@@ -267,3 +267,190 @@
  }
 }
 
+
+/*
+ * Guest Details sheet: constrain the whole dialog (not just its contents).
+ * The title and form actions stay visible; only the summary and input area scroll.
+ * Also covers short desktop windows whose CSS width exceeds 900px.
+ */
+.modal-main--guest-booking {
+  box-sizing: border-box;
+  top: var(--guest-modal-top, 0px);
+  bottom: auto;
+  width: 100%;
+  height: var(--guest-modal-height, 100dvh);
+  padding: 12px;
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-main--guest-booking > .modal-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.modal-main--guest-booking > .room-booking-modal {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  width: min(100%, 570px);
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 18px 20px 14px;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__title,
+.modal-main--guest-booking .room-booking-modal .modal__progress {
+  flex: 0 0 auto;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__title {
+  margin: 0 42px 4px 0;
+  font-size: 1.45rem;
+  line-height: 1.25;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__progress {
+  margin: 0 42px 12px 0;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 3px 12px;
+  margin: 0 -3px;
+  scrollbar-width: thin;
+  scrollbar-color: #e2c5a1 transparent;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal_all__section {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  margin: 0;
+  background: #fffaf3;
+  border: 1px solid #f6e3c5;
+  border-radius: 10px;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__section {
+  min-width: 0;
+  width: auto;
+  margin: 0;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__section:last-child {
+  grid-column: 1 / -1;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__section label {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  margin: 0 0 2px;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__section p {
+  font-size: 0.87rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__form {
+  margin-top: 12px;
+  gap: 12px 14px;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__form .modal__field textarea {
+  min-height: 70px;
+  max-height: 140px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__buttons {
+  position: static;
+  bottom: auto;
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 11px 0 0;
+  z-index: 1;
+  border-top: 1px solid #f0f0f0;
+  background: #fff;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__buttons button {
+  flex: 0 1 auto;
+  min-height: 44px;
+  min-width: 120px;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 0.93rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__buttons .modal__confirm {
+  background: #f7931e;
+  color: #fff;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__buttons .modal__confirm:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.modal-main--guest-booking .room-booking-modal .modal__buttons .modal__cancel {
+  background: #e5e5e5;
+  color: #444;
+}
+
+@media (max-width: 600px) {
+  .modal-main--guest-booking { padding: 8px; }
+  .modal-main--guest-booking > .room-booking-modal {
+    max-width: 570px;
+    max-height: 100%;
+    padding: 13px 14px 10px;
+  }
+  .modal-main--guest-booking .room-booking-modal .modal__title { font-size: 1.25rem; }
+  .modal-main--guest-booking .room-booking-modal .modal__progress { margin-bottom: 9px; }
+  .modal-main--guest-booking .room-booking-modal .modal_all__section { padding: 10px; gap: 9px 10px; }
+  .modal-main--guest-booking .room-booking-modal .modal__form { gap: 10px; margin-top: 10px; }
+  .modal-main--guest-booking .room-booking-modal .modal__buttons {
+    padding: 9px 0 calc(3px + env(safe-area-inset-bottom, 0px));
+    margin: 0;
+  }
+  .modal-main--guest-booking .room-booking-modal .modal__buttons button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 8px;
+    font-size: 0.88rem;
+  }
+}
+
+@media (max-height: 650px) {
+  .modal-main--guest-booking { padding-block: 6px; }
+  .modal-main--guest-booking > .room-booking-modal { padding-top: 10px; }
+  .modal-main--guest-booking .room-booking-modal .modal__scroll-area { padding-bottom: 7px; }
+  .modal-main--guest-booking .room-booking-modal .modal__progress { margin-bottom: 7px; }
+}
