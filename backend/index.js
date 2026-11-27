@@ -1432,7 +1432,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       return res.status(500).json({ error: "Payment sozlanmagan (env yo'q)" });
 
     const shopTransactionId = crypto.randomUUID();
-    const clientRequestKey = /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(String(req.body?.requestKey || ""))
+    const clientRequestKey = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(req.body?.requestKey || ""))
       ? String(req.body.requestKey) : null;
 
     const {
