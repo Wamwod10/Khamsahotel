@@ -510,5 +510,6 @@
   "bookingStarted": "Your check-in time has arrived",
   "bookingStatus": "Booking status",
   "bookingStatusPending": "Awaiting payment confirmation",
-  "bookingStatusFailed": "Payment was not confirmed"
+  "bookingStatusFailed": "Payment was not confirmed",
+  "bookingAlreadyAdded": "This booking is already in your list."
 }
