@@ -278,6 +278,19 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
         );
         return;
       }
+      // Prevent accidentally adding the same guest's identical stay twice.
+      const duplicate = existing.some((old) =>
+        String(old.email || "").trim().toLowerCase() === full.email.toLowerCase() &&
+        old.checkIn === full.checkIn &&
+        old.checkOutTime === full.checkOutTime &&
+        old.rooms === full.rooms &&
+        old.duration === full.duration
+      );
+      if (duplicate) {
+        setSubmitting(false);
+        toast.info(t("bookingAlreadyAdded"), { position: "top-center", autoClose: 3500 });
+        return;
+      }
       const updated = [full, ...existing];
       sessionStorage.setItem("allBookings", JSON.stringify(updated));
       sessionStorage.setItem("bookingInfo", JSON.stringify(full));
