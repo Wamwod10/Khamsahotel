@@ -143,6 +143,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
     lastName: "",
     phone: "",
     email: "",
+    comment: "",
   });
 
   const [touched, setTouched] = useState({});
@@ -235,6 +236,7 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
       lastName: lastName.trim(),
       phone: phone.trim(),
       email: email.trim(),
+      comment: String(formData.comment || "").trim().slice(0,500),
       price: priceEur,
       createdAt: new Date().toISOString(),
     };
@@ -438,6 +440,14 @@ const RoomModal = ({ isOpen, onClose, guests: propGuests, rooms: propRooms }) =>
             )}
           </div>
 
+          <div className="modal__field" style={{gridColumn:"1 / -1"}}>
+            <label htmlFor="guest-comment">{t("guestCommentLabel")}</label>
+            <textarea id="guest-comment" name="comment" rows={3} maxLength={500}
+              value={formData.comment} onChange={handleInputChange}
+              placeholder={t("guestCommentHint")}
+              style={{width:"100%",maxWidth:"100%",minWidth:0,boxSizing:"border-box",resize:"vertical",padding:"10px 12px",border:"1px solid #ddd",borderRadius:8,font:"inherit"}} />
+            <small style={{color:"#777",fontSize:12}}>{formData.comment.length}/500 · {t("guestCommentOptional")}</small>
+          </div>
           {/* Payment method (indikativ) */}
           <div className="modal__field custom-select">
             <label htmlFor="payment-method">{t("paymentMethod") || "Payment Method"}</label>
